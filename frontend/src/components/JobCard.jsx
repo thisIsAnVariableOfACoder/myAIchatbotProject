@@ -1,5 +1,6 @@
 export default function JobCard({ job }) {
-  const imageUrl = job.image_url || '/career-icons/default.svg';
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  const imageUrl = job.image_url || `${baseUrl}career-icons/default.svg`;
   return (
     <div className="rounded-2xl border border-[#E8E2D8] bg-white p-4 shadow-sm hover:shadow-md transition">
       <div className="flex items-center gap-3">

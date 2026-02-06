@@ -9,6 +9,9 @@ const linkClass = ({ isActive }) =>
 export default function TopNav() {
   const { user, logout } = useAuth();
   const isAdmin = user?.user_type === 'admin';
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  const logoSrc = `${baseUrl}ai-young-guru-logo.png`;
+  const fallbackLogo = `${baseUrl}icon.svg`;
   const [themeModeState, setThemeModeState] = useState(() => {
     const stored = getStoredTheme().mode;
     return stored === 'dark' ? 'dark' : 'light';
@@ -20,11 +23,11 @@ export default function TopNav() {
         <div className="flex items-center gap-4">
           <div className="h-12 w-auto">
             <img
-              src="/ai-young-guru-logo.png"
+              src={logoSrc}
               alt="AI Young Guru"
               className="h-12 w-auto object-contain"
               onError={(e) => {
-                e.currentTarget.src = '/icon.svg';
+                e.currentTarget.src = fallbackLogo;
               }}
             />
           </div>
