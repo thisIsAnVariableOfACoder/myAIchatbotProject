@@ -4,8 +4,7 @@ import ChatWindow from '../components/ChatWindow';
 import ProfileForm from '../components/ProfileForm';
 import ResultCard from '../components/ResultCard';
 import { useAuth } from '../context/AuthContext';
-
-const API_BASE = '';
+import { API_BASE } from '../config';
 
 function normalizeRecommendations(list) {
   if (!Array.isArray(list)) return [];
@@ -36,6 +35,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [historyError, setHistoryError] = useState('');
+  const [apiError, setApiError] = useState('');
   const [profileInitial, setProfileInitial] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [titleDraft, setTitleDraft] = useState('');
@@ -128,6 +128,7 @@ export default function Chat() {
         }
       } catch {
         setHistoryError('Không thể tải lịch sử');
+        setApiError('Không kết nối được máy chủ. Vui lòng cấu hình API backend.');
       }
     }
     loadHistory();
@@ -178,6 +179,7 @@ export default function Chat() {
 
   async function sendMessage(text, options = {}) {
     if (!text) return;
+    setApiError('');
     setMessages(prev => ([
       ...prev,
       { id: `${Date.now()}-u`, sender: 'user', text }
@@ -238,6 +240,7 @@ export default function Chat() {
       }
     } catch {
       setLoading(false);
+      setApiError('Không kết nối được máy chủ. Vui lòng cấu hình API backend.');
     }
   }
 
@@ -306,6 +309,11 @@ export default function Chat() {
           </button>
         </div>
       </div>
+      {apiError && (
+        <div className="mb-3 rounded-lg border border-[#F2C5C5] bg-[#FFF5F5] px-3 py-2 text-sm text-[#B91C1C]">
+          {apiError}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,3fr)_160px]">
         <section className="order-2 lg:order-1">

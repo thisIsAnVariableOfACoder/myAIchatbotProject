@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import JobCard from '../components/JobCard';
-
-const API_BASE = '';
+import { API_BASE } from '../config';
 
 export default function Explore() {
   const [jobs, setJobs] = useState([]);
@@ -13,6 +12,7 @@ export default function Explore() {
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
+  const [error, setError] = useState('');
 
   const limit = 24;
 
@@ -20,6 +20,7 @@ export default function Explore() {
     let cancelled = false;
     async function loadFilters() {
       try {
+        setError('');
         const res = await fetch(`${API_BASE}/api/explore/filters`);
         const json = await res.json();
         if (cancelled) return;
@@ -30,6 +31,7 @@ export default function Explore() {
         if (!cancelled) {
           setCategories([]);
           setTags([]);
+          setError('Không kết nối được máy chủ. Vui lòng cấu hình API backend.');
         }
       }
     }
@@ -46,20 +48,28 @@ export default function Explore() {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      setError('');
       const params = new URLSearchParams();
       if (query) params.set('q', query);
       if (category) params.set('category', category);
       if (tag) params.set('tag', tag);
       params.set('limit', String(limit));
       params.set('offset', String(page * limit));
-      const res = await fetch(`${API_BASE}/api/explore/jobs?${params.toString()}`);
-      const json = await res.json();
-      if (!cancelled) {
-        const items = json?.data || [];
-        setTotal(json?.total || 0);
-        setJobs((prev) => (page === 0 ? items : [...prev, ...items]));
+      try {
+        const res = await fetch(`${API_BASE}/api/explore/jobs?${params.toString()}`);
+        const json = await res.json();
+        if (!cancelled) {
+          const items = json?.data || [];
+          setTotal(json?.total || 0);
+          setJobs((prev) => (page === 0 ? items : [...prev, ...items]));
+        }
+      } catch {
+        if (!cancelled) {
+          setError('Không kết nối được máy chủ. Vui lòng cấu hình API backend.');
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     load();
     return () => { cancelled = true; };
@@ -109,6 +119,10 @@ export default function Explore() {
           <JobCard key={job.id} job={job} />
         ))}
       </div>
+
+      {error && (
+        <div className="mt-4 text-sm text-[#B91C1C]">{error}</div>
+      )}
 
       {!loading && jobs.length === 0 && (
         <div className="mt-4 text-sm text-[#5B5B57]">Chưa có dữ liệu nghề nghiệp.</div>

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-
-const API_BASE = '';
+import { API_BASE } from '../config';
 
 export default function AdminScenarioEditor({ selected, onSaved }) {
   const { token } = useAuth();

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import AnalyticsCard from '../components/AnalyticsCard';
 import { useAuth } from '../context/AuthContext';
-
-const API_BASE = '';
+import { API_BASE } from '../config';
 
 export default function Analytics() {
   const { user, token } = useAuth();
