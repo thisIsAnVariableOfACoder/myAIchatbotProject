@@ -7,7 +7,7 @@ const RECS_PREFIX = 'offline_recs_';
 
 const DEFAULT_ADMIN = { id: 1, email: 'admin@demo.local', password: 'admin123', user_type: 'admin' };
 
-const QUESTIONS = [
+const GENERAL_QUESTIONS = [
   { id: 'q1', text: 'Bạn thích học môn nào nhất?', tags: ['education', 'analysis'] },
   { id: 'q2', text: 'Bạn có hứng thú với công nghệ hoặc lập trình không?', tags: ['tech'] },
   { id: 'q3', text: 'Bạn thích làm việc với con người hay dữ liệu?', tags: ['people', 'data'] },
@@ -22,7 +22,98 @@ const QUESTIONS = [
   { id: 'q12', text: 'Bạn có quan tâm đến luật, chính sách, quy định không?', tags: ['law'] }
 ];
 
-const CAREERS = [
+const SUBJECTS = [
+  { key: 'math', label: 'Toán', tag: 'math', keywords: ['toán', 'đại số', 'hình học'] },
+  { key: 'physics', label: 'Vật lý', tag: 'physics', keywords: ['vật lý', 'cơ học', 'điện'] },
+  { key: 'chemistry', label: 'Hóa học', tag: 'chemistry', keywords: ['hóa', 'hóa học'] },
+  { key: 'literature', label: 'Ngữ văn', tag: 'literature', keywords: ['văn', 'ngữ văn', 'văn học'] },
+  { key: 'english', label: 'Tiếng Anh', tag: 'english', keywords: ['anh', 'tiếng anh', 'english'] },
+  { key: 'biology', label: 'Sinh học', tag: 'biology', keywords: ['sinh', 'sinh học'] },
+  { key: 'history', label: 'Lịch sử', tag: 'history', keywords: ['lịch sử', 'sử'] },
+  { key: 'geography', label: 'Địa lý', tag: 'geography', keywords: ['địa', 'địa lý'] },
+  { key: 'civics', label: 'GDCD', tag: 'civics', keywords: ['gdcd', 'giáo dục công dân', 'công dân'] }
+];
+
+const SUBJECT_TOPICS = {
+  math: ['đại số', 'hình học', 'xác suất', 'tổ hợp', 'giải tích', 'toán ứng dụng', 'thống kê', 'toán rời rạc'],
+  physics: ['cơ học', 'điện', 'quang', 'nhiệt', 'vật lý hiện đại', 'dao động', 'điện từ', 'quang học'],
+  chemistry: ['hóa hữu cơ', 'hóa vô cơ', 'phân tích', 'hóa sinh', 'hóa môi trường', 'công nghệ hóa', 'phản ứng', 'dung dịch'],
+  literature: ['văn học Việt Nam', 'văn học nước ngoài', 'nghị luận', 'kỹ năng viết', 'phân tích tác phẩm', 'ngôn ngữ học', 'phê bình', 'sáng tác'],
+  english: ['ngữ pháp', 'giao tiếp', 'biên phiên dịch', 'phát âm', 'tiếng Anh học thuật', 'tiếng Anh chuyên ngành', 'đọc hiểu', 'viết học thuật'],
+  biology: ['di truyền', 'sinh thái', 'sinh học phân tử', 'giải phẫu', 'vi sinh', 'công nghệ sinh học', 'môi trường', 'sinh lý'],
+  history: ['các triều đại', 'chiến tranh', 'lịch sử cận đại', 'lịch sử hiện đại', 'di sản', 'lịch sử văn hóa', 'lịch sử thế giới', 'nguồn sử liệu'],
+  geography: ['bản đồ', 'GIS', 'địa chất', 'khí hậu', 'địa lý kinh tế', 'địa lý đô thị', 'tài nguyên', 'môi trường'],
+  civics: ['pháp luật', 'đạo đức', 'quyền công dân', 'chính sách', 'xã hội', 'kinh tế', 'nhà nước', 'quản trị công']
+};
+
+const SUBJECT_TEMPLATES = [
+  (subject, topic) => `Bạn có hứng thú với ${topic} trong ${subject} không?`,
+  (subject, topic) => `Mức độ tự tin của bạn với ${topic} (${subject}) như thế nào?`,
+  (subject, topic) => `Bạn thích tìm hiểu sâu về ${topic} của ${subject} không?`,
+  (subject, topic) => `Bạn muốn theo hướng ${topic} trong ${subject} chứ?`,
+  (subject, topic) => `Bạn thấy ${topic} của ${subject} có hợp với mình không?`
+];
+
+function buildSubjectQuestions() {
+  const pool = {};
+  for (const subject of SUBJECTS) {
+    const list = [];
+    const topics = SUBJECT_TOPICS[subject.key] || [];
+    let idx = 1;
+    for (const topic of topics) {
+      for (const tpl of SUBJECT_TEMPLATES) {
+        list.push({
+          id: `${subject.tag}_${idx++}`,
+          text: tpl(subject.label, topic),
+          tags: [subject.tag, 'education']
+        });
+      }
+    }
+    pool[subject.tag] = list;
+  }
+  return pool;
+}
+
+const SUBJECT_QUESTIONS = buildSubjectQuestions();
+
+function buildSubjectCareers() {
+  const roleBases = [
+    'Giáo viên', 'Giảng viên', 'Gia sư', 'Nhà nghiên cứu', 'Chuyên viên nội dung',
+    'Biên soạn SGK', 'Chuyên viên học liệu số', 'Chuyên viên khảo thí', 'Chuyên viên đào tạo',
+    'Giáo vụ', 'Cố vấn học tập', 'Chuyên viên phát triển chương trình', 'Trợ giảng',
+    'Giáo viên luyện thi', 'Chuyên viên EdTech', 'Chuyên viên tư vấn giáo dục',
+    'Chuyên viên chất lượng giáo dục', 'Chuyên viên đánh giá năng lực'
+  ];
+  const contexts = [
+    'cơ bản', 'nâng cao', 'song ngữ', 'quốc tế', 'THCS', 'THPT', 'đại học', 'trực tuyến',
+    'hệ chuyên', 'đào tạo doanh nghiệp', 'hướng nghiệp', 'STEM', 'chương trình mới',
+    'chuyên đề', 'cộng đồng', 'đội tuyển', 'học liệu số', 'đánh giá năng lực'
+  ];
+  const management = ['Hiệu trưởng', 'Phó hiệu trưởng', 'Tổ trưởng chuyên môn', 'Trưởng bộ môn'];
+  const careers = [];
+  for (const subject of SUBJECTS) {
+    const subjectCareers = new Set();
+    for (const role of roleBases) {
+      subjectCareers.add(`${role} ${subject.label}`);
+      for (const ctx of contexts) {
+        subjectCareers.add(`${role} ${subject.label} ${ctx}`);
+        if (subjectCareers.size >= 120) break;
+      }
+      if (subjectCareers.size >= 120) break;
+    }
+    for (const manager of management) {
+      subjectCareers.add(`${manager} chuyên ${subject.label}`);
+      subjectCareers.add(`${manager} bộ môn ${subject.label}`);
+    }
+    const tags = [subject.tag, 'education'];
+    for (const name of subjectCareers) {
+      careers.push({ name, category: `Giáo dục - ${subject.label}`, tags });
+    }
+  }
+  return careers;
+}
+
+const BASE_CAREERS = [
   { name: 'Kỹ sư phần mềm', category: 'Công nghệ', tags: ['tech', 'data', 'analysis'] },
   { name: 'Khoa học dữ liệu', category: 'Công nghệ', tags: ['tech', 'data', 'research'] },
   { name: 'AI Engineer', category: 'Công nghệ', tags: ['tech', 'research', 'analysis'] },
@@ -49,6 +140,12 @@ const CAREERS = [
   { name: 'Chuyên viên nhân sự', category: 'Quản trị', tags: ['people', 'business'] },
   { name: 'Chuyên viên logistics', category: 'Logistics', tags: ['analysis', 'office'] }
 ];
+
+const CAREERS = Array.from(
+  new Map(
+    [...BASE_CAREERS, ...buildSubjectCareers()].map((c) => [c.name, c])
+  ).values()
+);
 
 function readJson(key, fallback) {
   try {
@@ -96,6 +193,10 @@ function saveConversations(conversations) {
 function getState(conversationId) {
   return readJson(`${STATE_PREFIX}${conversationId}`, {
     index: 0,
+    generalIndex: 0,
+    focusIndex: 0,
+    focusCount: 0,
+    focusTag: null,
     answers: [],
     tags: {}
   });
@@ -164,6 +265,16 @@ function clearHistoryForUser(userId) {
   saveConversations(conversations);
 }
 
+function detectSubjectTag(text) {
+  const lower = text.toLowerCase();
+  for (const subject of SUBJECTS) {
+    if (subject.keywords.some((k) => lower.includes(k))) {
+      return subject.tag;
+    }
+  }
+  return null;
+}
+
 function deriveTags(text) {
   const lower = text.toLowerCase();
   const tags = {};
@@ -178,11 +289,29 @@ function deriveTags(text) {
   if (lower.includes('ngoại ngữ') || lower.includes('tiếng')) tags.language = true;
   if (lower.includes('lãnh đạo') || lower.includes('quản lý')) tags.leadership = true;
   if (lower.includes('dữ liệu') || lower.includes('phân tích')) tags.data = true;
+  const subjectTag = detectSubjectTag(lower);
+  if (subjectTag) tags[subjectTag] = true;
   return tags;
+}
+
+function pickNextQuestion(state) {
+  const focusTag = state.focusTag;
+  const focusPool = focusTag ? SUBJECT_QUESTIONS[focusTag] : null;
+  const shouldUseFocus = focusPool && focusPool.length > 0 && (state.focusCount % 4 !== 3);
+  if (shouldUseFocus) {
+    const q = focusPool[state.focusIndex % focusPool.length];
+    state.focusIndex += 1;
+    state.focusCount += 1;
+    return q;
+  }
+  const q = GENERAL_QUESTIONS[state.generalIndex % GENERAL_QUESTIONS.length];
+  state.generalIndex += 1;
+  return q;
 }
 
 function scoreCareers(state) {
   const tags = state.tags || {};
+  const focusTag = state.focusTag;
   const answersText = state.answers.join(' ').toLowerCase();
   const scored = CAREERS.map((career) => {
     let score = 20;
@@ -190,9 +319,12 @@ function scoreCareers(state) {
       if (tags[tag]) score += 18;
       if (answersText.includes(tag)) score += 6;
     }
+    if (focusTag && career.tags.includes(focusTag)) {
+      score += 30;
+    }
     const noise = (hashCode(career.name + answersText) % 7);
     score += noise;
-    return { career_name: career.name, match_score: score, reasons: buildReasons(career, tags) };
+    return { career_name: career.name, match_score: score, reasons: buildReasons(career, tags, focusTag) };
   });
   scored.sort((a, b) => b.match_score - a.match_score);
   const top = scored.slice(0, 10);
@@ -203,8 +335,11 @@ function scoreCareers(state) {
   }));
 }
 
-function buildReasons(career, tags) {
+function buildReasons(career, tags, focusTag) {
   const reasons = [];
+  if (focusTag && career.tags.includes(focusTag)) {
+    reasons.push('Phù hợp môn học bạn yêu thích');
+  }
   if (career.tags.some((t) => tags[t])) reasons.push('Phù hợp sở thích/kỹ năng');
   if (career.category) reasons.push(`Nhóm ngành ${career.category}`);
   return reasons.slice(0, 3);
@@ -265,6 +400,11 @@ export const offlineApi = {
     const state = getState(convId);
     if (message) {
       state.answers.push(message);
+      const subjectTag = detectSubjectTag(message);
+      if (subjectTag) {
+        state.focusTag = subjectTag;
+        state.focusCount = 0;
+      }
       state.tags = { ...state.tags, ...deriveTags(message) };
     }
     const enoughInfo = state.answers.length >= 6;
@@ -283,8 +423,7 @@ export const offlineApi = {
       };
     }
 
-    const question = QUESTIONS[state.index % QUESTIONS.length];
-    state.index += 1;
+    const question = pickNextQuestion(state);
     saveState(convId, state);
     response = question.text;
     nextNode = question.id;

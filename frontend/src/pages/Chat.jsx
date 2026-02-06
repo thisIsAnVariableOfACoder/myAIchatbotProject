@@ -63,8 +63,8 @@ export default function Chat() {
   }, [user]);
 
   useEffect(() => {
-    const saidHello = messages.some((m) => m.sender === 'user' && String(m.text || '').trim().toLowerCase() === 'hello');
-    setHelloSent(saidHello);
+    const hasUserMessage = messages.some((m) => m.sender === 'user' && String(m.text || '').trim());
+    setHelloSent(hasUserMessage);
   }, [messages]);
 
   useEffect(() => {
@@ -275,11 +275,6 @@ export default function Chat() {
           </button>
         </div>
       </div>
-      {IS_OFFLINE && (
-        <div className="mb-3 rounded-lg border border-[#F2C5C5] bg-[#FFF5F5] px-3 py-2 text-sm text-[#B91C1C]">
-          Đang chạy chế độ demo offline. Một số tính năng sẽ được mô phỏng cục bộ.
-        </div>
-      )}
       {apiError && (
         <div className="mb-3 rounded-lg border border-[#F2C5C5] bg-[#FFF5F5] px-3 py-2 text-sm text-[#B91C1C]">
           {apiError}

@@ -86,11 +86,6 @@ export default function Explore() {
         <div className="text-2xl font-semibold">Explore Nghề Nghiệp</div>
         <div className="text-sm text-[#5B5B57]">Khám phá kho dữ liệu nghề nghiệp</div>
       </div>
-      {IS_OFFLINE && (
-        <div className="mb-3 rounded-lg border border-[#F2C5C5] bg-[#FFF5F5] px-3 py-2 text-sm text-[#B91C1C]">
-          Đang chạy chế độ demo offline. Dữ liệu nghề nghiệp được mô phỏng cục bộ.
-        </div>
-      )}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.5fr_1fr_1fr_auto]">
         <input

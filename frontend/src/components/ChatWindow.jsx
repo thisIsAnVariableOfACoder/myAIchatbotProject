@@ -29,11 +29,11 @@ export default function ChatWindow({ messages, onSend, loading, showHelloHint = 
       <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {showHelloHint && (
           <div className="rounded-xl bg-[#F7F5F2] border border-[#E8E2D8] p-3 text-sm text-[#5B5B57]">
-            Hãy trả lời từng câu hỏi để nhận gợi ý nghề nghiệp. Nói "hello" để bắt đầu cuộc trò chuyện.
+            Hãy trả lời từng câu hỏi để nhận gợi ý nghề nghiệp. Nhập "hello" để bắt đầu cuộc trò chuyện.
           </div>
         )}
         {showHelloHint && messages.length === 0 && (
-          <div className="text-sm text-[#5B5B57]">Nói "hello" để bắt đầu cuộc trò chuyện.</div>
+          <div className="text-sm text-[#5B5B57]">Nhập "hello" để bắt đầu cuộc trò chuyện.</div>
         )}
         {messages.map(msg => (
           <MessageBubble key={msg.id} message={msg} />
@@ -62,7 +62,7 @@ export default function ChatWindow({ messages, onSend, loading, showHelloHint = 
 
       <div className="border-t border-[#E8E2D8] p-3">
         {showHelloHint && (
-          <div className="mb-2 text-xs text-[#5B5B57]">Nói "hello" để bắt đầu cuộc trò chuyện.</div>
+          <div className="mb-2 text-xs text-[#5B5B57]">Nhập "hello" để bắt đầu cuộc trò chuyện.</div>
         )}
         <form onSubmit={handleSubmit} autoComplete="off">
           <label className="sr-only" htmlFor="chat-input">Nhập tin nhắn</label>
