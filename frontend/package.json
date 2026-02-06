@@ -2,6 +2,8 @@
   "name": "career-guidance-frontend",
   "version": "1.0.0",
   "private": true,
+  "homepage": "https://thisIsAnVariableOfACoder.github.io/myAIchatbotProject",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
