@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE } from '../config';
+import { IS_OFFLINE } from '../config';
+import { api } from '../api';
 
 export default function Auth() {
   const { login, user } = useAuth();
@@ -13,16 +14,12 @@ export default function Auth() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    const url = mode === 'login' ? `${API_BASE}/api/auth/login` : `${API_BASE}/api/auth/register`;
     const body = mode === 'login'
       ? { email, password }
       : { email, password, user_type: userType };
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const json = await res.json();
+    const json = mode === 'login'
+      ? await api.login(body)
+      : await api.register(body);
     if (!json?.success) {
       setError(json?.error || 'Đăng nhập thất bại');
       return;
@@ -45,6 +42,11 @@ export default function Auth() {
         <button className={`px-3 py-2 rounded-lg text-sm ${mode === 'login' ? 'bg-[var(--c-primary)] text-white' : 'border'}`} onClick={() => setMode('login')}>Đăng nhập</button>
         <button className={`px-3 py-2 rounded-lg text-sm ${mode === 'register' ? 'bg-[var(--c-primary)] text-white' : 'border'}`} onClick={() => setMode('register')}>Tạo tài khoản</button>
       </div>
+      {IS_OFFLINE && (
+        <div className="mb-3 text-xs text-[#B91C1C]">
+          Đang chạy chế độ demo offline. Tài khoản được lưu cục bộ trên trình duyệt.
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label className="text-xs text-[#5B5B57]" htmlFor="email">Email</label>

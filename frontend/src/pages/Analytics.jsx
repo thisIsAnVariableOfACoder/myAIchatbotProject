@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import AnalyticsCard from '../components/AnalyticsCard';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE } from '../config';
+import { IS_OFFLINE } from '../config';
+import { api } from '../api';
 
 export default function Analytics() {
   const { user, token } = useAuth();
@@ -10,10 +11,7 @@ export default function Analytics() {
   useEffect(() => {
     async function load() {
       if (!token) return;
-      const res = await fetch(`${API_BASE}/api/analytics/summary`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const json = await res.json();
+      const json = await api.analyticsSummary(token);
       setSummary(json?.data || null);
     }
     if (user?.user_type === 'admin') load();
@@ -24,6 +22,14 @@ export default function Analytics() {
       <div className="rounded-2xl border border-[#E8E2D8] bg-white p-6 shadow-sm">
         <div className="text-lg font-semibold">Truy cập bị giới hạn</div>
         <div className="text-sm text-[#5B5B57] mt-2">Chỉ admin mới xem được thống kê.</div>
+      </div>
+    );
+  }
+  if (IS_OFFLINE) {
+    return (
+      <div className="rounded-2xl border border-[#E8E2D8] bg-white p-6 shadow-sm">
+        <div className="text-lg font-semibold">Chế độ demo offline</div>
+        <div className="text-sm text-[#5B5B57] mt-2">Trang Thống kê cần kết nối backend để hoạt động.</div>
       </div>
     );
   }

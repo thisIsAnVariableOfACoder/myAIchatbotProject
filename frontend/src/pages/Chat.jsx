@@ -4,7 +4,8 @@ import ChatWindow from '../components/ChatWindow';
 import ProfileForm from '../components/ProfileForm';
 import ResultCard from '../components/ResultCard';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE } from '../config';
+import { IS_OFFLINE } from '../config';
+import { api } from '../api';
 
 function normalizeRecommendations(list) {
   if (!Array.isArray(list)) return [];
@@ -69,15 +70,13 @@ export default function Chat() {
   useEffect(() => {
     let cancelled = false;
     async function loadProfile() {
-      if (!token || !userId) {
+      if (!IS_OFFLINE && (!token || !userId)) {
         setProfileInitial(null);
         return;
       }
       try {
-        const res = await fetch(`${API_BASE}/api/profile/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const json = await res.json();
+        const profileId = userId || 'guest';
+        const json = await api.getProfile(profileId, token);
         if (!cancelled) {
           setProfileInitial(json?.data || null);
         }
@@ -92,25 +91,19 @@ export default function Chat() {
   useEffect(() => {
     let cancelled = false;
     async function loadHistory() {
-      if (!userId || !token) {
+      if (!IS_OFFLINE && (!userId || !token)) {
         setHistory([]);
         setCompleted(false);
         return;
       }
       try {
         setHistoryError('');
-        const res = await fetch(`${API_BASE}/api/chat/history/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const json = await res.json();
+        const json = await api.getHistory(userId, token);
         if (!cancelled && json?.data?.length) {
           setHistory(json.data);
           const firstConv = json.data[0].conversation_id;
           setConversationId(firstConv);
-          const msgRes = await fetch(`${API_BASE}/api/chat/messages/${firstConv}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const msgJson = await msgRes.json();
+          const msgJson = await api.getMessages(firstConv, token);
           const rows = msgJson?.data || [];
           setMessages(rows.map((m) => ({
             id: m.id,
@@ -118,10 +111,7 @@ export default function Chat() {
             text: m.message
           })));
           setCurrentNode(null);
-          const recRes = await fetch(`${API_BASE}/api/chat/recommendations/${firstConv}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const recJson = await recRes.json();
+          const recJson = await api.getRecommendations(firstConv, token);
           const recs = normalizeRecommendations(recJson?.data || []);
           setRecommendations(recs);
           setCompleted(recs.length > 0);
@@ -136,24 +126,17 @@ export default function Chat() {
   }, [userId, token]);
 
   async function refreshHistory() {
-    if (!userId || !token) return;
-    const resHistory = await fetch(`${API_BASE}/api/chat/history/${userId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const jsonHistory = await resHistory.json();
+    if (!IS_OFFLINE && (!userId || !token)) return;
+    const jsonHistory = await api.getHistory(userId, token);
     setHistory(jsonHistory?.data || []);
   }
 
   async function renameConversation(conversationId, title) {
-    if (!token || !conversationId) return;
+    if (!conversationId) return;
+    if (!IS_OFFLINE && !token) return;
     const cleanTitle = String(title || '').trim();
     if (!cleanTitle) return;
-    const res = await fetch(`${API_BASE}/api/chat/conversation/${conversationId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ title: cleanTitle })
-    });
-    const json = await res.json();
+    const json = await api.renameConversation(conversationId, cleanTitle, token);
     if (json?.success) {
       setHistory((prev) => prev.map((h) => (
         h.conversation_id === conversationId ? { ...h, title: cleanTitle } : h
@@ -162,11 +145,9 @@ export default function Chat() {
   }
 
   async function deleteConversation(convId) {
-    if (!token || !convId) return;
-    await fetch(`${API_BASE}/api/chat/conversation/${convId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    if (!convId) return;
+    if (!IS_OFFLINE && !token) return;
+    await api.deleteConversation(convId, token);
     if (conversationId === convId) {
       setMessages([]);
       setRecommendations([]);
@@ -195,17 +176,10 @@ export default function Chat() {
         conversation_id: conversationId,
         message: text,
         current_node: currentNode,
-        request_more: options.requestMore || false
+        request_more: options.requestMore || false,
+        user_id: userId || null
       };
-      const res = await fetch(`${API_BASE}/api/chat/message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify(body)
-      });
-      const json = await res.json();
+      const json = await api.sendMessage(body, token);
       const data = json?.data || {};
 
       const botMessage = { id: `${Date.now()}-b`, sender: 'bot', text: data.bot_reply };
@@ -245,20 +219,15 @@ export default function Chat() {
   }
 
   async function saveProfile(payload) {
-    if (!token || !userId) return;
-    await fetch(`${API_BASE}/api/profile/${userId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(payload)
-    });
+    if (!IS_OFFLINE && (!token || !userId)) return;
+    const profileId = userId || 'guest';
+    await api.updateProfile(profileId, token, payload);
   }
 
   async function loadConversation(convId) {
-    if (!token || !convId) return;
-    const res = await fetch(`${API_BASE}/api/chat/messages/${convId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const json = await res.json();
+    if (!convId) return;
+    if (!IS_OFFLINE && !token) return;
+    const json = await api.getMessages(convId, token);
     const rows = json?.data || [];
     setConversationId(convId);
     setMessages(rows.map((m) => ({
@@ -266,10 +235,7 @@ export default function Chat() {
       sender: m.sender,
       text: m.message
     })));
-    const recRes = await fetch(`${API_BASE}/api/chat/recommendations/${convId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const recJson = await recRes.json();
+    const recJson = await api.getRecommendations(convId, token);
     const recs = normalizeRecommendations(recJson?.data || []);
     setRecommendations(recs);
     setCompleted(recs.length > 0);
@@ -309,6 +275,11 @@ export default function Chat() {
           </button>
         </div>
       </div>
+      {IS_OFFLINE && (
+        <div className="mb-3 rounded-lg border border-[#F2C5C5] bg-[#FFF5F5] px-3 py-2 text-sm text-[#B91C1C]">
+          Đang chạy chế độ demo offline. Một số tính năng sẽ được mô phỏng cục bộ.
+        </div>
+      )}
       {apiError && (
         <div className="mb-3 rounded-lg border border-[#F2C5C5] bg-[#FFF5F5] px-3 py-2 text-sm text-[#B91C1C]">
           {apiError}
@@ -322,11 +293,11 @@ export default function Chat() {
             <ProfileForm
               onSave={saveProfile}
               onUserTypeChange={setUserType}
-              canSave={!!token}
+              canSave={!!token || IS_OFFLINE}
               storageKey={userId ? `profileDraft:${userId}` : 'profileDraft:guest'}
               initialValues={profileInitial}
             />
-            {!token && (
+            {!token && !IS_OFFLINE && (
               <div className="text-xs text-[#5B5B57] mt-2">
                 Đăng nhập để lưu hồ sơ và lịch sử chat.
               </div>
@@ -335,15 +306,12 @@ export default function Chat() {
           <div className="mt-4 rounded-2xl border border-[#E8E2D8] bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-semibold">Lịch sử hội đáp</div>
-              {token && history.length > 0 && (
+              {(token || IS_OFFLINE) && history.length > 0 && (
                 <button
                   className="text-xs text-[#D64545]"
                   onClick={async () => {
-                    if (!token || !userId) return;
-                    await fetch(`${API_BASE}/api/chat/history/${userId}`, {
-                      method: 'DELETE',
-                      headers: { Authorization: `Bearer ${token}` }
-                    });
+                    if (!IS_OFFLINE && (!token || !userId)) return;
+                    await api.deleteHistory(userId, token);
                     setHistory([]);
                     setMessages([]);
                     setRecommendations([]);
@@ -358,9 +326,9 @@ export default function Chat() {
             </div>
             <div className="space-y-2 text-xs text-[#5B5B57]">
               {historyError && <div>{historyError}</div>}
-              {!token && <div>Đăng nhập để xem lịch sử.</div>}
-              {token && history.length === 0 && <div>Chưa có hội đáp.</div>}
-              {history.map((h) => (
+              {!token && !IS_OFFLINE && <div>Đăng nhập để xem lịch sử.</div>}
+              {(token || IS_OFFLINE) && history.length === 0 && <div>Chưa có hội đáp.</div>}
+              {(token || IS_OFFLINE) && history.map((h) => (
                 <div key={h.conversation_id} className="flex w-full items-center justify-between rounded-md border border-transparent hover:border-[#E2D8C8] px-2 py-1">
                   <div className="flex-1">
                     {editingId === h.conversation_id ? (

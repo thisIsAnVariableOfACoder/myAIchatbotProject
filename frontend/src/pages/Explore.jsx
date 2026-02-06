@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import JobCard from '../components/JobCard';
-import { API_BASE } from '../config';
+import { IS_OFFLINE } from '../config';
+import { api } from '../api';
 
 export default function Explore() {
   const [jobs, setJobs] = useState([]);
@@ -21,8 +22,7 @@ export default function Explore() {
     async function loadFilters() {
       try {
         setError('');
-        const res = await fetch(`${API_BASE}/api/explore/filters`);
-        const json = await res.json();
+        const json = await api.exploreFilters();
         if (cancelled) return;
         const data = json?.data || {};
         setCategories(data.categories || []);
@@ -56,8 +56,13 @@ export default function Explore() {
       params.set('limit', String(limit));
       params.set('offset', String(page * limit));
       try {
-        const res = await fetch(`${API_BASE}/api/explore/jobs?${params.toString()}`);
-        const json = await res.json();
+        const json = await api.exploreJobs({
+          q: query,
+          category,
+          tag,
+          limit,
+          offset: page * limit
+        });
         if (!cancelled) {
           const items = json?.data || [];
           setTotal(json?.total || 0);
@@ -81,6 +86,11 @@ export default function Explore() {
         <div className="text-2xl font-semibold">Explore Nghề Nghiệp</div>
         <div className="text-sm text-[#5B5B57]">Khám phá kho dữ liệu nghề nghiệp</div>
       </div>
+      {IS_OFFLINE && (
+        <div className="mb-3 rounded-lg border border-[#F2C5C5] bg-[#FFF5F5] px-3 py-2 text-sm text-[#B91C1C]">
+          Đang chạy chế độ demo offline. Dữ liệu nghề nghiệp được mô phỏng cục bộ.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.5fr_1fr_1fr_auto]">
         <input

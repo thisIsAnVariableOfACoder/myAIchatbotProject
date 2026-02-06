@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { API_BASE } from '../config';
+import { api } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -17,10 +17,7 @@ export function AuthProvider({ children }) {
         return;
       }
       try {
-        const res = await fetch(`${API_BASE}/api/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const json = await res.json();
+        const json = await api.me(token);
         if (!cancelled) {
           if (json?.success) {
             setUser(json?.data || null);

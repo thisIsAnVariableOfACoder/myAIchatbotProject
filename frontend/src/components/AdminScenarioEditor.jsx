@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE } from '../config';
+import { api } from '../api';
 
 export default function AdminScenarioEditor({ selected, onSaved }) {
   const { token } = useAuth();
@@ -40,13 +40,7 @@ export default function AdminScenarioEditor({ selected, onSaved }) {
       edges,
       is_active: isActive ? 1 : 0
     };
-    const url = selected ? `${API_BASE}/api/admin/scenario/${selected.id}` : `${API_BASE}/api/admin/scenario`;
-    const method = selected ? 'PUT' : 'POST';
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(payload)
-    });
+    await api.saveScenario(payload, token, selected?.id);
     if (onSaved) onSaved();
   }
 

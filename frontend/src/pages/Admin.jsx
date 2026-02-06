@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import AdminScenarioEditor from '../components/AdminScenarioEditor';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE } from '../config';
+import { IS_OFFLINE } from '../config';
+import { api } from '../api';
 
 export default function Admin() {
   const { user, token } = useAuth();
@@ -9,10 +10,7 @@ export default function Admin() {
   const [selected, setSelected] = useState(null);
 
   async function loadScenarios() {
-    const res = await fetch(`${API_BASE}/api/admin/scenarios`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const json = await res.json();
+    const json = await api.getScenarios(token);
     setScenarios(json?.data || []);
   }
 
@@ -21,10 +19,7 @@ export default function Admin() {
   }, [user]);
 
   async function handleDelete(id) {
-    await fetch(`${API_BASE}/api/admin/scenario/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    await api.deleteScenario(id, token);
     await loadScenarios();
     setSelected(null);
   }
@@ -34,6 +29,14 @@ export default function Admin() {
       <div className="rounded-2xl border border-[#E8E2D8] bg-white p-6 shadow-sm">
         <div className="text-lg font-semibold">Truy cập bị giới hạn</div>
         <div className="text-sm text-[#5B5B57] mt-2">Trang này chỉ dành cho tài khoản admin.</div>
+      </div>
+    );
+  }
+  if (IS_OFFLINE) {
+    return (
+      <div className="rounded-2xl border border-[#E8E2D8] bg-white p-6 shadow-sm">
+        <div className="text-lg font-semibold">Chế độ demo offline</div>
+        <div className="text-sm text-[#5B5B57] mt-2">Trang Admin cần kết nối backend để hoạt động.</div>
       </div>
     );
   }
