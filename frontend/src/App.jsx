@@ -11,6 +11,8 @@ import { applyTheme, getStoredTheme } from './theme';
 import Explore from './pages/Explore';
 
 export default function App() {
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  const routerBase = baseUrl === './' ? '/' : baseUrl;
   const [showSplash, setShowSplash] = useState(() => localStorage.getItem('showSplash') !== 'false');
   const [splashVisible, setSplashVisible] = useState(showSplash);
 
@@ -26,7 +28,7 @@ export default function App() {
   }, [showSplash]);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={routerBase}>
       <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_var(--c-accent-soft)_0,_var(--c-bg)_45%,_var(--c-bg)_100%)] text-[var(--c-text)]">
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 bg-white px-3 py-2 rounded shadow">
           Skip to main content
