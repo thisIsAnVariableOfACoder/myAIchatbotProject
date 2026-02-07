@@ -2704,19 +2704,6 @@ async function pickNextQuestion(state) {
   const pastBotMessages = history.filter(m => m.sender === 'bot').map(m => m.message);
   const conversationText = history.map(m => `${m.sender}: ${m.message}`).join('\n');
 
-  // Force exact first question ONLY if profile group is missing AND no history of asking
-  const hasAskedFirst = pastBotMessages.some(m => m.includes("học sinh") && m.includes("sinh viên") && m.includes("đi làm"));
-  const hasRole = profile.education_level && ['high_school', 'university', 'professional'].includes(profile.education_level);
-
-  if (!hasAskedFirst && !hasRole) {
-    state.lastQuestionText = "Trước tiên, mình cần biết bạn hiện là học sinh, sinh viên hay người đã đi làm nhé.";
-    return {
-      id: "ai_start",
-      text: state.lastQuestionText,
-      tags: ["orientation"]
-    };
-  }
-
   // Attempt LLM dynamic question ALWAYS
   const llmQ = await generateNextQuestionWithLLM(conversationText, profile, pastBotMessages);
   if (llmQ) {
@@ -3130,8 +3117,8 @@ async function generateNextQuestionWithLLM(conversationText, profile, pastBotMes
 
       YÊU CẦU KỸ THUẬT:
       1. Hãy tuân thủ tuyệt đối các bước và phong cách trong prompt trên.
-      2. QUAN TRỌNG: Bước 1 (hỏi vai trò) ĐÃ HOÀN THÀNH. Người dùng đã trả lời. 
-      3. Hãy thực hiện ngay Bước 2 hoặc Bước 3 dựa trên thông tin người dùng vừa cung cấp.
+      2. QUAN TRỌNG: Bước 1 (hỏi vai trò) ĐÃ CÓ TRONG HỒ SƠ (${profile.education_level}). 
+      3. Hãy thực hiện ngay BƯỚC 2 hoặc BƯỚC 3 phù hợp với hồ sơ trên.
       4. KHÔNG lặp lại câu hỏi: ${JSON.stringify(pastBotMessages.slice(-5))}
       5. Trả về DUY NHẤT một đối tượng JSON:
       {
