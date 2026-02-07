@@ -2920,47 +2920,43 @@ export const offlineApi = {
 
     // Map category to icon
     const getIcon = (cat) => {
-      const lower = normalizeText(cat || '').toLowerCase();
-      console.log('DEBUG ICON:', cat, '->', lower);
-      // Explicit English Mapping (High Priority)
-      if (lower.includes('technology') || lower.includes('data') || lower.includes('it')) return 'tech.svg';
-      if (lower.includes('education')) return 'education.svg';
-      if (lower.includes('health') || lower.includes('medical') || lower.includes('doctor')) return 'health.svg';
-      if (lower.includes('business') || lower.includes('finance') || lower.includes('marketing') || lower.includes('sales')) return 'business.svg';
-      if (lower.includes('creative') || lower.includes('design') || lower.includes('art') || lower.includes('media')) return 'creative.svg';
-      if (lower.includes('science')) return 'science.svg';
-      if (lower.includes('security')) return 'security.svg';
-      if (lower.includes('service') || lower.includes('beauty') || lower.includes('retail')) return 'service.svg';
-      if (lower.includes('hospitality') || lower.includes('hotel') || lower.includes('tourism')) return 'hospitality.svg';
-      if (lower.includes('transport') || lower.includes('logistics')) return 'transport.svg';
-      if (lower.includes('construction') || lower.includes('architecture')) return 'construction.svg';
-      if (lower.includes('agriculture') || lower.includes('farming') || lower.includes('agri')) return 'agri.svg';
-      if (lower.includes('management') || lower.includes('manager')) return 'management.svg';
-      if (lower.includes('legal') || lower.includes('law')) return 'legal.svg';
-      if (lower.includes('admin') || lower.includes('government') || lower.includes('office')) return 'admin.svg';
-      if (lower.includes('community') || lower.includes('social') || lower.includes('sports')) return 'community.svg';
-      if (lower.includes('engineering') || lower.includes('industry') || lower.includes('technical') || lower.includes('trades')) return 'engineering.svg';
+      const key = normalizeText(cat || '').toLowerCase().trim();
+      
+      const MAPPING = {
+        'agriculture': 'agri.svg',
+        'beauty': 'service.svg',
+        'business': 'business.svg',
+        'construction': 'construction.svg',
+        'data': 'tech.svg',
+        'design': 'creative.svg',
+        'education': 'education.svg',
+        'engineering': 'engineering.svg',
+        'finance': 'business.svg',
+        'government': 'admin.svg',
+        'healthcare': 'health.svg',
+        'health': 'health.svg',
+        'hospitality': 'hospitality.svg',
+        'legal': 'legal.svg',
+        'logistics': 'transport.svg',
+        'marketing': 'business.svg',
+        'media': 'creative.svg',
+        'realestate': 'business.svg',
+        'retail': 'service.svg',
+        'science': 'science.svg',
+        'sports': 'community.svg',
+        'technology': 'tech.svg',
+        'tech': 'tech.svg',
+        'trades': 'engineering.svg',
+        'transportation': 'transport.svg',
+        'transport': 'transport.svg',
+        'security': 'security.svg',
+        'service': 'service.svg',
+        'management': 'management.svg',
+        'community': 'community.svg',
+        'admin': 'admin.svg'
+      };
 
-      // Vietnamese Mapping (Fallback)
-      if (lower.includes('cong nghe')) return 'tech.svg';
-      if (lower.includes('giao duc')) return 'education.svg';
-      if (lower.includes('y te') || lower.includes('bac si')) return 'health.svg';
-      if (lower.includes('kinh doanh')) return 'business.svg';
-      if (lower.includes('nghe thuat') || lower.includes('thiet ke')) return 'creative.svg';
-      if (lower.includes('khoa hoc')) return 'science.svg';
-      if (lower.includes('an ninh')) return 'security.svg';
-      if (lower.includes('dich vu')) return 'service.svg';
-      if (lower.includes('du lich')) return 'hospitality.svg';
-      if (lower.includes('van tai')) return 'transport.svg';
-      if (lower.includes('xay dung')) return 'construction.svg';
-      if (lower.includes('nong nghiep')) return 'agri.svg';
-      if (lower.includes('quan ly')) return 'management.svg';
-      if (lower.includes('luat')) return 'legal.svg';
-      if (lower.includes('hanh chinh')) return 'admin.svg';
-      if (lower.includes('cong dong')) return 'community.svg';
-      if (lower.includes('ky thuat') || lower.includes('co khi')) return 'engineering.svg';
-
-      return 'default.svg';
+      return MAPPING[key] || 'default.svg';
     };
 
     const query = normalizeText(String(q || ''));
