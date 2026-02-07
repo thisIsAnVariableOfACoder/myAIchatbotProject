@@ -28,22 +28,31 @@ function getConversationState(conversationId, userType = 'high_school') {
 function getNextQuestion(conversationId, userType) {
   const state = getConversationState(conversationId, userType);
 
-  // Initial mode: ask 5-7 broad questions
-  if (state.answers.length >= 7) {
+  // Initial mode: ask 20-30 broad questions
+  if (state.answers.length >= 25) {
     return null; // Done with initial questions
   }
 
   // Get broad questions from different categories
-  const categories = ['skill', 'interest', 'scenario'];
+  const categories = ['skill', 'interest', 'scenario', 'workstyle'];
   const targetCategory = categories[state.answers.length % categories.length];
 
   const availableQuestions = ALL_QUESTIONS.filter(q =>
     q.category === targetCategory &&
-    !state.asked Questions.has(q.id)
+    !state.askedQuestions.has(q.id)
   );
 
   if (availableQuestions.length === 0) {
-    return null;
+    // Fallback to any category if no questions in target category
+    const anyAvailable = ALL_QUESTIONS.filter(q => !state.askedQuestions.has(q.id));
+    if (anyAvailable.length === 0) return null;
+    const question = anyAvailable[0];
+    return {
+      id: question.id,
+      text: question.text,
+      type: 'yes_no_maybe',
+      options: ['Có', 'Có thể', 'Không']
+    };
   }
 
   // Return first available question
@@ -200,25 +209,39 @@ function getCareerRecommendations(conversationId) {
   // Combine initial and refinement answers
   const allAnswers = [...state.answers, ...state.refinementAnswers];
 
-  if (allAnswers.length < 3) {
-    throw new Error('Need at least 3 answers to generate recommendations');
+  if (allAnswers.length < 10) {
+    throw new Error(`Need at least 10 answers to generate recommendations (current: ${allAnswers.length})`);
   }
 
   // Calculate scores
   const scores = calculateCareerScoresFromAnswers(allAnswers);
 
-  // Rank and normalize
-  const sortedCareers = Object.entries(scores)
+  // Filter out careers with very low scores (minimum threshold)
+  const minScoreThreshold = Math.max(...Object.values(scores)) * 0.1; // 10% of max score
+  const filteredScores = Object.entries(scores)
+    .filter(([, score]) => score >= minScoreThreshold)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10);
 
-  const totalScore = sortedCareers.reduce((sum, [, score]) => sum + score, 0);
+  if (filteredScores.length === 0) {
+    throw new Error('No careers match your profile');
+  }
 
-  const recommendations = sortedCareers.map(([career, score]) => ({
+  // Softmax normalization for smoother probability distribution
+  const maxScore = filteredScores[0][1];
+  const expScores = filteredScores.map(([career, score]) => [
+    career,
+    Math.exp((score - maxScore) / 50) // Temperature parameter = 50
+  ]);
+
+  const sumExp = expScores.reduce((sum, [, exp]) => sum + exp, 0);
+
+  const recommendations = expScores.map(([career, exp], index) => ({
     career_name: career,
-    match_score: score,
-    probability: totalScore > 0 ? (score / totalScore) : 0.1,
-    confidence: score > 100 ? 'high' : score > 50 ? 'medium' : 'low',
+    match_score: Math.round(filteredScores[index][1]),
+    probability: exp / sumExp,
+    confidence: filteredScores[index][1] > 150 ? 'high' :
+      filteredScores[index][1] > 75 ? 'medium' : 'low',
     reasons: generateReasons(career, allAnswers)
   }));
 
@@ -226,7 +249,7 @@ function getCareerRecommendations(conversationId) {
     recommendations,
     totalAnswers: allAnswers.length,
     mode: state.mode,
-    canRefine: state.mode === 'initial' && allAnswers.length >= 5
+    canRefine: state.mode === 'initial' && allAnswers.length >= 20
   };
 }
 
