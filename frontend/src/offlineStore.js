@@ -2961,10 +2961,8 @@ export const offlineApi = {
 
     const query = normalizeText(String(q || ''));
 
-    // Determine image base path absolutely to avoid double-path issues
-    const imgPrefix = window.location.hostname.includes('github.io')
-      ? '/myAIchatbotProject/career-icons/'
-      : '/career-icons/';
+    // Simplified path per user request to avoid duplication
+    const imgPrefix = 'career-icons/';
 
     let list = CAREERS.map((c, idx) => ({
       id: idx + 1,
