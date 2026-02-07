@@ -78,7 +78,7 @@ const CAREER_LIBRARY = {
     'Investment Banker', 'Equity Research Analyst', 'Actuary', 'Risk Manager'
   ],
   Education: [
-    'Giáo viên Toán', 'Giáo viên Văn', 'Giáo viên Tiếng Anh', 'Giáo viên Lịch sử', 'Giáo viên Địa lý', 'Giáo viên Sinh học', 'Giáo viên Hóa học', 'Giáo viên Vật lý', 'Giáo viên Tin học', 'Giáo viên Giáo dục công dân', 'Giáo viên Mầm non', 'Giáo viên Tiểu học', 'Giáo viên Trung học', 'Giáo viên Nghệ thuật', 'Giáo viên Âm nhạc', 'Giáo viên Thể dục', 'Giáo viên Kỹ năng sống', 'Giảng viên Đại học', 'Giảng viên Cao đẳng', 'Giảng viên Trung cấp', 'Giáo viên Đào tạo nghề', 'Giáo viên Giáo dục đặc biệt', 'Giáo viên Giáo dục quốc tế', 'Giáo viên Giáo dục hướng nghiệp'
+    'Giáo viên Toán', 'Giáo viên Văn', 'Giáo viên Tiếng Anh', 'Giáo viên Lịch sử', 'Giáo viên Địa lý', 'Giáo viên Sinh học', 'Giáo viên Hóa học', 'Giáo viên Vật lý', 'Giáo viên Tin học', 'Giáo viên Giáo dục công dân', 'Giáo viên Nghệ thuật', 'Giáo viên Âm nhạc', 'Giáo viên Thể dục', 'Giáo viên Kỹ năng sống', 'Giảng viên Đại học', 'Giảng viên Cao đẳng', 'Giảng viên Trung cấp', 'Giáo viên Giáo dục đặc biệt', 'Giáo viên Giáo dục quốc tế', 'Giáo viên Giáo dục hướng nghiệp'
   ],
   Healthcare: [
     'Nurse', 'Pharmacist', 'Lab Technician', 'Medical Assistant',

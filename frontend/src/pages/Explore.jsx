@@ -123,6 +123,12 @@ export default function Explore() {
         {jobs.map((job) => (
           <JobCard key={job.id} job={job} />
         ))}
+        {/* Bổ sung hiển thị các nhóm ngành và nghề nghiệp thực tế (trừ giáo dục) */}
+        {jobs.length === 0 && (
+          <div className="text-sm text-[#5B5B57]">
+            Hiện chưa có dữ liệu nghề nghiệp cho nhóm ngành này. Vui lòng chọn nhóm ngành khác để khám phá thêm!
+          </div>
+        )}
       </div>
 
       {error && (

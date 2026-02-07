@@ -140,31 +140,12 @@ router.post('/message', optionalAuth, async (req, res) => {
       });
     }
 
-    let nextQuestion = getNextQuestion(state, { force: wantsMore });
-    let finished = false;
-    let recommendations = [];
-    let answersText = buildAnswersText(state, message);
-    const profile = await getProfile(userId);
-    const mergedProfile = buildProfileFromState(profile, state, effectiveUserType);
-    // Lặp hỏi thêm cho đến khi xác suất nghề nghiệp đủ rõ ràng (ví dụ: nghề top 1 > 40% và chênh lệch với top 2 > 15%)
-    while (!nextQuestion && !finished) {
-      recommendations = await matchCareerAsync(mergedProfile, {
-        message,
-        answers: state.answers,
-        answersText,
-        tags: state.tags
-      });
-      if (isLlmEnabled()) {
-        const candidates = recommendations.map((r) => r.career_name);
-        const llmScores = await scoreCareersWithLLM({ profile: mergedProfile, answersText, candidates });
-        recommendations = mergeScores(recommendations, llmScores);
-      }
-      const sorted = recommendations.sort((a, b) => b.probability - a.probability);
-      if (sorted.length > 1 && sorted[0].probability > 0.4 && (sorted[0].probability - sorted[1].probability) > 0.15) {
-        finished = true;
-        break;
-      }
-      // Nếu chưa đủ rõ ràng, hỏi thêm câu hỏi
+    // Nếu người dùng báo chưa hài lòng, reset xác suất và hỏi lại từ đầu
+    if (wantsMore) {
+      state.answers = [];
+      state.tags = [];
+      state.node_id = null;
+      state.recommendations = [];
       nextQuestion = getNextQuestion(state, { force: true });
       if (nextQuestion) {
         if (userId) {
@@ -181,24 +162,7 @@ router.post('/message', optionalAuth, async (req, res) => {
         });
       }
     }
-    // Nếu đã đủ xác suất rõ ràng hoặc hết câu hỏi
-    if (finished || !nextQuestion) {
-      if (userId) {
-        await saveMessage(convId, userId, 'bot', 'Tôi đã gợi ý nghề nghiệp phù hợp cho bạn.', null);
-        await saveRecommendations(convId, userId, recommendations);
-        await logEvent('conversation_completed', userId, { conversation_id: convId });
-      }
-      return res.json({
-        success: true,
-        data: {
-          bot_reply: 'Đây là gợi ý nghề nghiệp phù hợp:',
-          recommendations,
-          next_node: null,
-          completed: true,
-          conversation_id: convId
-        }
-      });
-    }
+    // ...existing code...
   } catch (error) {
     console.error('Chat error:', error);
     res.status(500).json({ success: false, error: error.message });
