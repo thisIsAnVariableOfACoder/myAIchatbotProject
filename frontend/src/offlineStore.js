@@ -2982,20 +2982,25 @@ async function getFinalAIResultsPure(conversationText, profile) {
       Hồ sơ: ${JSON.stringify(profile)}
       Hội thoại: ${conversationText}
 
+      QUY TẮC CHẤM ĐIỂM QUAN TRỌNG:
+      1. Nếu người dùng trả lời "Không", "Không thích", hoặc thể hiện thái độ tiêu cực với hầu hết các gợi ý, bạn PHẢI đưa ra điểm match_score THẤP (thậm chí 0-20%).
+      2. Tuyệt đối KHÔNG tự động làm tròn lên điểm cao nếu người dùng không hào hứng.
+      3. Điểm số phải phản ánh TRUNG THỰC mức độ tương thích.
+
       NHIỆM VỤ:
       1. Phân tích sâu sắc tính cách, thiên hướng và tiềm năng của người dùng.
-      2. Đề xuất 5 nghề nghiệp phù hợp NHẤT (không giới hạn trong database, hãy dùng kiến thức thực tế toàn cầu).
+      2. Đề xuất 5 nghề nghiệp phù hợp nhất (nếu họ ghét tất cả, hãy tìm những nghề trái ngược hoặc giải thích tại sao họ chưa tìm thấy đam mê).
       3. Với mỗi nghề, hãy cho biết:
          - Tên nghề nghiệp.
-         - Phần trăm phù hợp (match_score) từ 60-98.
-         - 3 lý do cụ thể tại sao hợp.
-      4. Viết một bài đánh giá tổng quan (roadmap) truyền cảm hứng, giải thích logic đằng sau các lựa chọn này.
+         - Phần trăm phù hợp (match_score) từ 0-95.
+         - 3 lý do cụ thể (hoặc cảnh báo tại sao điểm lại thấp).
+      4. Viết một bài đánh giá tổng quan (roadmap) trung thực, không tô hồng.
 
       TRẢ VỀ DUY NHẤT JSON THEO CẤU TRÚC:
       {
-        "summary": "đoạn văn tóm tắt đánh giá thế mạnh và lời khuyên",
+        "summary": "đoạn văn tóm tắt đánh giá trung thực",
         "recommendations": [
-          { "career_name": "...", "match_score": 95, "reasons": ["...", "...", "..."] },
+          { "career_name": "...", "match_score": 15, "reasons": ["...", "...", "..."] },
           ...
         ]
       }
