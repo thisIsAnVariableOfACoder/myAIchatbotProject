@@ -2921,7 +2921,7 @@ export const offlineApi = {
     // Map category to icon
     const getIcon = (cat) => {
       const key = normalizeText(cat || '').toLowerCase().trim();
-      
+
       const MAPPING = {
         'agriculture': 'agri.svg',
         'beauty': 'service.svg',
@@ -2965,7 +2965,7 @@ export const offlineApi = {
       title: c.name,
       category: c.category,
       tags: c.tags,
-      image_url: `${basePath}/career-icons/${getIcon(c.category)}`
+      image_url: `./career-icons/${getIcon(c.category)}`
     }));
     if (query) {
       list = list.filter((j) => {
