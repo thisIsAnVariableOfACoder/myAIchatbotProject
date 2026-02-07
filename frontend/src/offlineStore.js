@@ -2698,6 +2698,40 @@ function deriveTags(text) {
 }
 
 function pickNextQuestion(state) {
+  const profile = state.userProfile || {};
+  const userType = profile.education_level || 'high_school';
+
+  // High School: Focus on subjects first
+  if (userType === 'high_school') {
+    // If we haven't asked enough subject questions (e.g., first 5 questions)
+    if (state.answers.length < 5) {
+      // Pick a random subject question we haven't asked clearly yet
+      // This is a simplified logic; ideally we should track asked questions better
+      const subjectIndex = state.answers.length % SUBJECTS.length;
+      const subj = SUBJECTS[subjectIndex];
+      const template = SUBJECT_TEMPLATES[state.answers.length % SUBJECT_TEMPLATES.length];
+      // Create a dynamic question object
+      return {
+        id: `subj_${subj.key}_${Date.now()}`,
+        text: template(subj.label, SUBJECT_TOPICS[subj.key][0]), // Pick first topic for simplicity or random
+        tags: [subj.tag, 'education']
+      };
+    }
+  }
+
+  // University/Professional: Focus on groups/industries
+  if (userType === 'university' || userType === 'professional') {
+    if (state.answers.length < 4) {
+      const groupIndex = state.answers.length % GROUP_BLUEPRINTS.length;
+      const group = GROUP_BLUEPRINTS[groupIndex];
+      return {
+        id: `group_${group.tag}_${Date.now()}`,
+        text: `Bạn có hứng thú với lĩnh vực ${group.label} (${group.keywords.slice(0, 2).join(', ')}) không?`,
+        tags: [group.tag, 'career_group']
+      };
+    }
+  }
+
   const focusTag = state.focusTag;
   const focusType = state.focusType;
   let focusPool = null;
@@ -2739,23 +2773,46 @@ function buildReasons(career, tags, focusTag) {
 }
 
 function scoreCareers(state) {
+  const profile = state.userProfile || {};
+  const userType = profile.education_level || 'high_school';
   const tags = state.tags || {};
   const focusTag = state.focusTag;
   const answersText = normalizeText(state.answers.join(' '));
+
   const scored = CAREERS.map((career) => {
     let score = 30;
+
+    // Core tag matching
     for (const tag of career.tags) {
       const weight = tags[tag] || 0;
       if (weight) score += 12 * weight;
       if (answersText.includes(normalizeText(tag))) score += 4;
     }
+
+    // Focus tag bonus
     if (focusTag && career.tags.includes(focusTag)) {
       score += 25 + (tags[focusTag] || 0) * 3;
     }
+
+    // Profile-based weighting
+    if (userType === 'professional') {
+      // Professionals might favor management/leadership roles if applicable
+      if (career.tags.includes('management') || career.tags.includes('leadership')) {
+        score += 15;
+      }
+      // Penalize entry-level sounding roles if needed, or just boost seniority
+    } else if (userType === 'high_school') {
+      // Boost academic/subject aligned roles
+      if (career.tags.some(t => ['math', 'physics', 'chemistry', 'biology', 'literature'].includes(t))) {
+        score += 10;
+      }
+    }
+
     const noise = (hashCode(career.name + answersText) % 11);
     score += noise;
     return { career_name: career.name, match_score: score, reasons: buildReasons(career, tags, focusTag) };
   });
+
   scored.sort((a, b) => b.match_score - a.match_score);
   const top = scored.slice(0, 10);
   const max = top[0]?.match_score || 1;
@@ -2812,7 +2869,7 @@ export const offlineApi = {
     saveProfiles(profiles);
     return { success: true, data: { updated: true } };
   },
-  sendMessage({ conversation_id, message, user_id, request_more }) {
+  sendMessage({ conversation_id, message, user_id, request_more, profile }) {
     const convId = conversation_id || `conv_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     ensureConversation(convId, user_id || null, message);
     const messages = getMessages(convId);
@@ -2820,6 +2877,9 @@ export const offlineApi = {
     saveMessages(convId, messages);
 
     const state = getState(convId);
+    if (profile) {
+      state.userProfile = profile; // Store profile in state
+    }
     if (message) {
       state.answers.push(message);
       const tone = detectAnswerTone(message);

@@ -408,10 +408,12 @@ export default function Chat() {
             <ChatWindow
               messages={messages}
               loading={loading}
-              onSend={sendMessage}
+              onSend={(text) => sendMessage(text, { profile: profileInitial })}
               showHelloHint={!helloSent}
               showFollowUp={completed && recommendations.length > 0}
               onFollowUp={requestMoreQuestions}
+              disabled={!profileInitial?.education_level}
+              placeholder={!profileInitial?.education_level ? "Vui lòng điền hồ sơ bên trái để bắt đầu..." : "Nhập tin nhắn..."}
             />
           </div>
           <div className="mt-4 rounded-2xl border border-[#E8E2D8] bg-white p-4 shadow-sm animate-rise" style={{ animationDelay: '100ms' }}>
@@ -439,7 +441,7 @@ export default function Chat() {
               </div>
             )}
 
-            
+
             {bestCareer && (
               <div className="mb-3 rounded-lg border border-[#E8E2D8] bg-[#FFF8F0] px-3 py-2 text-sm font-semibold">
                 Nghề phù hợp nhất: {bestCareer.career_name} ({Number(bestCareer.match_score || 0).toFixed(1)}%)

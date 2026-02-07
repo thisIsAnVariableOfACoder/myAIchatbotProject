@@ -1,8 +1,18 @@
+```
 // FILE: frontend/src/components/ChatWindow.jsx
 import { useEffect, useRef, useState } from 'react';
 import MessageBubble from './MessageBubble';
 
-export default function ChatWindow({ messages, onSend, loading, showHelloHint = true, showFollowUp = false, onFollowUp }) {
+export default function ChatWindow({
+  messages,
+  onSend,
+  loading,
+  showHelloHint = true,
+  showFollowUp = false,
+  onFollowUp,
+  disabled = false,
+  placeholder = "Nhập tin nhắn..."
+}) {
   const [input, setInput] = useState('');
   const listRef = useRef(null);
 
@@ -70,8 +80,8 @@ export default function ChatWindow({ messages, onSend, loading, showHelloHint = 
             <input
               id="chat-input"
               aria-label="Nhập tin nhắn cho chatbot"
-              className="flex-1 rounded-xl border border-[#E2D8C8] px-3 py-2 outline-none transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:shadow-[0_0_0_3px_rgba(34,211,238,0.35)] focus:scale-[1.01]"
-              placeholder="Nhập câu trả lời của bạn..."
+              className="flex-1 rounded-xl border border-[#E2D8C8] px-3 py-2 outline-none transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:shadow-[0_0_0_3px_rgba(34,211,238,0.35)] focus:scale-[1.01] disabled:bg-[#f3f4f6] disabled:text-[#9ca3af] disabled:cursor-not-allowed"
+              placeholder={placeholder}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -84,12 +94,12 @@ export default function ChatWindow({ messages, onSend, loading, showHelloHint = 
               autoCorrect="off"
               autoCapitalize="off"
               spellCheck={false}
-              disabled={loading}
+              disabled={loading || disabled}
             />
             <button
               type="submit"
-              className="px-4 py-2 rounded-xl bg-[var(--c-primary)] text-white hover:opacity-90 transition"
-              disabled={loading}
+              className="px-4 py-2 rounded-xl bg-[var(--c-primary)] text-white hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || disabled}
             >
               Gửi
             </button>
