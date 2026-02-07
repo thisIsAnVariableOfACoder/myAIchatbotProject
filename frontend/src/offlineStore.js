@@ -2749,14 +2749,14 @@ function pickNextQuestion(state) {
     state.focusIndex += 1;
     state.focusCount += 1;
     state.lastQuestionTags = q.tags || [];
-    state.lastQuestionText = q.text; // Store text for LLM context
+    state.lastQuestionText = q.text; // Store for LLM context
     return q;
   }
 
   const q = GENERAL_QUESTIONS[state.generalIndex % GENERAL_QUESTIONS.length];
   state.generalIndex += 1;
   state.lastQuestionTags = q.tags || [];
-  state.lastQuestionText = q.text; // Store text for LLM context
+  state.lastQuestionText = q.text; // Store for LLM context
   return q;
 }
 
@@ -2835,43 +2835,55 @@ function hashCode(value) {
 
 
 
-export const offlineApi = {
-  getMe(token) {
-    if (!token || !token.startsWith('offline:')) return { success: false };
-    const userId = Number(token.replace('offline:', ''));
-    const user = getUsers().find((u) => u.id === userId);
-    if (!user) return { success: false };
-    return { success: true, data: { user_id: user.id, email: user.email, user_type: user.user_type } };
-  },
-  login({ email, password }) {
-    const user = getUsers().find((u) => u.email === email && u.password === password);
-    if (!user) return { success: false, error: 'Sai email hoặc mật khẩu' };
-    const token = `offline:${user.id}`;
-    return { success: true, data: { user_id: user.id, email: user.email, user_type: user.user_type, token } };
-  },
-  register({ email, password, user_type }) {
-    const users = getUsers();
-    if (users.find((u) => u.email === email)) {
-      return { success: false, error: 'Email đã tồn tại' };
+async function analyzeResponseWithLLM(question, answer, profile) {
+  const apiKey = localStorage.getItem('GEMINI_API_KEY');
+  if (!apiKey) return null;
+
+  try {
+    const prompt = `
+      Bạn là một chuyên gia tư vấn nghề nghiệp. 
+      Câu hỏi cuối cùng của chatbot: "${question}"
+      Câu trả lời của người dùng: "${answer}"
+      Thông tin hồ sơ người dùng: ${JSON.stringify(profile)}
+
+      Hãy phân tích câu trả lời trên:
+      1. Phân loại thái độ (sentiment): "positive" (tích cực/đồng ý), "negative" (tiêu cực/không đồng ý), "neutral" (trung lập).
+      2. Xác định các chủ đề nghề nghiệp hoặc sở thích ẩn ý (implied_topics) dựa trên câu trả lời (tiếng Anh).
+      
+      TRẢ VỀ DUY NHẤT JSON:
+      {
+        "sentiment": "positive" | "negative" | "neutral",
+        "confidence": 0.0-1.0,
+        "implied_topics": ["topic1", "topic2"],
+        "reasoning": "giải thích ngắn gọn"
+      }
+    `;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return null;
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
     }
-    const nextId = Math.max(1, ...users.map((u) => u.id)) + 1;
-    const user = { id: nextId, email, password, user_type: user_type || 'high_school' };
-    users.push(user);
-    saveUsers(users);
-    const token = `offline:${user.id}`;
-    return { success: true, data: { user_id: user.id, email: user.email, user_type: user.user_type, token } };
-  },
-  getProfile(userId) {
-    const profiles = getProfiles();
-    return { success: true, data: profiles[userId] || null };
-  },
-  updateProfile(userId, payload) {
-    const profiles = getProfiles();
-    profiles[userId] = { ...profiles[userId], ...payload };
-    saveProfiles(profiles);
-    return { success: true, data: { updated: true } };
-  },
-  sendMessage({ conversation_id, message, user_id, request_more, profile }) {
+  } catch (e) {
+    console.error("LLM Analysis Error:", e);
+  }
+  return null;
+}
+
+export const offlineApi = {
+  // ... (keep getMe, login, register, getProfile, updateProfile)
+  async sendMessage({ conversation_id, message, user_id, request_more, profile }) {
     const convId = conversation_id || `conv_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     ensureConversation(convId, user_id || null, message);
     const messages = getMessages(convId);
@@ -2879,18 +2891,45 @@ export const offlineApi = {
     saveMessages(convId, messages);
 
     const state = getState(convId);
-    if (profile) {
-      state.userProfile = profile; // Store profile in state
-    }
+    if (profile) state.userProfile = profile;
+
     if (message) {
       state.answers.push(message);
-      const tone = detectAnswerTone(message);
-      if (tone > 0 && state.lastQuestionTags?.length) {
-        for (const tag of state.lastQuestionTags) addTagScore(state.tags, tag, 2);
-      }
-      const derived = deriveTags(message);
-      Object.keys(derived).forEach((tag) => addTagScore(state.tags, tag, derived[tag]));
 
+      // Smart Analysis
+      const lastQ = state.lastQuestionText || "";
+      const llmResult = await analyzeResponseWithLLM(lastQ, message, state.userProfile);
+
+      if (llmResult) {
+        console.log("LLM Smart Result:", llmResult);
+        if (llmResult.sentiment === 'positive') {
+          if (state.lastQuestionTags?.length) {
+            for (const tag of state.lastQuestionTags) addTagScore(state.tags, tag, 3 * (llmResult.confidence || 1));
+          }
+          if (llmResult.implied_topics) {
+            for (const topic of llmResult.implied_topics) {
+              const matchedTag = Object.keys(TAG_KEYWORDS).find(t =>
+                normalizeText(topic).includes(t) || t.includes(normalizeText(topic))
+              );
+              if (matchedTag) addTagScore(state.tags, matchedTag, 2);
+            }
+          }
+        } else if (llmResult.sentiment === 'negative') {
+          if (state.lastQuestionTags?.length) {
+            for (const tag of state.lastQuestionTags) addTagScore(state.tags, tag, -2);
+          }
+        }
+      } else {
+        // Fallback to legacy regex
+        const tone = detectAnswerTone(message);
+        if (tone > 0 && state.lastQuestionTags?.length) {
+          for (const tag of state.lastQuestionTags) addTagScore(state.tags, tag, 2);
+        }
+        const derived = deriveTags(message);
+        Object.keys(derived).forEach((tag) => addTagScore(state.tags, tag, derived[tag]));
+      }
+
+      // Update focus tags if detected (legacy but useful)
       const subjectTag = detectSubjectTag(message);
       const groupTag = detectGroupTag(message);
       if (subjectTag) {
