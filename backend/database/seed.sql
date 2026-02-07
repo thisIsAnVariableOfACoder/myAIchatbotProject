@@ -115,7 +115,6 @@ INSERT INTO chat_messages (conversation_id, user_id, sender, message, node_id) V
 ('conv_010', 14, 'bot', 'Bạn muốn làm marketing hay content?', 'node_1'),
 ('conv_010', 14, 'user', 'Content', 'node_1');
 
--- Sample scenarios
 INSERT INTO scenarios (name, target_user_type, nodes, edges, is_active) VALUES
 ('High School Career Discovery', 'high_school',
  '[{"id":"node_1","question":"Bạn đang học lớp mấy?","options":["10","11","12"],"type":"choice"},{"id":"node_2","question":"Bạn thích môn học nào nhất?","options":["Toán","Văn","Anh","Tin"],"type":"choice"},{"id":"node_3","question":"Bạn có thích làm việc với máy tính không?","options":["Có","Không","Chưa chắc"],"type":"choice"},{"id":"node_4","question":"Bạn thích giải quyết vấn đề hay sáng tạo?","options":["Giải quyết","Sáng tạo","Cả hai"],"type":"choice"}]',
@@ -137,7 +136,38 @@ INSERT INTO scenarios (name, target_user_type, nodes, edges, is_active) VALUES
 -- Sample scenario nodes
 INSERT INTO scenario_nodes (scenario_id, node_id, question, answer_type, options, weight) VALUES
 (1, 'node_1', 'Bạn đang học lớp mấy?', 'multiple_choice', '["10","11","12"]', 1.0),
-(1, 'node_2', 'Bạn thích môn học nào nhất?', 'multiple_choice', '["Toán","Văn","Anh","Tin"]', 1.0),
+-- Bổ sung nhiều nghề nghiệp mới cho từng nhóm ngành
+INSERT INTO careers (name, category, required_skills, salary_range, job_outlook, description) VALUES
+('Software Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Software Engineer thuoc nhom Technology'),
+('Frontend Developer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Frontend Developer thuoc nhom Technology'),
+('Backend Developer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Backend Developer thuoc nhom Technology'),
+('Full Stack Developer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Full Stack Developer thuoc nhom Technology'),
+('Mobile Developer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Mobile Developer thuoc nhom Technology'),
+('Game Developer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Game Developer thuoc nhom Technology'),
+('QA Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'QA Engineer thuoc nhom Technology'),
+('DevOps Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'DevOps Engineer thuoc nhom Technology'),
+('Cloud Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Cloud Engineer thuoc nhom Technology'),
+('Network Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Network Engineer thuoc nhom Technology'),
+('Cybersecurity Analyst', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Cybersecurity Analyst thuoc nhom Technology'),
+('AI Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'AI Engineer thuoc nhom Technology'),
+('Embedded Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Embedded Engineer thuoc nhom Technology'),
+('Systems Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Systems Engineer thuoc nhom Technology'),
+('Site Reliability Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Site Reliability Engineer thuoc nhom Technology'),
+('IT Support', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'IT Support thuoc nhom Technology'),
+('IT Administrator', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'IT Administrator thuoc nhom Technology'),
+('Database Administrator', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Database Administrator thuoc nhom Technology'),
+('Security Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Security Engineer thuoc nhom Technology'),
+('Automation Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Automation Engineer thuoc nhom Technology'),
+('AI Researcher', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'AI Researcher thuoc nhom Technology'),
+('MLOps Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'MLOps Engineer thuoc nhom Technology'),
+('AR/VR Developer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'AR/VR Developer thuoc nhom Technology'),
+('Blockchain Developer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Blockchain Developer thuoc nhom Technology'),
+('Solutions Architect', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Solutions Architect thuoc nhom Technology'),
+('Platform Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Platform Engineer thuoc nhom Technology'),
+('DevSecOps Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'DevSecOps Engineer thuoc nhom Technology'),
+('Product Security Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Product Security Engineer thuoc nhom Technology'),
+('Systems Administrator', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Systems Administrator thuoc nhom Technology'),
+('Technical Support Engineer', 'Technology', '["coding","problem_solving","sql"]', 'Thoa thuan', 'good', 'Technical Support Engineer thuoc nhom Technology');
 (1, 'node_3', 'Bạn có thích làm việc với máy tính không?', 'multiple_choice', '["Có","Không","Chưa chắc"]', 1.2),
 (1, 'node_4', 'Bạn thích giải quyết vấn đề hay sáng tạo?', 'multiple_choice', '["Giải quyết","Sáng tạo","Cả hai"]', 1.0),
 (1, 'node_5', 'Bạn ưu tiên ổn định hay thử thách?', 'multiple_choice', '["Ổn định","Thử thách","Cân bằng"]', 1.1),

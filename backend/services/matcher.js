@@ -261,12 +261,15 @@ function matchCareer(profile, answers) {
     scores[career.name] = Math.min(score, 100);
   });
 
+  // Chuẩn hóa điểm thành xác suất
+  const totalScore = Object.values(scores).reduce((sum, s) => sum + s, 0);
   const recs = Object.entries(scores)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
     .map(([name, score]) => ({
       career_name: name,
       match_score: score,
+      probability: totalScore > 0 ? (score / totalScore) : 0,
       reasons: generateReasons(name, profile)
     }));
 
@@ -279,7 +282,10 @@ function rankCareers(profile, answers, careers) {
   const skills = signals.skills;
   const interests = signals.interests;
   const edu = profile.education_level || '';
-
+      const scores = {};  
+      // Sử dụng danh sách nghề nghiệp từ database (bổ sung mới)
+      const { buildCareerRecords } = require('../data/careerLibrary');
+      const CAREER_LIST = buildCareerRecords().map(c => c.name);
   for (const c of careers) {
     let score = 0;
     const required = c.required_skills || [];
