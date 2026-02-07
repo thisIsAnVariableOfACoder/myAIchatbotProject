@@ -91,6 +91,19 @@ export default function ProfileForm({
     setDirty(false);
   }
 
+  const isValid = () => {
+    if (!educationLevel) return true; // Allow saving empty to clear profile
+    if (educationLevel === 'high_school' || educationLevel === 'university') {
+      return !!currentGrade;
+    }
+    if (educationLevel === 'professional') {
+      return !!workYears;
+    }
+    return false;
+  };
+
+  const isFormValid = isValid();
+
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
@@ -151,10 +164,14 @@ export default function ProfileForm({
         </>
       )}
 
-      <button className="w-full rounded-lg bg-[var(--c-primary)] py-2 text-white hover:opacity-90 transition disabled:opacity-50 active:scale-[0.98]" type="submit" disabled={!canSave}>
-        Lưu hồ sơ
+      <button
+        className="w-full rounded-lg bg-[var(--c-primary)] py-2 text-white hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+        type="submit"
+        disabled={!canSave || !isFormValid}
+      >
+        {educationLevel ? "Lưu hồ sơ" : "Xóa hồ sơ & Chat"}
       </button>
-      {dirty && (
+      {dirty && isFormValid && (
         <div className="text-xs text-[#D64545] whitespace-nowrap">Hãy lưu hồ sơ để áp dụng thay đổi</div>
       )}
     </form>

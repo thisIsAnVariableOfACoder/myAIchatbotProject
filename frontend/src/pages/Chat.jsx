@@ -222,6 +222,18 @@ export default function Chat() {
     if (!IS_OFFLINE && (!token || !userId)) return;
     const profileId = userId || 'guest';
     await api.updateProfile(profileId, token, payload);
+
+    // Reactively update local state
+    setProfileInitial(payload);
+
+    // If clearing profile (education_level is empty), lock chat and clear messages
+    if (!payload.education_level) {
+      setMessages([]);
+      setRecommendations([]);
+      setCurrentNode(null);
+      setCompleted(false);
+      setConversationId(null);
+    }
   }
 
   async function loadConversation(convId) {
