@@ -2704,19 +2704,17 @@ async function pickNextQuestion(state) {
   const pastBotMessages = history.filter(m => m.sender === 'bot').map(m => m.message);
   const conversationText = history.map(m => `${m.sender}: ${m.message}`).join('\n');
 
-  // Try LLM dynamic question if enabled and we have enough history
-  if (state.answers.length >= 1) {
-    const llmQ = await generateNextQuestionWithLLM(conversationText, profile, pastBotMessages);
-    if (llmQ) {
-      console.log("LLM Generated Question:", llmQ);
-      state.lastQuestionTags = llmQ.intended_tags || [];
-      state.lastQuestionText = llmQ.question;
-      return {
-        id: `llm_${Date.now()}`,
-        text: llmQ.question,
-        tags: llmQ.intended_tags || []
-      };
-    }
+  // Attempt LLM dynamic question ALWAYS
+  const llmQ = await generateNextQuestionWithLLM(conversationText, profile, pastBotMessages);
+  if (llmQ) {
+    console.log("Autonomous AI Question:", llmQ);
+    state.lastQuestionTags = llmQ.intended_tags || [];
+    state.lastQuestionText = llmQ.question;
+    return {
+      id: `ai_${Date.now()}`,
+      text: llmQ.question,
+      tags: llmQ.intended_tags || []
+    };
   }
 
   // Fallback to randomized static logic
@@ -2925,23 +2923,26 @@ async function generateNextQuestionWithLLM(conversationText, profile, pastBotMes
 
   try {
     const prompt = `
-      Bạn là một chatbot tư vấn nghề nghiệp thông minh. 
+      Bạn là một CHUYÊN GIA TƯ VẤN NGHỀ NGHIỆP tâm lý và sâu sắc. 
       Hồ sơ người dùng: ${JSON.stringify(profile)}
-      Lịch sử hội thoại gần đây:
-      ${conversationText.slice(-2000)}
+      Lịch sử hội thoại:
+      ${conversationText || "Chưa có (đây là câu hỏi đầu tiên)"}
 
-      Nhiệm vụ: Hãy đặt một câu hỏi tiếp theo để tìm hiểu sâu hơn về sở thích, năng lực hoặc định hướng nghề nghiệp của người dùng.
-      
-      YÊU CẦU QUAN TRỌNG:
-      1. TUYỆT ĐỐI KHÔNG lặp lại các câu hỏi đã hỏi sau đây: ${JSON.stringify(pastBotMessages.slice(-10))}
-      2. Câu hỏi phải tự nhiên, dựa trên những gì người dùng vừa trả lời.
-      3. Nếu người dùng muốn "hỏi thêm", hãy khai thác một khía cạnh mới hoặc đào sâu vào một ngành mà họ có vẻ quan tâm.
-      4. Ngôn ngữ thân thiện, gần gũi (dùng "bạn", "mình").
+      NHIỆM VỤ: 
+      - Hãy dẫn dắt buổi tư vấn một cách tự nhiên. 
+      - Nếu là câu đầu, hãy bắt đầu bằng một lời chào thân thiện và hỏi về đam mê, ước mơ hoặc một khó khăn họ đang gặp phải khi chọn nghề.
+      - Nếu đã trò chuyện, hãy phân tích câu trả lời trước đó để hỏi sâu hơn. 
+      - Đừng chỉ hỏi về môn học, hãy hỏi về giá trị sống, môi trường làm việc mơ ước (trong nhà/ngoài trời, tự do/ổn định).
+
+      YÊU CẦU:
+      1. KHÔNG lặp lại các câu hỏi đã hỏi: ${JSON.stringify(pastBotMessages.slice(-10))}
+      2. Ngôn ngữ ấm áp, khích lệ (dùng "mình", "bạn").
+      3. Câu hỏi ngắn gọn nhưng gợi mở.
 
       TRẢ VỀ DUY NHẤT JSON:
       {
-        "question": "nội dung câu hỏi mới",
-        "intended_tags": ["tag_lien_quan1", "tag_lien_quan2"]
+        "question": "nội dung câu hỏi",
+        "intended_tags": ["tag1", "tag2"]
       }
     `;
 
@@ -2960,10 +2961,7 @@ async function generateNextQuestionWithLLM(conversationText, profile, pastBotMes
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const result = JSON.parse(jsonMatch[0]);
-      // Double check uniqueness locally
-      if (pastBotMessages.includes(result.question)) {
-        return null; // Force fallback to randomized static
-      }
+      if (pastBotMessages.includes(result.question)) return null;
       return result;
     }
   } catch (e) {
@@ -2971,6 +2969,41 @@ async function generateNextQuestionWithLLM(conversationText, profile, pastBotMes
   }
   return null;
 }
+
+async function getFinalAIEvaluation(conversationText, profile, recommendations) {
+  const apiKey = localStorage.getItem('GEMINI_API_KEY') || 'AIzaSyBufWY4GjPYSXH9jkOD6pjDcdMAgSgA2gM';
+  if (!apiKey) return "Cảm ơn bạn đã tham gia tư vấn. Dưới đây là kết quả dựa trên số liệu phân tích.";
+
+  try {
+    const prompt = `
+      Bạn là chuyên gia tư vấn nghề nghiệp. Dựa vào:
+      Hồ sơ: ${JSON.stringify(profile)}
+      Hội thoại: ${conversationText}
+      Gợi ý của hệ thống: ${JSON.stringify(recommendations.slice(0, 3))}
+
+      HÃY VIẾT:
+      1. Một đoạn tóm tắt về thế mạnh và định hướng của người dùng qua cuộc trò chuyện.
+      2. Giải thích tại sao 3 nghề nghiệp top đầu lại phù hợp với họ.
+      3. Một lời khuyên thực tế để họ bắt đầu (lộ trình học tập hoặc kỹ năng cần luyện).
+
+      YÊU CẦU: Ngôn ngữ chuyên nghiệp nhưng truyền cảm hứng. Tối đa 250 từ. Trả về text thuần.
+    `;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Gợi ý của chúng mình dựa trên các tiêu chí bạn đã chia sẻ.";
+  } catch (e) {
+    return "Chúng mình đánh giá cao sự chia sẻ của bạn. Hãy xem qua danh sách gợi ý bên dưới nhé.";
+  }
+}
+
 
 export const offlineApi = {
   getMe(token) {
@@ -3071,12 +3104,15 @@ export const offlineApi = {
     const enoughInfo = state.answers.length >= 6;
     if (enoughInfo && !request_more) {
       const recs = scoreCareers(state);
+      const conversationText = messages.map(m => `${m.sender}: ${m.message}`).join('\n');
+      const aiSummary = await getFinalAIEvaluation(conversationText, state.userProfile, recs);
+
       saveRecommendations(convId, recs);
       saveState(convId, state);
       return {
         success: true,
         data: {
-          bot_reply: 'Đây là gợi ý nghề nghiệp phù hợp:',
+          bot_reply: aiSummary,
           recommendations: recs,
           next_node: null,
           completed: true,
