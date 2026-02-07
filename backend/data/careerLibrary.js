@@ -33,9 +33,9 @@ const CAREER_LIBRARY = {
     'Cloud Engineer', 'Network Engineer', 'Cybersecurity Analyst', 'AI Engineer',
     'Embedded Engineer', 'Systems Engineer', 'Site Reliability Engineer', 'IT Support',
     'IT Administrator', 'Database Administrator', 'Security Engineer', 'Automation Engineer',
-    'AI Researcher', 'MLOps Engineer', 'AR/VR Developer', 'Blockchain Developer',
-    'Solutions Architect', 'Platform Engineer', 'DevSecOps Engineer', 'Product Security Engineer',
-    'Systems Administrator', 'Technical Support Engineer'
+    'Technical Support Engineer', 'Web Developer', 'System Administrator', 'IT Consultant',
+    'IT Project Manager', 'Data Center Engineer', 'IT Trainer', 'IT Auditor', 'IT Sales Specialist',
+    'IT Procurement Specialist', 'IT Business Analyst', 'IT Operations Specialist', 'IT Service Manager'
   ],
   Data: [
     'Data Analyst', 'Data Engineer', 'Data Scientist', 'Business Intelligence Analyst',
@@ -48,15 +48,21 @@ const CAREER_LIBRARY = {
     'UI/UX Designer', 'Graphic Designer', 'Product Designer', 'UX Researcher',
     'Interaction Designer', 'Motion Designer', '3D Designer', 'Brand Designer',
     'Illustrator', 'Game Artist', 'Service Designer', 'Design Systems Designer',
-    'Visual Designer', 'UX Writer', 'Creative Technologist', 'Art Director',
-    'Industrial Designer', 'Packaging Designer'
+    'Visual Designer', 'UX Writer', 'Art Director', 'Industrial Designer', 'Packaging Designer',
+    'Fashion Designer', 'Interior Designer', 'Web Designer', 'Advertising Designer',
+    'Animation Designer', 'Event Designer', 'Video Designer', 'Sound Designer',
+    'Book Designer', 'Magazine Designer', 'Film Designer', 'Game Designer'
   ],
   Business: [
     'Business Analyst', 'Product Manager', 'Project Manager', 'Operations Manager',
     'HR Specialist', 'Recruiter', 'Sales Representative', 'Account Manager',
     'Customer Success', 'Business Development', 'Office Manager', 'Procurement Specialist',
     'Strategy Analyst', 'Operations Analyst', 'Management Consultant',
-    'Customer Experience Manager', 'Supply Chain Manager'
+    'Customer Experience Manager', 'Supply Chain Manager',
+    'CEO', 'CFO', 'CMO', 'CHRO', 'Sales Manager', 'Project Manager', 'HR Manager', 'Marketing Manager',
+    'Market Development Specialist', 'Business Data Analyst', 'Supply Chain Specialist', 'Risk Manager',
+    'Quality Manager', 'Customer Manager', 'Product Manager', 'Finance Manager', 'Operations Manager',
+    'Strategy Manager', 'Brand Manager', 'Sales Specialist', 'Contract Manager', 'Purchasing Manager', 'Office Manager'
   ],
   Marketing: [
     'Marketing Specialist', 'SEO Specialist', 'Social Media Manager', 'Content Creator',
@@ -72,10 +78,7 @@ const CAREER_LIBRARY = {
     'Investment Banker', 'Equity Research Analyst', 'Actuary', 'Risk Manager'
   ],
   Education: [
-    'Teacher', 'English Teacher', 'Math Teacher', 'Academic Advisor',
-    'Education Counselor', 'Trainer', 'Instructional Designer', 'School Administrator',
-    'STEM Teacher', 'Career Coach', 'E-learning Specialist', 'Academic Researcher',
-    'School Psychologist', 'Education Content Developer'
+    'Giáo viên Toán', 'Giáo viên Văn', 'Giáo viên Tiếng Anh', 'Giáo viên Lịch sử', 'Giáo viên Địa lý', 'Giáo viên Sinh học', 'Giáo viên Hóa học', 'Giáo viên Vật lý', 'Giáo viên Tin học', 'Giáo viên Giáo dục công dân', 'Giáo viên Mầm non', 'Giáo viên Tiểu học', 'Giáo viên Trung học', 'Giáo viên Nghệ thuật', 'Giáo viên Âm nhạc', 'Giáo viên Thể dục', 'Giáo viên Kỹ năng sống', 'Giảng viên Đại học', 'Giảng viên Cao đẳng', 'Giảng viên Trung cấp', 'Giáo viên Đào tạo nghề', 'Giáo viên Giáo dục đặc biệt', 'Giáo viên Giáo dục quốc tế', 'Giáo viên Giáo dục hướng nghiệp'
   ],
   Healthcare: [
     'Nurse', 'Pharmacist', 'Lab Technician', 'Medical Assistant',
@@ -105,7 +108,10 @@ const CAREER_LIBRARY = {
   Media: [
     'Journalist', 'Video Editor', 'Photographer', 'Media Producer',
     'Content Strategist', 'Podcast Producer', 'Animator', 'Scriptwriter',
-    'Social Media Producer', 'Sound Designer', 'Media Planner'
+    'Social Media Producer', 'Sound Designer', 'Media Planner',
+    'Editor', 'Reporter', 'TV Host', 'Director', 'Cameraman', 'PR Specialist', 'Advertising Specialist',
+    'Program Producer', 'Video Producer', 'Audio Producer', 'Image Producer', 'Press Producer', 'Film Producer',
+    'Game Producer', 'Animation Producer', 'Interactive Producer', 'Brand Producer'
   ],
   Government: [
     'Policy Analyst', 'Public Relations Officer', 'Civil Servant',

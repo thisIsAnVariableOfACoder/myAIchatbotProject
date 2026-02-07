@@ -23,7 +23,7 @@ export default function JobCard({ job }) {
           onError={() => setImgSrc(`${baseUrl}career-icons/default.svg`)}
         />
         <div className="min-w-0">
-          <div className="text-sm font-semibold truncate">{job.title}</div>
+          <div className="text-sm font-semibold break-words whitespace-normal">{job.title}</div>
           <div className="text-xs text-[#5B5B57]">{job.category || 'Khác'}</div>
         </div>
       </div>

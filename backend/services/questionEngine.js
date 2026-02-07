@@ -38,102 +38,104 @@ const MIN_TAG_FILTER_ANSWERS = 4;
 
 function getConversationState(conversationId, userType) {
   if (!CONVERSATIONS.has(conversationId)) {
-    CONVERSATIONS.set(conversationId, {
-      askedIds: new Set(),
-      coverage: {},
-      answers: [],
-      lastQuestion: null,
-      userType: userType || null,
-      tags: {},
-      collectedSkills: new Set(),
-      collectedInterests: new Set(),
-      seed: hashCode(conversationId)
-    });
-  }
-  const state = CONVERSATIONS.get(conversationId);
-  if (userType) state.userType = userType;
-  return state;
-}
-
-function recordAnswer(state, message) {
-  const raw = String(message || '');
-  const text = raw.toLowerCase();
-  const normalized = normalizeText(raw);
-  if (state.lastQuestion) {
-    const category = state.lastQuestion.category;
-    state.coverage[category] = (state.coverage[category] || 0) + 1;
-    state.answers.push({ q: state.lastQuestion.id, a: message, category });
-    if (state.lastQuestion.item && !isNegativeAnswer(normalized)) {
-      if (category === 'skills') state.collectedSkills.add(state.lastQuestion.item);
-      if (category === 'interests') state.collectedInterests.add(state.lastQuestion.item);
-    }
-  }
-  // basic keyword tagging for branching
-  if (text.includes('công nghệ') || normalized.includes('cong nghe') || text.includes('tech') || text.includes('it')) state.tags.tech = true;
-  if (text.includes('kinh doanh') || normalized.includes('kinh doanh') || text.includes('business') || text.includes('marketing')) state.tags.business = true;
-  if (text.includes('thiết kế') || normalized.includes('thiet ke') || text.includes('design') || text.includes('ui') || text.includes('ux')) state.tags.design = true;
-  if (text.includes('y tế') || normalized.includes('y te') || text.includes('dược') || normalized.includes('duoc') || text.includes('điều dưỡng') || normalized.includes('dieu duong')) state.tags.health = true;
-  if (text.includes('giáo dục') || normalized.includes('giao duc') || text.includes('dạy') || normalized.includes('day') || text.includes('giảng')) state.tags.education = true;
-}
-
-function normalizeText(value) {
-  return String(value || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-}
-
-function isNegativeAnswer(normalizedText) {
-  const negatives = ['khong', 'không', 'chua', 'chưa', 'it', 'ít', 'kho', 'khó', 'khong thich', 'không thích'];
-  return negatives.some((t) => normalizedText.includes(t));
-}
-
-function getCategoryOrder(userType) {
-  if (userType && CATEGORY_PRIORITY_BY_USER_TYPE[userType]) {
-    return CATEGORY_PRIORITY_BY_USER_TYPE[userType];
-  }
-  return CATEGORY_PRIORITY;
-}
-
-function getCategoryLimit(userType, category) {
-  const byType = CATEGORY_LIMITS_BY_USER_TYPE[userType] || {};
-  if (byType && byType[category]) return byType[category];
-  return MAX_PER_CATEGORY;
-}
-
-function isRequiredMet(state) {
-  const req = REQUIRED_BY_USER_TYPE[state.userType] || {};
-  return Object.entries(req).every(([category, min]) => (state.coverage[category] || 0) >= min);
-}
-
-function pickRequiredCategory(state, userType, options) {
-  if (options.force) return null;
-  const req = REQUIRED_BY_USER_TYPE[userType] || {};
-  const unmet = Object.entries(req)
-    .filter(([category, min]) => (state.coverage[category] || 0) < min)
-    .map(([category]) => category);
-  if (unmet.length === 0) return null;
-  return unmet[state.answers.length % unmet.length];
-}
-
-function isEnoughInfo(state) {
-  if (!isRequiredMet(state)) return false;
-  const covered = Object.keys(state.coverage).length;
-  return covered >= 9 || state.answers.length >= 16;
-}
-
-function getNextQuestion(state, options = {}) {
-  const forceContinue = options.force === true;
-  if (!forceContinue && isEnoughInfo(state)) return null;
-
-  const userType = state.userType;
-  const categories = getCategoryOrder(userType);
-  const coverageCounts = categories.map((category) => ({
-    category,
-    count: state.coverage[category] || 0
-  })).filter(item => item.count < getCategoryLimit(userType, item.category));
-
-  if (coverageCounts.length === 0) return null;
+    const QUESTION_BANK = [
+      // ...existing code...
+      // Các câu hỏi phân biệt từng nghề nghiệp phổ biến
+      {
+        id: 'q1',
+        question: 'Bạn thích làm việc với con người hay máy móc?',
+        options: ['Con người', 'Máy móc', 'Cả hai'],
+        weights: {
+          'Giáo viên Toán': 10, 'Giáo viên Văn': 10, 'Giáo viên Tiếng Anh': 10, 'Giáo viên Lịch sử': 10, 'Giáo viên Địa lý': 10,
+          'Lập trình viên': 10, 'Chuyên viên phát triển phần mềm': 10, 'Chuyên viên quản trị mạng': 10, 'Chuyên viên bảo mật thông tin': 10,
+          'UI/UX Designer': 10, 'Thiết kế đồ họa': 10, 'Thiết kế web': 10, 'Biên tập viên': 10, 'Phóng viên': 10, 'MC truyền hình': 10,
+          'Giám đốc điều hành (CEO)': 10, 'Giám đốc tài chính (CFO)': 10, 'Giám đốc marketing (CMO)': 10, 'Trưởng phòng kinh doanh': 10
+        }
+      },
+      {
+        id: 'q2',
+        question: 'Bạn thích giải quyết vấn đề logic hay sáng tạo?',
+        options: ['Logic', 'Sáng tạo', 'Cả hai'],
+        weights: {
+          'Giáo viên Toán': 10, 'Lập trình viên': 10, 'Chuyên viên phân tích hệ thống': 10, 'Chuyên viên phát triển phần mềm': 10,
+          'Thiết kế đồ họa': 10, 'Thiết kế web': 10, 'Thiết kế sáng tạo': 10, 'Biên tập viên': 10, 'Phóng viên': 10, 'MC truyền hình': 10
+        }
+      },
+      {
+        id: 'q3',
+        question: 'Bạn thích làm việc độc lập hay theo nhóm?',
+        options: ['Độc lập', 'Theo nhóm', 'Cả hai'],
+        weights: {
+          'Lập trình viên': 10, 'Chuyên viên phát triển phần mềm': 10, 'Chuyên viên quản trị mạng': 10, 'Chuyên viên bảo mật thông tin': 10,
+          'Giáo viên Toán': 10, 'Giáo viên Văn': 10, 'Giáo viên Tiếng Anh': 10, 'Giáo viên Lịch sử': 10, 'Giáo viên Địa lý': 10,
+          'UI/UX Designer': 10, 'Thiết kế đồ họa': 10, 'Thiết kế web': 10, 'Biên tập viên': 10, 'Phóng viên': 10, 'MC truyền hình': 10,
+          'Giám đốc điều hành (CEO)': 10, 'Giám đốc tài chính (CFO)': 10, 'Giám đốc marketing (CMO)': 10, 'Trưởng phòng kinh doanh': 10
+        }
+      },
+      {
+        id: 'q4',
+        question: 'Bạn có thích quản lý, lãnh đạo không?',
+        options: ['Có', 'Không', 'Tùy tình huống'],
+        weights: {
+          'Giám đốc điều hành (CEO)': 15, 'Giám đốc tài chính (CFO)': 15, 'Giám đốc marketing (CMO)': 15, 'Trưởng phòng kinh doanh': 15,
+          'Trưởng phòng dự án': 15, 'Trưởng phòng nhân sự': 15, 'Trưởng phòng marketing': 15
+        }
+      },
+      {
+        id: 'q5',
+        question: 'Bạn có thích sáng tạo nội dung, truyền thông?',
+        options: ['Có', 'Không', 'Tùy tình huống'],
+        weights: {
+          'Biên tập viên': 15, 'Phóng viên': 15, 'MC truyền hình': 15, 'Đạo diễn': 15, 'Quay phim': 15,
+          'Chuyên viên truyền thông': 15, 'Chuyên viên PR': 15, 'Chuyên viên quảng cáo': 15, 'Chuyên viên sản xuất chương trình': 15
+        }
+      },
+      {
+        id: 'q6',
+        question: 'Bạn có thích thiết kế, mỹ thuật, sáng tạo hình ảnh?',
+        options: ['Có', 'Không', 'Tùy tình huống'],
+        weights: {
+          'UI/UX Designer': 15, 'Thiết kế đồ họa': 15, 'Thiết kế web': 15, 'Thiết kế sáng tạo': 15, 'Thiết kế thời trang': 15,
+          'Thiết kế nội thất': 15, 'Thiết kế sản phẩm': 15, 'Thiết kế bao bì': 15, 'Thiết kế quảng cáo': 15
+        }
+      },
+      {
+        id: 'q7',
+        question: 'Bạn có thích phân tích dữ liệu, số liệu, tài chính?',
+        options: ['Có', 'Không', 'Tùy tình huống'],
+        weights: {
+          'Chuyên viên phân tích dữ liệu kinh doanh': 15, 'Chuyên viên quản lý tài chính': 15, 'Chuyên viên quản lý chất lượng': 15,
+          'Giám đốc tài chính (CFO)': 15, 'Business Analyst': 15, 'Financial Analyst': 15, 'Accountant': 15
+        }
+      },
+      {
+        id: 'q8',
+        question: 'Bạn có thích phát triển phần mềm, lập trình?',
+        options: ['Có', 'Không', 'Tùy tình huống'],
+        weights: {
+          'Lập trình viên': 20, 'Chuyên viên phát triển phần mềm': 20, 'Software Engineer': 20, 'Backend Developer': 20, 'Frontend Developer': 20,
+          'Full Stack Developer': 20, 'Mobile Developer': 20, 'Game Developer': 20, 'QA Engineer': 20, 'DevOps Engineer': 20
+        }
+      },
+      {
+        id: 'q9',
+        question: 'Bạn có thích quản trị hệ thống, bảo mật thông tin?',
+        options: ['Có', 'Không', 'Tùy tình huống'],
+        weights: {
+          'Chuyên viên quản trị hệ thống': 20, 'Chuyên viên bảo mật thông tin': 20, 'Security Engineer': 20, 'Network Engineer': 20,
+          'Database Administrator': 20, 'Cloud Engineer': 20, 'DevSecOps Engineer': 20
+        }
+      },
+      {
+        id: 'q10',
+        question: 'Bạn có thích phát triển game, ứng dụng di động, AI, IoT?',
+        options: ['Có', 'Không', 'Tùy tình huống'],
+        weights: {
+          'Chuyên viên phát triển game': 20, 'Chuyên viên phát triển ứng dụng di động': 20, 'Chuyên viên phát triển AI': 20,
+          'Chuyên viên phát triển IoT': 20, 'Game Developer': 20, 'Mobile Developer': 20, 'AI Engineer': 20
+        }
+      }
+    ];
 
   const requiredPick = pickRequiredCategory(state, userType, options);
   if (requiredPick) {
