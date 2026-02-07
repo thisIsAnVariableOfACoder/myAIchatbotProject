@@ -2873,7 +2873,7 @@ function hashCode(value) {
 
 
 async function analyzeResponseWithLLM(question, answer, profile) {
-  const apiKey = localStorage.getItem('GEMINI_API_KEY');
+  const apiKey = localStorage.getItem('GEMINI_API_KEY') || 'AIzaSyBufWY4GjPYSXH9jkOD6pjDcdMAgSgA2gM';
   if (!apiKey) return null;
 
   try {
@@ -2920,7 +2920,7 @@ async function analyzeResponseWithLLM(question, answer, profile) {
 }
 
 async function generateNextQuestionWithLLM(conversationText, profile, pastBotMessages) {
-  const apiKey = localStorage.getItem('GEMINI_API_KEY');
+  const apiKey = localStorage.getItem('GEMINI_API_KEY') || 'AIzaSyBufWY4GjPYSXH9jkOD6pjDcdMAgSgA2gM';
   if (!apiKey) return null;
 
   try {
