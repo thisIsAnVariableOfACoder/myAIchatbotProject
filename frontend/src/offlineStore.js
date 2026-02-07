@@ -2910,13 +2910,21 @@ export const offlineApi = {
   },
   exploreJobs({ q, category, tag, limit = 120, offset = 0 }) {
     console.log('[OfflineStore] exploreJobs called', { q, category, tag, limit, offset, careersCount: CAREERS.length });
+
+    // Fix image path for GitHub Pages
+    const getBasePath = () => {
+      const path = window.location.pathname;
+      return path.includes('/myAIchatbotProject') ? '/myAIchatbotProject' : '';
+    };
+    const basePath = getBasePath();
+
     const query = normalizeText(String(q || ''));
     let list = CAREERS.map((c, idx) => ({
       id: idx + 1,
       title: c.name,
       category: c.category,
       tags: c.tags,
-      image_url: 'career-icons/default.svg'
+      image_url: `${basePath}/career-icons/default.svg` // Fix path
     }));
     if (query) {
       list = list.filter((j) => {
