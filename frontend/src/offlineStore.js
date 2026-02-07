@@ -2704,11 +2704,11 @@ async function pickNextQuestion(state) {
   const pastBotMessages = history.filter(m => m.sender === 'bot').map(m => m.message);
   const conversationText = history.map(m => `${m.sender}: ${m.message}`).join('\n');
 
-  // Force exact first question from verbatim prompt
-  const hasAskedFirst = pastBotMessages.some(m => m.includes("Trước tiên, mình cần biết bạn hiện là học sinh, sinh viên hay người đã đi làm nhé"));
+  // Force exact first question ONLY if profile group is missing AND no history of asking
+  const hasAskedFirst = pastBotMessages.some(m => m.includes("học sinh") && m.includes("sinh viên") && m.includes("đi làm"));
+  const hasRole = profile.education_level && ['high_school', 'university', 'professional'].includes(profile.education_level);
 
-  if (!hasAskedFirst) {
-    state.askedFirst = true; // Use flag for extra safety
+  if (!hasAskedFirst && !hasRole) {
     state.lastQuestionText = "Trước tiên, mình cần biết bạn hiện là học sinh, sinh viên hay người đã đi làm nhé.";
     return {
       id: "ai_start",
@@ -2904,8 +2904,10 @@ async function analyzeResponseWithLLM(question, answer, profile) {
         "sentiment": "positive" | "negative" | "neutral",
         "confidence": 0.0-1.0,
         "topic_weights": { "tag1": weight, "tag2": weight },
+        "detected_role": "high_school" | "university" | "professional" | null,
         "reasoning": "giải thích ngắn gọn"
       }
+      Lưu ý: detected_role chỉ điền nếu người dùng nhắc đến tình trạng hiện tại (VD: "đang đi học" -> high_school, "sinh viên năm 2" -> university, "đã đi làm" -> professional). nhen! nhen!
     `;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
@@ -3153,6 +3155,14 @@ async function generateNextQuestionWithLLM(conversationText, profile, pastBotMes
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const result = JSON.parse(jsonMatch[0]);
+
+      // EXTRA SAFETY: Block any question that looks like the start question
+      const content = result.question.toLowerCase();
+      if (content.includes("học sinh") && content.includes("sinh viên") && content.includes("đi làm")) {
+        console.log("Blocking LLM from repeating start question");
+        return null; // Force fallback logic
+      }
+
       if (pastBotMessages.includes(result.question)) return null;
       return result;
     }
@@ -3267,6 +3277,13 @@ export const offlineApi = {
 
       if (llmResult) {
         console.log("LLM Analysis Result:", llmResult);
+
+        // Apply role detection from AI
+        if (llmResult.detected_role) {
+          console.log("AI Detected Role:", llmResult.detected_role);
+          if (!state.userProfile) state.userProfile = {};
+          state.userProfile.education_level = llmResult.detected_role;
+        }
 
         // Apply topic weights (fine-grained scoring)
         if (llmResult.topic_weights) {
