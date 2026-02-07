@@ -2704,6 +2704,16 @@ async function pickNextQuestion(state) {
   const pastBotMessages = history.filter(m => m.sender === 'bot').map(m => m.message);
   const conversationText = history.map(m => `${m.sender}: ${m.message}`).join('\n');
 
+  // Force exact first question from verbatim prompt if no history
+  if (history.length === 0) {
+    state.lastQuestionText = "Trước tiên, mình cần biết bạn hiện là học sinh, sinh viên hay người đã đi làm nhé.";
+    return {
+      id: "ai_start",
+      text: state.lastQuestionText,
+      tags: ["orientation"]
+    };
+  }
+
   // Attempt LLM dynamic question ALWAYS
   const llmQ = await generateNextQuestionWithLLM(conversationText, profile, pastBotMessages);
   if (llmQ) {
