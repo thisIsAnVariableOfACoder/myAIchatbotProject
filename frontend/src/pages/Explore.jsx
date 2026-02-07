@@ -68,9 +68,10 @@ export default function Explore() {
           setTotal(json?.total || 0);
           setJobs((prev) => (page === 0 ? items : [...prev, ...items]));
         }
-      } catch {
+      } catch (err) {
+        console.error('Explore Load Error:', err);
         if (!cancelled) {
-          setError('Không kết nối được máy chủ. Vui lòng cấu hình API backend.');
+          setError(`Lỗi tải dữ liệu: ${err.message}`);
         }
       } finally {
         setLoading(false);

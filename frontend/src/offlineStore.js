@@ -2909,6 +2909,7 @@ export const offlineApi = {
     return { success: true, data: { categories, tags } };
   },
   exploreJobs({ q, category, tag, limit = 120, offset = 0 }) {
+    console.log('[OfflineStore] exploreJobs called', { q, category, tag, limit, offset, careersCount: CAREERS.length });
     const query = normalizeText(String(q || ''));
     let list = CAREERS.map((c, idx) => ({
       id: idx + 1,
