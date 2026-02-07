@@ -1,5 +1,3 @@
-```
-// FILE: frontend/src/components/ChatWindow.jsx
 import { useEffect, useRef, useState } from 'react';
 import MessageBubble from './MessageBubble';
 
