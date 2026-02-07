@@ -2923,21 +2923,24 @@ async function generateNextQuestionWithLLM(conversationText, profile, pastBotMes
 
   try {
     const prompt = `
-      Bạn là một CHUYÊN GIA TƯ VẤN NGHỀ NGHIỆP tâm lý và sâu sắc. 
+      Bạn là một CHUYÊN GIA TƯ VẤN TÂM LÝ VÀ HƯỚNG NGHIỆP cấp cao. 
       Hồ sơ người dùng: ${JSON.stringify(profile)}
       Lịch sử hội thoại:
       ${conversationText || "Chưa có (đây là câu hỏi đầu tiên)"}
 
       NHIỆM VỤ: 
-      - Hãy dẫn dắt buổi tư vấn một cách tự nhiên. 
-      - Nếu là câu đầu, hãy bắt đầu bằng một lời chào thân thiện và hỏi về đam mê, ước mơ hoặc một khó khăn họ đang gặp phải khi chọn nghề.
-      - Nếu đã trò chuyện, hãy phân tích câu trả lời trước đó để hỏi sâu hơn. 
-      - Đừng chỉ hỏi về môn học, hãy hỏi về giá trị sống, môi trường làm việc mơ ước (trong nhà/ngoài trời, tự do/ổn định).
+      - Hãy dẫn dắt buổi tư vấn một cách cực kỳ sâu sắc, như một người bạn tri kỷ và chuyên gia. 
+      - Đừng chỉ hỏi "Bạn thích gì?", hãy hỏi về:
+        * Những tình huống khiến họ thấy tự hào nhất.
+        * Cách họ đối mặt với áp lực hoặc giải quyết mâu thuẫn.
+        * Những giá trị họ muốn để lại cho thế giới (tiền bạc, danh tiếng, hay sự giúp đỡ?).
+        * Sở thích ẩn giấu mà họ chưa từng nói với ai.
+      - Nếu đã trò chuyện, hãy "đọc vị" tính cách của họ qua cách dùng từ để đặt câu hỏi tiếp theo thật "chạm".
 
       YÊU CẦU:
-      1. KHÔNG lặp lại các câu hỏi đã hỏi: ${JSON.stringify(pastBotMessages.slice(-10))}
-      2. Ngôn ngữ ấm áp, khích lệ (dùng "mình", "bạn").
-      3. Câu hỏi ngắn gọn nhưng gợi mở.
+      1. KHÔNG lặp lại câu hỏi: ${JSON.stringify(pastBotMessages.slice(-10))}
+      2. Ngôn ngữ ấm áp, giàu hình ảnh, khích lệ (dùng "mình", "bạn").
+      3. Câu hỏi ngắn gọn nhưng đầy sức gợi.
 
       TRẢ VỀ DUY NHẤT JSON:
       {
@@ -2970,23 +2973,32 @@ async function generateNextQuestionWithLLM(conversationText, profile, pastBotMes
   return null;
 }
 
-async function getFinalAIEvaluation(conversationText, profile, recommendations) {
+async function getFinalAIResultsPure(conversationText, profile) {
   const apiKey = localStorage.getItem('GEMINI_API_KEY') || 'AIzaSyBufWY4GjPYSXH9jkOD6pjDcdMAgSgA2gM';
-  if (!apiKey) return "Cảm ơn bạn đã tham gia tư vấn. Dưới đây là kết quả dựa trên số liệu phân tích.";
 
   try {
     const prompt = `
-      Bạn là chuyên gia tư vấn nghề nghiệp. Dựa vào:
+      Bạn là chuyên gia tư vấn nghề nghiệp cao cấp. Dựa vào cuộc hội thoại sau:
       Hồ sơ: ${JSON.stringify(profile)}
       Hội thoại: ${conversationText}
-      Gợi ý của hệ thống: ${JSON.stringify(recommendations.slice(0, 3))}
 
-      HÃY VIẾT:
-      1. Một đoạn tóm tắt về thế mạnh và định hướng của người dùng qua cuộc trò chuyện.
-      2. Giải thích tại sao 3 nghề nghiệp top đầu lại phù hợp với họ.
-      3. Một lời khuyên thực tế để họ bắt đầu (lộ trình học tập hoặc kỹ năng cần luyện).
+      NHIỆM VỤ:
+      1. Phân tích sâu sắc tính cách, thiên hướng và tiềm năng của người dùng.
+      2. Đề xuất 5 nghề nghiệp phù hợp NHẤT (không giới hạn trong database, hãy dùng kiến thức thực tế toàn cầu).
+      3. Với mỗi nghề, hãy cho biết:
+         - Tên nghề nghiệp.
+         - Phần trăm phù hợp (match_score) từ 60-98.
+         - 3 lý do cụ thể tại sao hợp.
+      4. Viết một bài đánh giá tổng quan (roadmap) truyền cảm hứng, giải thích logic đằng sau các lựa chọn này.
 
-      YÊU CẦU: Ngôn ngữ chuyên nghiệp nhưng truyền cảm hứng. Tối đa 250 từ. Trả về text thuần.
+      TRẢ VỀ DUY NHẤT JSON THEO CẤU TRÚC:
+      {
+        "summary": "đoạn văn tóm tắt đánh giá thế mạnh và lời khuyên",
+        "recommendations": [
+          { "career_name": "...", "match_score": 95, "reasons": ["...", "...", "..."] },
+          ...
+        ]
+      }
     `;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
@@ -2998,10 +3010,15 @@ async function getFinalAIEvaluation(conversationText, profile, recommendations) 
     });
 
     const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Gợi ý của chúng mình dựa trên các tiêu chí bạn đã chia sẻ.";
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
   } catch (e) {
-    return "Chúng mình đánh giá cao sự chia sẻ của bạn. Hãy xem qua danh sách gợi ý bên dưới nhé.";
+    console.error("Pure AI Results Error:", e);
   }
+  return null;
 }
 
 
@@ -3101,18 +3118,37 @@ export const offlineApi = {
       }
     }
 
-    const enoughInfo = state.answers.length >= 6;
+    const enoughInfo = state.answers.length >= 10;
     if (enoughInfo && !request_more) {
-      const recs = scoreCareers(state);
+      const messages = getMessages(convId);
       const conversationText = messages.map(m => `${m.sender}: ${m.message}`).join('\n');
-      const aiSummary = await getFinalAIEvaluation(conversationText, state.userProfile, recs);
 
+      // Call PURE AI results
+      const aiResult = await getFinalAIResultsPure(conversationText, state.userProfile);
+
+      if (aiResult) {
+        saveRecommendations(convId, aiResult.recommendations);
+        saveState(convId, state);
+        return {
+          success: true,
+          data: {
+            bot_reply: aiResult.summary,
+            recommendations: aiResult.recommendations,
+            next_node: null,
+            completed: true,
+            conversation_id: convId
+          }
+        };
+      }
+
+      // Fallback if AI fails
+      const recs = scoreCareers(state);
       saveRecommendations(convId, recs);
       saveState(convId, state);
       return {
         success: true,
         data: {
-          bot_reply: aiSummary,
+          bot_reply: 'Đây là gợi ý nghề nghiệp dựa trên phân tích dữ liệu môn học:',
           recommendations: recs,
           next_node: null,
           completed: true,
