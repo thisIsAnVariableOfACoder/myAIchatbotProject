@@ -409,8 +409,10 @@ export default function Chat() {
                       )}
                     </div>
                   ))}
-                </div>
+                </>
+              )}
             </div>
+          </div>
         </section>
 
         <section className="order-1 lg:order-2">

@@ -68,7 +68,15 @@ export default function ChatWindow({
         )}
       </div>
 
-      <div className="border-t border-[#E8E2D8] p-3">
+      <div className="border-t border-[#E8E2D8] p-3 relative">
+        {disabled && (
+          <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center p-4 text-center backdrop-blur-sm">
+            <div className="text-sm font-medium text-[var(--c-primary)] shadow-sm bg-white border border-[#E2D8C8] px-4 py-2 rounded-lg">
+              {placeholder}
+            </div>
+          </div>
+        )}
+
         {showHelloHint && (
           <div className="mb-2 text-xs text-[#5B5B57]">Nhập "hello" để bắt đầu cuộc trò chuyện.</div>
         )}
@@ -79,7 +87,7 @@ export default function ChatWindow({
               id="chat-input"
               aria-label="Nhập tin nhắn cho chatbot"
               className="flex-1 rounded-xl border border-[#E2D8C8] px-3 py-2 outline-none transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:shadow-[0_0_0_3px_rgba(34,211,238,0.35)] focus:scale-[1.01] disabled:bg-[#f3f4f6] disabled:text-[#9ca3af] disabled:cursor-not-allowed"
-              placeholder={placeholder}
+              placeholder={disabled ? "" : placeholder}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
