@@ -342,77 +342,9 @@ function buildGroupQuestions() {
 
 const GROUP_QUESTIONS = buildGroupQuestions();
 
-function buildSubjectCareers() {
-  const roleBases = [
-    'Giáo viên', 'Giảng viên', 'Gia sư', 'Nhà nghiên cứu', 'Chuyên viên nội dung',
-    'Biên soạn SGK', 'Chuyên viên học liệu số', 'Chuyên viên khảo thí', 'Chuyên viên đào tạo',
-    'Giáo vụ', 'Cố vấn học tập', 'Chuyên viên phát triển chương trình', 'Trợ giảng',
-    'Giáo viên luyện thi', 'Chuyên viên EdTech', 'Chuyên viên tư vấn giáo dục',
-    'Chuyên viên chất lượng giáo dục', 'Chuyên viên đánh giá năng lực', 'Chuyên viên hướng nghiệp'
-  ];
-  const contexts = [
-    'cơ bản', 'nâng cao', 'song ngữ', 'quốc tế', 'THCS', 'THPT', 'đại học', 'trực tuyến',
-    'hệ chuyên', 'đào tạo doanh nghiệp', 'hướng nghiệp', 'STEM', 'chương trình mới',
-    'chuyên đề', 'cộng đồng', 'đội tuyển', 'học liệu số', 'đánh giá năng lực'
-  ];
-  const management = ['Hiệu trưởng', 'Phó hiệu trưởng', 'Tổ trưởng chuyên môn', 'Trưởng bộ môn'];
-  const careers = [];
-  for (const subject of SUBJECTS) {
-    const subjectCareers = new Set();
-    for (const role of roleBases) {
-      subjectCareers.add(`${role} ${subject.label}`);
-      for (const ctx of contexts) {
-        subjectCareers.add(`${role} ${subject.label} ${ctx}`);
-        if (subjectCareers.size >= 140) break;
-      }
-      if (subjectCareers.size >= 140) break;
-    }
-    for (const manager of management) {
-      subjectCareers.add(`${manager} chuyên ${subject.label}`);
-      subjectCareers.add(`${manager} bộ môn ${subject.label}`);
-    }
-    const tags = [subject.tag, 'education'];
-    for (const name of subjectCareers) {
-      careers.push({ name, category: `Giáo dục - ${subject.label}`, tags });
-    }
-  }
-  return careers;
-}
 
-function buildGroupCareers() {
-  const ROLE_LEVELS = ['Junior', 'Senior', 'Lead', 'Principal', 'Cao cấp', 'Trưởng nhóm', 'Giám sát', 'Quản lý'];
-  const ROLE_TRACKS = ['chiến lược', 'vận hành', 'triển khai', 'tối ưu', 'nghiên cứu', 'tư vấn', 'đào tạo', 'chuyển đổi số'];
-  const MAX_GROUP_CAREERS = 800;
-  const careers = [];
-  for (const group of GROUP_BLUEPRINTS) {
-    const names = new Set();
-    const specialties = group.specialties || group.topics || [];
-    for (const role of group.roles) {
-      for (const domain of group.domains) {
-        names.add(`${role} ${domain}`);
-        for (const level of ROLE_LEVELS) {
-          names.add(`${role} ${domain} ${level}`);
-          if (names.size >= MAX_GROUP_CAREERS) break;
-        }
-        for (const track of ROLE_TRACKS) {
-          names.add(`${role} ${domain} (${track})`);
-          if (names.size >= MAX_GROUP_CAREERS) break;
-        }
-        for (const spec of specialties) {
-          names.add(`${role} ${domain} chuyên ${spec}`);
-          if (names.size >= MAX_GROUP_CAREERS) break;
-        }
-        if (names.size >= MAX_GROUP_CAREERS) break;
-      }
-      if (names.size >= MAX_GROUP_CAREERS) break;
-    }
-    const tags = [group.tag, ...(group.extraTags || [])];
-    for (const name of names) {
-      careers.push({ name, category: group.category, tags });
-    }
-  }
-  return careers;
-}
+
+
 
 const BASE_CAREERS = [
   {
@@ -2841,6 +2773,8 @@ function hashCode(value) {
   }
   return Math.abs(hash);
 }
+
+
 
 export const offlineApi = {
   getMe(token) {
