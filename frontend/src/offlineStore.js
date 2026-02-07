@@ -2882,7 +2882,41 @@ async function analyzeResponseWithLLM(question, answer, profile) {
 }
 
 export const offlineApi = {
-  // ... (keep getMe, login, register, getProfile, updateProfile)
+  getMe(token) {
+    if (!token || !token.startsWith('offline:')) return { success: false };
+    const userId = Number(token.replace('offline:', ''));
+    const user = getUsers().find((u) => u.id === userId);
+    if (!user) return { success: false };
+    return { success: true, data: { user_id: user.id, email: user.email, user_type: user.user_type } };
+  },
+  login({ email, password }) {
+    const user = getUsers().find((u) => u.email === email && u.password === password);
+    if (!user) return { success: false, error: 'Sai email hoặc mật khẩu' };
+    const token = `offline:${user.id}`;
+    return { success: true, data: { user_id: user.id, email: user.email, user_type: user.user_type, token } };
+  },
+  register({ email, password, user_type }) {
+    const users = getUsers();
+    if (users.find((u) => u.email === email)) {
+      return { success: false, error: 'Email đã tồn tại' };
+    }
+    const nextId = Math.max(1, ...users.map((u) => u.id)) + 1;
+    const user = { id: nextId, email, password, user_type: user_type || 'high_school' };
+    users.push(user);
+    saveUsers(users);
+    const token = `offline:${user.id}`;
+    return { success: true, data: { user_id: user.id, email: user.email, user_type: user.user_type, token } };
+  },
+  getProfile(userId) {
+    const profiles = getProfiles();
+    return { success: true, data: profiles[userId] || null };
+  },
+  updateProfile(userId, payload) {
+    const profiles = getProfiles();
+    profiles[userId] = { ...profiles[userId], ...payload };
+    saveProfiles(profiles);
+    return { success: true, data: { updated: true } };
+  },
   async sendMessage({ conversation_id, message, user_id, request_more, profile }) {
     const convId = conversation_id || `conv_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     ensureConversation(convId, user_id || null, message);
@@ -2929,7 +2963,7 @@ export const offlineApi = {
         Object.keys(derived).forEach((tag) => addTagScore(state.tags, tag, derived[tag]));
       }
 
-      // Update focus tags if detected (legacy but useful)
+      // Update focus tags if detected
       const subjectTag = detectSubjectTag(message);
       const groupTag = detectGroupTag(message);
       if (subjectTag) {
@@ -2993,36 +3027,40 @@ export const offlineApi = {
     return { success: true, data: getRecommendations(conversationId) };
   },
   renameConversation(conversationId, title) {
-    updateConversationTitle(conversationId, title);
-    return { success: true, data: { updated: true } };
+    const convs = getConversations();
+    const idx = convs.findIndex((c) => c.conversation_id === conversationId);
+    if (idx !== -1) {
+      convs[idx].title = title;
+      saveConversations(convs);
+    }
+    return { success: true };
   },
   deleteConversation(conversationId) {
-    removeConversation(conversationId);
-    return { success: true, data: { deleted: true } };
+    const convs = getConversations().filter((c) => c.conversation_id !== conversationId);
+    saveConversations(convs);
+    localStorage.removeItem(`messages:${conversationId}`);
+    localStorage.removeItem(`recommendations:${conversationId}`);
+    localStorage.removeItem(`state:${conversationId}`);
+    return { success: true };
   },
   deleteHistory(userId) {
-    clearHistoryForUser(userId);
-    return { success: true, data: { deleted: true } };
+    const convs = getConversations().filter((c) => c.user_id !== userId);
+    saveConversations(convs);
+    return { success: true };
   },
   exploreFilters() {
-    const categories = Array.from(new Set(CAREERS.map((c) => c.category))).filter(Boolean);
-    const tags = Array.from(new Set(CAREERS.flatMap((c) => c.tags))).filter(Boolean);
-    return { success: true, data: { categories, tags } };
+    return {
+      success: true,
+      data: {
+        categories: Array.from(new Set(BASE_CAREERS.map((c) => c.category))),
+        tags: Array.from(new Set(BASE_CAREERS.flatMap((c) => c.tags)))
+      }
+    };
   },
   exploreJobs({ q, category, tag, limit = 120, offset = 0 }) {
-    console.log('[OfflineStore] exploreJobs called', { q, category, tag, limit, offset, careersCount: CAREERS.length });
-
-    // Fix image path for GitHub Pages
-    const getBasePath = () => {
-      const path = window.location.pathname;
-      return path.includes('/myAIchatbotProject') ? '/myAIchatbotProject' : '';
-    };
-    const basePath = getBasePath();
-
     // Map category to icon
-    const getIcon = (cat) => {
+    const getMappingIcon = (cat) => {
       const key = normalizeText(cat || '').toLowerCase().trim();
-
       const MAPPING = {
         'agriculture': 'agri.svg',
         'beauty': 'service.svg',
@@ -3056,22 +3094,23 @@ export const offlineApi = {
         'community': 'community.svg',
         'admin': 'admin.svg'
       };
-
       return MAPPING[key] || 'default.svg';
     };
 
     const query = normalizeText(String(q || ''));
-
-    // Simplified path per user request to avoid duplication
     const imgPrefix = 'career-icons/';
 
-    let list = CAREERS.map((c, idx) => ({
+    let list = BASE_CAREERS.map((c, idx) => ({
       id: idx + 1,
+      career_name: c.name,
       title: c.name,
       category: c.category,
       tags: c.tags,
-      image_url: `${imgPrefix}${getIcon(c.category)}`
+      description: `Mô tả cho ${c.name}...`,
+      salary: '10M - 50M VNĐ',
+      image_url: `${imgPrefix}${getMappingIcon(c.category)}`
     }));
+
     if (query) {
       list = list.filter((j) => {
         const title = normalizeText(j.title);
@@ -3084,6 +3123,7 @@ export const offlineApi = {
     if (tag) {
       list = list.filter((j) => j.tags.includes(tag));
     }
+
     const total = list.length;
     const slice = list.slice(offset, offset + limit);
     return { success: true, data: slice, total };
