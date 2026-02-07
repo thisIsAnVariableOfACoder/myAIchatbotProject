@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/myAIchatbotProject/',
+  base: '', // Relative base path for flexible deployment
   server: {
     proxy: {
       '/api': {
