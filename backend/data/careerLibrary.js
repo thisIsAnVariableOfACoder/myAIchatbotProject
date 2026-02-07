@@ -169,6 +169,11 @@ function buildCareerRecords() {
   const seen = new Set();
 
   function pushRecord(name, category) {
+    // Explicitly exclude specific roles requested by user
+    if (name.includes('Giáo viên Toán STEM') || name.includes('Giảng viên Toán đội tuyển')) {
+      return;
+    }
+
     const key = `${name}`.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);

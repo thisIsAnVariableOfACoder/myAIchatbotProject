@@ -44,8 +44,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/explore', exploreRoutes);
 app.use('/api/chatbot', chatbotRoutes); // NEW: Question-based chatbot
-
-// Health check
+app.use('/api/health', require('./routes/debug')); // NEW: Debug info
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
