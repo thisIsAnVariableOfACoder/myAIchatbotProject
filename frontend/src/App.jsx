@@ -11,8 +11,9 @@ import { applyTheme, getStoredTheme } from './theme';
 import Explore from './pages/Explore';
 
 export default function App() {
-  const baseUrl = import.meta.env.BASE_URL || '/';
-  const routerBase = baseUrl === './' ? '/' : baseUrl;
+  // Detect GitHub Pages subdirectory
+  const isGitHubPages = window.location.hostname.includes('github.io');
+  const routerBase = isGitHubPages ? '/myAIchatbotProject' : '/';
   const [showSplash, setShowSplash] = useState(() => localStorage.getItem('showSplash') !== 'false');
   const [splashVisible, setSplashVisible] = useState(showSplash);
 
