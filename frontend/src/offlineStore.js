@@ -2918,13 +2918,35 @@ export const offlineApi = {
     };
     const basePath = getBasePath();
 
+    // Map category to icon
+    const getIcon = (cat) => {
+      const lower = normalizeText(cat || '').toLowerCase();
+      if (lower.includes('cong nghe') || lower.includes('technology') || lower.includes('it')) return 'tech.svg';
+      if (lower.includes('giao duc') || lower.includes('education') || lower.includes('dao tao')) return 'education.svg';
+      if (lower.includes('y te') || lower.includes('health') || lower.includes('bac si')) return 'health.svg';
+      if (lower.includes('kinh doanh') || lower.includes('business') || lower.includes('ban hang')) return 'business.svg';
+      if (lower.includes('nghe thuat') || lower.includes('art') || lower.includes('thiet ke') || lower.includes('creative')) return 'creative.svg';
+      if (lower.includes('khoa hoc') || lower.includes('science') || lower.includes('nghien cuu')) return 'science.svg';
+      if (lower.includes('an ninh') || lower.includes('security') || lower.includes('cong an')) return 'security.svg';
+      if (lower.includes('dich vu') || lower.includes('service') || lower.includes('du lich')) return 'service.svg';
+      if (lower.includes('van tai') || lower.includes('transport') || lower.includes('lai xe')) return 'transport.svg';
+      if (lower.includes('xay dung') || lower.includes('construction') || lower.includes('kien truc')) return 'construction.svg';
+      if (lower.includes('nong nghiep') || lower.includes('agri') || lower.includes('lam nghiep')) return 'agri.svg';
+      if (lower.includes('quan ly') || lower.includes('management') || lower.includes('lanh dao')) return 'management.svg';
+      if (lower.includes('luat') || lower.includes('legal') || lower.includes('phap ly')) return 'legal.svg';
+      if (lower.includes('hanh chinh') || lower.includes('admin') || lower.includes('van phong')) return 'admin.svg';
+      if (lower.includes('cong dong') || lower.includes('community') || lower.includes('xa hoi')) return 'community.svg';
+      if (lower.includes('ky thuat') || lower.includes('industry') || lower.includes('co khi')) return 'industry.svg';
+      return 'default.svg';
+    };
+
     const query = normalizeText(String(q || ''));
     let list = CAREERS.map((c, idx) => ({
       id: idx + 1,
       title: c.name,
       category: c.category,
       tags: c.tags,
-      image_url: `${basePath}/career-icons/default.svg` // Fix path
+      image_url: `${basePath}/career-icons/${getIcon(c.category)}`
     }));
     if (query) {
       list = list.filter((j) => {
