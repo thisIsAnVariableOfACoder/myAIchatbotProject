@@ -380,16 +380,31 @@ function buildSubjectCareers() {
 }
 
 function buildGroupCareers() {
+  const ROLE_LEVELS = ['Junior', 'Senior', 'Lead', 'Principal', 'Cao cấp', 'Trưởng nhóm', 'Giám sát', 'Quản lý'];
+  const ROLE_TRACKS = ['chiến lược', 'vận hành', 'triển khai', 'tối ưu', 'nghiên cứu', 'tư vấn', 'đào tạo', 'chuyển đổi số'];
+  const MAX_GROUP_CAREERS = 800;
   const careers = [];
   for (const group of GROUP_BLUEPRINTS) {
     const names = new Set();
+    const specialties = group.specialties || group.topics || [];
     for (const role of group.roles) {
       for (const domain of group.domains) {
         names.add(`${role} ${domain}`);
-        names.add(`${role} ${domain} cao cấp`);
-        if (names.size >= 160) break;
+        for (const level of ROLE_LEVELS) {
+          names.add(`${role} ${domain} ${level}`);
+          if (names.size >= MAX_GROUP_CAREERS) break;
+        }
+        for (const track of ROLE_TRACKS) {
+          names.add(`${role} ${domain} (${track})`);
+          if (names.size >= MAX_GROUP_CAREERS) break;
+        }
+        for (const spec of specialties) {
+          names.add(`${role} ${domain} chuyên ${spec}`);
+          if (names.size >= MAX_GROUP_CAREERS) break;
+        }
+        if (names.size >= MAX_GROUP_CAREERS) break;
       }
-      if (names.size >= 160) break;
+      if (names.size >= MAX_GROUP_CAREERS) break;
     }
     const tags = [group.tag, ...(group.extraTags || [])];
     for (const name of names) {
