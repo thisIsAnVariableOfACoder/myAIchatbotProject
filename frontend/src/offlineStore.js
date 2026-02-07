@@ -2749,12 +2749,14 @@ function pickNextQuestion(state) {
     state.focusIndex += 1;
     state.focusCount += 1;
     state.lastQuestionTags = q.tags || [];
+    state.lastQuestionText = q.text; // Store text for LLM context
     return q;
   }
 
   const q = GENERAL_QUESTIONS[state.generalIndex % GENERAL_QUESTIONS.length];
   state.generalIndex += 1;
   state.lastQuestionTags = q.tags || [];
+  state.lastQuestionText = q.text; // Store text for LLM context
   return q;
 }
 

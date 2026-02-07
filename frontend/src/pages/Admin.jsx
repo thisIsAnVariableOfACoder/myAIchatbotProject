@@ -42,36 +42,27 @@ export default function Admin() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
-      <section className="rounded-2xl border border-[#E8E2D8] bg-white p-4 shadow-sm">
-        <div className="text-lg font-semibold mb-3">Danh sách kịch bản</div>
-        <div className="space-y-2">
-          {scenarios.length === 0 && <div className="text-sm text-[#5B5B57]">Chưa có kịch bản.</div>}
-          {scenarios.map((s) => (
-            <div key={s.id} className="rounded-xl border border-[#E8E2D8] p-3 flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-sm">{s.name}</div>
-                <div className="text-xs text-[#5B5B57]">{s.target_user_type || 'all'}</div>
-              </div>
-              <div className="flex gap-2">
-                <button className="px-2 py-1 text-xs rounded border" onClick={() => setSelected(s)}>Sửa</button>
-                <button className="px-2 py-1 text-xs rounded border border-[#D64545] text-[#D64545]" onClick={() => handleDelete(s.id)}>Xóa</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-[#E8E2D8] bg-white p-4 shadow-sm">
-        <div className="text-lg font-semibold mb-3">{selected ? 'Sửa kịch bản' : 'Tạo kịch bản mới'}</div>
-        <AdminScenarioEditor
-          selected={selected}
-          onSaved={async () => {
-            await loadScenarios();
-            setSelected(null);
-          }}
-        />
-      </section>
+              </div >
+    <div className="flex gap-2">
+      <button className="px-2 py-1 text-xs rounded border" onClick={() => setSelected(s)}>Sửa</button>
+      <button className="px-2 py-1 text-xs rounded border border-[#D64545] text-[#D64545]" onClick={() => handleDelete(s.id)}>Xóa</button>
     </div>
+            </div >
+          ))
+}
+        </div >
+      </section >
+
+  <section className="rounded-2xl border border-[#E8E2D8] bg-white p-4 shadow-sm">
+    <div className="text-lg font-semibold mb-3">{selected ? 'Sửa kịch bản' : 'Tạo kịch bản mới'}</div>
+    <AdminScenarioEditor
+      selected={selected}
+      onSaved={async () => {
+        await loadScenarios();
+        setSelected(null);
+      }}
+    />
+  </section>
+    </div >
   );
 }
