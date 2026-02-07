@@ -2921,7 +2921,7 @@ export const offlineApi = {
     // Map category to icon
     const getIcon = (cat) => {
       const lower = normalizeText(cat || '').toLowerCase();
-      
+      console.log('DEBUG ICON:', cat, '->', lower);
       // Explicit English Mapping (High Priority)
       if (lower.includes('technology') || lower.includes('data') || lower.includes('it')) return 'tech.svg';
       if (lower.includes('education')) return 'education.svg';
