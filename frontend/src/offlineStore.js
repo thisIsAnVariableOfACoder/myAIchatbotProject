@@ -2960,12 +2960,18 @@ export const offlineApi = {
     };
 
     const query = normalizeText(String(q || ''));
+
+    // Determine image base path absolutely to avoid double-path issues
+    const imgPrefix = window.location.hostname.includes('github.io')
+      ? '/myAIchatbotProject/career-icons/'
+      : '/career-icons/';
+
     let list = CAREERS.map((c, idx) => ({
       id: idx + 1,
       title: c.name,
       category: c.category,
       tags: c.tags,
-      image_url: `./career-icons/${getIcon(c.category)}`
+      image_url: `${imgPrefix}${getIcon(c.category)}`
     }));
     if (query) {
       list = list.filter((j) => {
