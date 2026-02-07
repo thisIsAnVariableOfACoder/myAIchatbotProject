@@ -1,5 +1,5 @@
-
 # Valid artifacts
+node_modules/
 backend/database/esco_occupations.csv
 tabiya-livelihoods-classifier/
 
