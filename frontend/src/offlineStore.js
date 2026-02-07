@@ -2697,33 +2697,60 @@ function deriveTags(text) {
   return tags;
 }
 
-function pickNextQuestion(state) {
+async function pickNextQuestion(state) {
   const profile = state.userProfile || {};
   const userType = profile.education_level || 'high_school';
+  const history = getMessages(state.conversationId || 'guest');
+  const pastBotMessages = history.filter(m => m.sender === 'bot').map(m => m.message);
+  const conversationText = history.map(m => `${m.sender}: ${m.message}`).join('\n');
 
-  // High School: Focus on subjects first
+  // Try LLM dynamic question if enabled and we have enough history
+  if (state.answers.length >= 1) {
+    const llmQ = await generateNextQuestionWithLLM(conversationText, profile, pastBotMessages);
+    if (llmQ) {
+      console.log("LLM Generated Question:", llmQ);
+      state.lastQuestionTags = llmQ.intended_tags || [];
+      state.lastQuestionText = llmQ.question;
+      return {
+        id: `llm_${Date.now()}`,
+        text: llmQ.question,
+        tags: llmQ.intended_tags || []
+      };
+    }
+  }
+
+  // Fallback to randomized static logic
+  const isAsked = (text) => pastBotMessages.some(m => m.includes(text) || text.includes(m));
+
   if (userType === 'high_school') {
-    // If we haven't asked enough subject questions (e.g., first 5 questions)
     if (state.answers.length < 5) {
-      // Pick a random subject question we haven't asked clearly yet
-      // This is a simplified logic; ideally we should track asked questions better
-      const subjectIndex = state.answers.length % SUBJECTS.length;
-      const subj = SUBJECTS[subjectIndex];
-      const template = SUBJECT_TEMPLATES[state.answers.length % SUBJECT_TEMPLATES.length];
-      // Create a dynamic question object
+      const availableSubjs = SUBJECTS.filter(s => !state.answers.some(a => a.includes(s.label)));
+      const subj = availableSubjs.length > 0
+        ? availableSubjs[Math.floor(Math.random() * availableSubjs.length)]
+        : SUBJECTS[Math.floor(Math.random() * SUBJECTS.length)];
+
+      const topicPool = SUBJECT_TOPICS[subj.key].filter(t => !isAsked(t));
+      const topic = topicPool.length > 0
+        ? topicPool[Math.floor(Math.random() * topicPool.length)]
+        : SUBJECT_TOPICS[subj.key][Math.floor(Math.random() * SUBJECT_TOPICS[subj.key].length)];
+
+      const template = SUBJECT_TEMPLATES[Math.floor(Math.random() * SUBJECT_TEMPLATES.length)];
+
       return {
         id: `subj_${subj.key}_${Date.now()}`,
-        text: template(subj.label, SUBJECT_TOPICS[subj.key][0]), // Pick first topic for simplicity or random
+        text: template(subj.label, topic),
         tags: [subj.tag, 'education']
       };
     }
   }
 
-  // University/Professional: Focus on groups/industries
   if (userType === 'university' || userType === 'professional') {
     if (state.answers.length < 4) {
-      const groupIndex = state.answers.length % GROUP_BLUEPRINTS.length;
-      const group = GROUP_BLUEPRINTS[groupIndex];
+      const availableGroups = GROUP_BLUEPRINTS.filter(g => !isAsked(g.label));
+      const group = availableGroups.length > 0
+        ? availableGroups[Math.floor(Math.random() * availableGroups.length)]
+        : GROUP_BLUEPRINTS[Math.floor(Math.random() * GROUP_BLUEPRINTS.length)];
+
       return {
         id: `group_${group.tag}_${Date.now()}`,
         text: `Bạn có hứng thú với lĩnh vực ${group.label} (${group.keywords.slice(0, 2).join(', ')}) không?`,
@@ -2745,18 +2772,25 @@ function pickNextQuestion(state) {
   const shouldUseFocus = focusPool && focusPool.length > 0 && (state.focusCount % 4 !== 3);
 
   if (shouldUseFocus) {
-    const q = focusPool[state.focusIndex % focusPool.length];
-    state.focusIndex += 1;
+    const unaskedFocus = focusPool.filter(q => !isAsked(q.text));
+    const q = unaskedFocus.length > 0
+      ? unaskedFocus[Math.floor(Math.random() * unaskedFocus.length)]
+      : focusPool[Math.floor(Math.random() * focusPool.length)];
+
     state.focusCount += 1;
     state.lastQuestionTags = q.tags || [];
-    state.lastQuestionText = q.text; // Store for LLM context
+    state.lastQuestionText = q.text;
     return q;
   }
 
-  const q = GENERAL_QUESTIONS[state.generalIndex % GENERAL_QUESTIONS.length];
-  state.generalIndex += 1;
+  // Random general question
+  const unaskedGeneral = GENERAL_QUESTIONS.filter(q => !isAsked(q.text));
+  const q = unaskedGeneral.length > 0
+    ? unaskedGeneral[Math.floor(Math.random() * unaskedGeneral.length)]
+    : GENERAL_QUESTIONS[Math.floor(Math.random() * GENERAL_QUESTIONS.length)];
+
   state.lastQuestionTags = q.tags || [];
-  state.lastQuestionText = q.text; // Store for LLM context
+  state.lastQuestionText = q.text;
   return q;
 }
 
@@ -2781,14 +2815,17 @@ function scoreCareers(state) {
   const focusTag = state.focusTag;
   const answersText = normalizeText(state.answers.join(' '));
 
-  const scored = CAREERS.map((career) => {
+  const scored = BASE_CAREERS.map((career) => {
     let score = 30;
 
-    // Core tag matching
+    // Core tag matching (using weights from AI or regex)
     for (const tag of career.tags) {
       const weight = tags[tag] || 0;
-      if (weight) score += 12 * weight;
-      if (answersText.includes(normalizeText(tag))) score += 4;
+      if (weight !== 0) {
+        // AI weights (1-5) have high impact
+        score += 15 * weight;
+      }
+      if (answersText.includes(normalizeText(tag))) score += 5;
     }
 
     // Focus tag bonus
@@ -2847,14 +2884,15 @@ async function analyzeResponseWithLLM(question, answer, profile) {
       Thông tin hồ sơ người dùng: ${JSON.stringify(profile)}
 
       Hãy phân tích câu trả lời trên:
-      1. Phân loại thái độ (sentiment): "positive" (tích cực/đồng ý), "negative" (tiêu cực/không đồng ý), "neutral" (trung lập).
-      2. Xác định các chủ đề nghề nghiệp hoặc sở thích ẩn ý (implied_topics) dựa trên câu trả lời (tiếng Anh).
+      1. Phân loại thái độ (sentiment): "positive", "negative", "neutral".
+      2. Xác định các chủ đề nghề nghiệp (tags) liên quan và gán trọng số từ 1 đến 5 (VD: {"technology": 5, "creative": 2, "office": -3}).
+      Trọng số âm nghĩa là người dùng KHÔNG thích hoặc KHÔNG phù hợp với chủ đề đó.
       
       TRẢ VỀ DUY NHẤT JSON:
       {
         "sentiment": "positive" | "negative" | "neutral",
         "confidence": 0.0-1.0,
-        "implied_topics": ["topic1", "topic2"],
+        "topic_weights": { "tag1": weight, "tag2": weight },
         "reasoning": "giải thích ngắn gọn"
       }
     `;
@@ -2877,6 +2915,59 @@ async function analyzeResponseWithLLM(question, answer, profile) {
     }
   } catch (e) {
     console.error("LLM Analysis Error:", e);
+  }
+  return null;
+}
+
+async function generateNextQuestionWithLLM(conversationText, profile, pastBotMessages) {
+  const apiKey = localStorage.getItem('GEMINI_API_KEY');
+  if (!apiKey) return null;
+
+  try {
+    const prompt = `
+      Bạn là một chatbot tư vấn nghề nghiệp thông minh. 
+      Hồ sơ người dùng: ${JSON.stringify(profile)}
+      Lịch sử hội thoại gần đây:
+      ${conversationText.slice(-2000)}
+
+      Nhiệm vụ: Hãy đặt một câu hỏi tiếp theo để tìm hiểu sâu hơn về sở thích, năng lực hoặc định hướng nghề nghiệp của người dùng.
+      
+      YÊU CẦU QUAN TRỌNG:
+      1. TUYỆT ĐỐI KHÔNG lặp lại các câu hỏi đã hỏi sau đây: ${JSON.stringify(pastBotMessages.slice(-10))}
+      2. Câu hỏi phải tự nhiên, dựa trên những gì người dùng vừa trả lời.
+      3. Nếu người dùng muốn "hỏi thêm", hãy khai thác một khía cạnh mới hoặc đào sâu vào một ngành mà họ có vẻ quan tâm.
+      4. Ngôn ngữ thân thiện, gần gũi (dùng "bạn", "mình").
+
+      TRẢ VỀ DUY NHẤT JSON:
+      {
+        "question": "nội dung câu hỏi mới",
+        "intended_tags": ["tag_lien_quan1", "tag_lien_quan2"]
+      }
+    `;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return null;
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const result = JSON.parse(jsonMatch[0]);
+      // Double check uniqueness locally
+      if (pastBotMessages.includes(result.question)) {
+        return null; // Force fallback to randomized static
+      }
+      return result;
+    }
+  } catch (e) {
+    console.error("LLM Generation Error:", e);
   }
   return null;
 }
@@ -2935,22 +3026,20 @@ export const offlineApi = {
       const llmResult = await analyzeResponseWithLLM(lastQ, message, state.userProfile);
 
       if (llmResult) {
-        console.log("LLM Smart Result:", llmResult);
-        if (llmResult.sentiment === 'positive') {
-          if (state.lastQuestionTags?.length) {
-            for (const tag of state.lastQuestionTags) addTagScore(state.tags, tag, 3 * (llmResult.confidence || 1));
+        console.log("LLM Analysis Result:", llmResult);
+
+        // Apply topic weights (fine-grained scoring)
+        if (llmResult.topic_weights) {
+          for (const [tag, weight] of Object.entries(llmResult.topic_weights)) {
+            addTagScore(state.tags, tag, weight);
           }
-          if (llmResult.implied_topics) {
-            for (const topic of llmResult.implied_topics) {
-              const matchedTag = Object.keys(TAG_KEYWORDS).find(t =>
-                normalizeText(topic).includes(t) || t.includes(normalizeText(topic))
-              );
-              if (matchedTag) addTagScore(state.tags, matchedTag, 2);
-            }
-          }
-        } else if (llmResult.sentiment === 'negative') {
-          if (state.lastQuestionTags?.length) {
-            for (const tag of state.lastQuestionTags) addTagScore(state.tags, tag, -2);
+        }
+
+        // Apply sentiment bonus/penalty to current question tags
+        const sentimentMultiplier = llmResult.sentiment === 'positive' ? 1 : (llmResult.sentiment === 'negative' ? -1 : 0);
+        if (sentimentMultiplier !== 0 && state.lastQuestionTags?.length) {
+          for (const tag of state.lastQuestionTags) {
+            addTagScore(state.tags, tag, 3 * sentimentMultiplier * (llmResult.confidence || 1));
           }
         }
       } else {
@@ -2996,7 +3085,7 @@ export const offlineApi = {
       };
     }
 
-    const question = pickNextQuestion(state);
+    const question = await pickNextQuestion(state);
     saveState(convId, state);
     const response = question.text;
     messages.push({ id: messages.length + 1, sender: 'bot', message: response, created_at: new Date().toISOString() });
