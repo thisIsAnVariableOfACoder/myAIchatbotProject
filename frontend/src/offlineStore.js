@@ -2921,38 +2921,44 @@ export const offlineApi = {
     // Map category to icon
     const getIcon = (cat) => {
       const lower = normalizeText(cat || '').toLowerCase();
-      // Tech
-      if (lower.includes('cong nghe') || lower.includes('technology') || lower.includes('it') || lower.includes('phan mem') || lower.includes('lap trinh') || lower.includes('du lieu') || lower.includes('mang may tinh') || lower.includes('he thong')) return 'tech.svg';
-      // Education
-      if (lower.includes('giao duc') || lower.includes('education') || lower.includes('dao tao') || lower.includes('giang day') || lower.includes('giao vien')) return 'education.svg';
-      // Health
-      if (lower.includes('y te') || lower.includes('health') || lower.includes('bac si') || lower.includes('duoc') || lower.includes('dieu duong') || lower.includes('nha khoa')) return 'health.svg';
-      // Business
-      if (lower.includes('kinh doanh') || lower.includes('business') || lower.includes('ban hang') || lower.includes('marketing') || lower.includes('tai chinh') || lower.includes('ke toan') || lower.includes('nhan su')) return 'business.svg';
-      // Creative
-      if (lower.includes('nghe thuat') || lower.includes('art') || lower.includes('thiet ke') || lower.includes('creative') || lower.includes('truyen thong') || lower.includes('noi dung') || lower.includes('dien anh') || lower.includes('am nhac')) return 'creative.svg';
-      // Science
-      if (lower.includes('khoa hoc') || lower.includes('science') || lower.includes('nghien cuu') || lower.includes('sinh hoc') || lower.includes('hoa hoc') || lower.includes('vat ly') || lower.includes('moi truong')) return 'science.svg';
-      // Security
-      if (lower.includes('an ninh') || lower.includes('security') || lower.includes('cong an') || lower.includes('quan doi') || lower.includes('bao mat')) return 'security.svg';
-      // Service
-      if (lower.includes('dich vu') || lower.includes('service') || lower.includes('du lich') || lower.includes('khach san') || lower.includes('nha hang') || lower.includes('spa') || lower.includes('cham soc')) return 'service.svg';
-      // Transport
-      if (lower.includes('van tai') || lower.includes('transport') || lower.includes('lai xe') || lower.includes('hang hai') || lower.includes('hang khong') || lower.includes('logistics')) return 'transport.svg';
-      // Construction
-      if (lower.includes('xay dung') || lower.includes('construction') || lower.includes('kien truc') || lower.includes('quy hoach') || lower.includes('noi that')) return 'construction.svg';
-      // Agri
-      if (lower.includes('nong nghiep') || lower.includes('agri') || lower.includes('lam nghiep') || lower.includes('thuy san') || lower.includes('chan nuoi') || lower.includes('trong trot')) return 'agri.svg';
-      // Management
-      if (lower.includes('quan ly') || lower.includes('management') || lower.includes('lanh dao') || lower.includes('dieu hanh') || lower.includes('giam doc')) return 'management.svg';
-      // Legal
-      if (lower.includes('luat') || lower.includes('legal') || lower.includes('phap ly') || lower.includes('tu phap') || lower.includes('to a')) return 'legal.svg';
-      // Admin
-      if (lower.includes('hanh chinh') || lower.includes('admin') || lower.includes('van phong') || lower.includes('thu ky') || lower.includes('tro ly')) return 'admin.svg';
-      // Community
-      if (lower.includes('cong dong') || lower.includes('community') || lower.includes('xa hoi') || lower.includes('tam ly') || lower.includes('tu thien')) return 'community.svg';
-      // Industry (Engineering/Technical)
-      if (lower.includes('ky thuat') || lower.includes('industry') || lower.includes('co khi') || lower.includes('dien') || lower.includes('dien tu') || lower.includes('tu dong hoa') || lower.includes('che tao')) return 'engineering.svg';
+      
+      // Explicit English Mapping (High Priority)
+      if (lower.includes('technology') || lower.includes('data') || lower.includes('it')) return 'tech.svg';
+      if (lower.includes('education')) return 'education.svg';
+      if (lower.includes('health') || lower.includes('medical') || lower.includes('doctor')) return 'health.svg';
+      if (lower.includes('business') || lower.includes('finance') || lower.includes('marketing') || lower.includes('sales')) return 'business.svg';
+      if (lower.includes('creative') || lower.includes('design') || lower.includes('art') || lower.includes('media')) return 'creative.svg';
+      if (lower.includes('science')) return 'science.svg';
+      if (lower.includes('security')) return 'security.svg';
+      if (lower.includes('service') || lower.includes('beauty') || lower.includes('retail')) return 'service.svg';
+      if (lower.includes('hospitality') || lower.includes('hotel') || lower.includes('tourism')) return 'hospitality.svg';
+      if (lower.includes('transport') || lower.includes('logistics')) return 'transport.svg';
+      if (lower.includes('construction') || lower.includes('architecture')) return 'construction.svg';
+      if (lower.includes('agriculture') || lower.includes('farming') || lower.includes('agri')) return 'agri.svg';
+      if (lower.includes('management') || lower.includes('manager')) return 'management.svg';
+      if (lower.includes('legal') || lower.includes('law')) return 'legal.svg';
+      if (lower.includes('admin') || lower.includes('government') || lower.includes('office')) return 'admin.svg';
+      if (lower.includes('community') || lower.includes('social') || lower.includes('sports')) return 'community.svg';
+      if (lower.includes('engineering') || lower.includes('industry') || lower.includes('technical') || lower.includes('trades')) return 'engineering.svg';
+
+      // Vietnamese Mapping (Fallback)
+      if (lower.includes('cong nghe')) return 'tech.svg';
+      if (lower.includes('giao duc')) return 'education.svg';
+      if (lower.includes('y te') || lower.includes('bac si')) return 'health.svg';
+      if (lower.includes('kinh doanh')) return 'business.svg';
+      if (lower.includes('nghe thuat') || lower.includes('thiet ke')) return 'creative.svg';
+      if (lower.includes('khoa hoc')) return 'science.svg';
+      if (lower.includes('an ninh')) return 'security.svg';
+      if (lower.includes('dich vu')) return 'service.svg';
+      if (lower.includes('du lich')) return 'hospitality.svg';
+      if (lower.includes('van tai')) return 'transport.svg';
+      if (lower.includes('xay dung')) return 'construction.svg';
+      if (lower.includes('nong nghiep')) return 'agri.svg';
+      if (lower.includes('quan ly')) return 'management.svg';
+      if (lower.includes('luat')) return 'legal.svg';
+      if (lower.includes('hanh chinh')) return 'admin.svg';
+      if (lower.includes('cong dong')) return 'community.svg';
+      if (lower.includes('ky thuat') || lower.includes('co khi')) return 'engineering.svg';
 
       return 'default.svg';
     };
