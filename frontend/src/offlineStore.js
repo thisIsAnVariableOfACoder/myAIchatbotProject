@@ -2704,8 +2704,11 @@ async function pickNextQuestion(state) {
   const pastBotMessages = history.filter(m => m.sender === 'bot').map(m => m.message);
   const conversationText = history.map(m => `${m.sender}: ${m.message}`).join('\n');
 
-  // Force exact first question from verbatim prompt if no history
-  if (history.length === 0) {
+  // Force exact first question from verbatim prompt
+  const hasAskedFirst = pastBotMessages.some(m => m.includes("Trước tiên, mình cần biết bạn hiện là học sinh, sinh viên hay người đã đi làm nhé"));
+
+  if (!hasAskedFirst) {
+    state.askedFirst = true; // Use flag for extra safety
     state.lastQuestionText = "Trước tiên, mình cần biết bạn hiện là học sinh, sinh viên hay người đã đi làm nhé.";
     return {
       id: "ai_start",
@@ -3125,10 +3128,12 @@ async function generateNextQuestionWithLLM(conversationText, profile, pastBotMes
 
       YÊU CẦU KỸ THUẬT:
       1. Hãy tuân thủ tuyệt đối các bước và phong cách trong prompt trên.
-      2. KHÔNG lặp lại câu hỏi: ${JSON.stringify(pastBotMessages.slice(-5))}
-      3. Trả về DUY NHẤT một đối tượng JSON để hệ thống có thể hiển thị:
+      2. QUAN TRỌNG: Bước 1 (hỏi vai trò) ĐÃ HOÀN THÀNH. Người dùng đã trả lời. 
+      3. Hãy thực hiện ngay Bước 2 hoặc Bước 3 dựa trên thông tin người dùng vừa cung cấp.
+      4. KHÔNG lặp lại câu hỏi: ${JSON.stringify(pastBotMessages.slice(-5))}
+      5. Trả về DUY NHẤT một đối tượng JSON:
       {
-        "question": "nội dung câu hỏi tiếp theo theo đúng lộ trình Bước 1/2/3",
+        "question": "nội dung câu hỏi tiếp theo (Bước 2 hoặc 3)",
         "intended_tags": ["tag1", "tag2"]
       }
     `;
