@@ -73,7 +73,7 @@ export default function Admin() {
               </button>
             </div>
             <p className="mt-2 text-xs text-[#7A6D5B]">
-              Chatbot sẽ dùng LLM để hiểu ý định người dùng (ví dụ: "cos" -> "có") và tính điểm chính xác hơn.
+              Chatbot sẽ dùng LLM để hiểu ý định người dùng (ví dụ: "cos" thành "có") và tính điểm chính xác hơn.
               Lấy key miễn phí tại <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[var(--c-primary)] underline font-medium">Google AI Studio</a>.
             </p>
           </div>
