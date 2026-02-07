@@ -73,241 +73,97 @@ const CAREER_LIBRARY = {
   ],
   Finance: [
     'Financial Analyst', 'Accountant', 'Auditor', 'Tax Specialist',
-    'Investment Analyst', 'Risk Analyst', 'Treasury Specialist', 'Controller',
-    'Credit Analyst', 'Insurance Specialist', 'Financial Planner', 'Wealth Manager',
-    'Investment Banker', 'Equity Research Analyst', 'Actuary', 'Risk Manager'
+    'Investment Analyst', 'Risk Analyst', 'Treasury Specialist',
+    'Credit Analyst', 'Insurance Specialist', 'Financial Planner',
+    'Investment Banker', 'Actuary'
   ],
   Education: [
-    'Giáo viên Toán', 'Giáo viên Văn', 'Giáo viên Tiếng Anh', 'Giáo viên Lịch sử', 'Giáo viên Địa lý', 'Giáo viên Sinh học', 'Giáo viên Hóa học', 'Giáo viên Vật lý', 'Giáo viên Tin học', 'Giáo viên Giáo dục công dân', 'Giáo viên Nghệ thuật', 'Giáo viên Âm nhạc', 'Giáo viên Thể dục', 'Giáo viên Kỹ năng sống', 'Giảng viên Đại học', 'Giảng viên Cao đẳng', 'Giảng viên Trung cấp', 'Giáo viên Giáo dục đặc biệt', 'Giáo viên Giáo dục quốc tế', 'Giáo viên Giáo dục hướng nghiệp'
+    'Giáo viên Tiểu học',
+    'Giáo viên Trung học cơ sở',
+    'Giáo viên Trung học phổ thông',
+    'Giảng viên Đại học / Cao đẳng',
+    'Giáo viên Đào tạo nghề',
+    'Giáo viên Giáo dục đặc biệt',
+    'Gia sư / Giáo viên kèm'
   ],
   Healthcare: [
-    'Nurse', 'Pharmacist', 'Lab Technician', 'Medical Assistant',
-    'Physiotherapist', 'Radiology Technician', 'Dentist Assistant', 'Public Health Officer',
-    'Doctor', 'Dentist', 'Clinical Psychologist', 'Occupational Therapist', 'Nutritionist',
-    'Health Informatics Specialist', 'Medical Sales Representative', 'Healthcare Administrator'
+    'Bác sĩ', 'Y tá / Điều dưỡng', 'Dược sĩ', 'Nha sĩ',
+    'Kỹ thuật viên Y tế', 'Nhân viên Chăm sóc sức khỏe',
+    'Nhà Tâm lý học Lâm sàng', 'Vật lý trị liệu',
+    'Chuyên viên Dinh dưỡng', 'Quản lý Y tế'
   ],
   Engineering: [
-    'Civil Engineer', 'Mechanical Engineer', 'Electrical Engineer', 'Industrial Engineer',
-    'Automation Engineer', 'Robotics Engineer', 'Environmental Engineer', 'Architect',
-    'Chemical Engineer', 'Aerospace Engineer', 'Biomedical Engineer', 'Quality Engineer',
-    'Process Engineer', 'Mechatronics Engineer', 'Energy Engineer', 'Materials Engineer'
+    'Kỹ sư Xây dựng', 'Kỹ sư Cơ khí', 'Kỹ sư Điện', 'Kỹ sư Công nghiệp',
+    'Kỹ sư Tự động hóa', 'Kiến trúc sư', 'Kỹ sư Hóa học',
+    'Kỹ sư Môi trường', 'Kỹ sư Năng lượng'
   ],
   Legal: [
-    'Legal Assistant', 'Paralegal', 'Compliance Officer', 'Legal Consultant',
-    'Lawyer', 'Legal Advisor', 'Contract Manager', 'IP Specialist', 'Compliance Manager'
+    'Luật sư', 'Trợ lý Pháp lý', 'Chuyên viên Tuân thủ',
+    'Tư vấn Pháp lý', 'Chuyên viên Hợp đồng'
   ],
   Hospitality: [
-    'Hotel Manager', 'Tour Guide', 'Chef', 'Restaurant Manager',
-    'Travel Consultant', 'Event Coordinator', 'Resort Manager', 'Event Manager',
-    'Bartender', 'Barista', 'Sommelier'
+    'Quản lý Khách sạn', 'Hướng dẫn viên Du lịch', 'Đầu bếp',
+    'Quản lý Nhà hàng', 'Tư vấn Du lịch', 'Điều phối Sự kiện'
   ],
   Logistics: [
-    'Supply Chain Analyst', 'Logistics Coordinator', 'Warehouse Manager', 'Operations Planner',
-    'Customs Specialist', 'Demand Planner', 'Fleet Supervisor', 'Import Export Coordinator'
+    'Chuyên viên Chuỗi cung ứng', 'Điều phối Logistics',
+    'Quản lý Kho', 'Chuyên viên Hải quan', 'Quản lý Vận tải'
   ],
   Media: [
-    'Journalist', 'Video Editor', 'Photographer', 'Media Producer',
-    'Content Strategist', 'Podcast Producer', 'Animator', 'Scriptwriter',
-    'Social Media Producer', 'Sound Designer', 'Media Planner',
-    'Editor', 'Reporter', 'TV Host', 'Director', 'Cameraman', 'PR Specialist', 'Advertising Specialist',
-    'Program Producer', 'Video Producer', 'Audio Producer', 'Image Producer', 'Press Producer', 'Film Producer',
-    'Game Producer', 'Animation Producer', 'Interactive Producer', 'Brand Producer'
+    'Nhà báo', 'Biên tập viên Video', 'Nhiếp ảnh gia',
+    'Nhà sản xuất Truyền thông', 'Chuyên gia Nội dung',
+    'Nhà sản xuất Podcast', 'Họa sĩ Hoạt hình', 'Biên kịch',
+    'Chuyên gia PR', 'Quản lý Truyền thông Xã hội'
   ],
   Government: [
-    'Policy Analyst', 'Public Relations Officer', 'Civil Servant',
-    'Diplomat', 'Urban Planner', 'Regulatory Affairs Specialist', 'Public Policy Advisor'
+    'Chuyên viên Chính sách', 'Công chức',
+    'Nhà Ngoại giao', 'Quy hoạch Đô thị'
   ],
   Science: [
-    'Research Assistant', 'Lab Researcher', 'Biologist', 'Chemist',
-    'Physicist', 'Environmental Scientist', 'Food Scientist', 'Biochemist',
-    'Geneticist', 'Geologist', 'Meteorologist', 'Epidemiologist', 'Microbiologist'
+    'Nhà Nghiên cứu Khoa học',
+    'Kỹ thuật viên Phòng thí nghiệm',
+    'Nhà Khoa học Môi trường',
+    'Nhà Khoa học Thực phẩm'
   ],
   Trades: [
-    'Electrician', 'Mechanic', 'Plumber', 'Carpenter',
-    'Welder', 'Technician', 'HVAC Technician', 'Painter',
-    'Machinist', 'Auto Technician'
+    'Thợ Điện', 'Thợ Cơ khí', 'Thợ Sửa ống nước', 'Thợ Mộc',
+    'Thợ Hàn', 'Kỹ thuật viên', 'Thợ Sơn'
   ],
   Agriculture: [
-    'Agronomist', 'Farm Manager', 'Food Technologist', 'Veterinary Assistant',
-    'Aquaculture Specialist', 'Greenhouse Technician', 'Soil Scientist',
-    'Food Safety Specialist', 'Agricultural Engineer', 'Agribusiness Specialist'
+    'Kỹ sư Nông nghiệp', 'Quản lý Trang trại',
+    'Chuyên gia Công nghệ Thực phẩm', 'Trợ lý Thú y',
+    'Chuyên viên An toàn Thực phẩm'
   ],
   RealEstate: [
-    'Real Estate Agent', 'Property Manager', 'Real Estate Analyst', 'Leasing Consultant',
-    'Property Valuer', 'Real Estate Broker'
+    'Môi giới Bất động sản', 'Quản lý Tài sản',
+    'Chuyên viên Phân tích Bất động sản', 'Tư vấn Cho thuê'
   ],
   Retail: [
-    'Retail Manager', 'Merchandiser', 'Store Supervisor', 'Inventory Specialist',
-    'Category Manager', 'Buyer', 'E-commerce Merchandiser'
+    'Quản lý Bán lẻ', 'Chuyên viên Hàng hóa',
+    'Giám sát Cửa hàng', 'Quản lý Tồn kho', 'Quản lý Thương mại điện tử'
   ],
   Beauty: [
-    'Makeup Artist', 'Hair Stylist', 'Skincare Specialist', 'Spa Therapist',
-    'Nail Technician', 'Cosmetologist', 'Esthetician'
+    'Chuyên viên Trang điểm', 'Nhà Tạo mẫu Tóc',
+    'Chuyên gia Chăm sóc Da', 'Nhân viên Spa'
   ],
   Sports: [
-    'Coach', 'Fitness Trainer', 'Sports Analyst', 'Physiotherapist (Sports)',
-    'Sports Physiologist', 'Strength Coach', 'Sports Nutritionist'
+    'Huấn luyện viên', 'Chuyên gia Thể dục',
+    'Chuyên viên Phân tích Thể thao', 'Chuyền gia Dinh dưỡng Thể thao'
   ],
   Transportation: [
-    'Logistics Driver', 'Fleet Manager', 'Transport Planner', 'Pilot Assistant',
-    'Air Traffic Controller', 'Flight Dispatcher', 'Maritime Officer', 'Rail Operations Manager'
+    'Quản lý Vận tải', 'Chuyên gia Quy hoạch Giao thông',
+    'Kiểm soát viên Không lưu', 'Nhân viên Điều hành Bay'
   ],
   Construction: [
-    'Construction Manager', 'Site Engineer', 'Surveyor', 'Safety Officer',
-    'Quantity Surveyor', 'Structural Engineer', 'Construction Planner'
+    'Quản lý Xây dựng', 'Kỹ sư Công trường',
+    'Khảo sát viên', 'Chuyên viên An toàn Xây dựng', 'Kỹ sư Kết cấu'
   ]
 };
 
-const SPECIALIZED_BLUEPRINTS = [
-  {
-    category: 'Technology',
-    domains: [
-      'Web', 'Mobile', 'Cloud', 'DevOps', 'Security', 'AI', 'Machine Learning',
-      'Data', 'Embedded Systems', 'Robotics', 'IoT', 'Blockchain', 'AR/VR',
-      'Game', 'Platform', 'Infrastructure', 'Network', 'Automation', 'QA',
-      'Computer Vision', 'NLP'
-    ],
-    roles: ['Engineer', 'Developer', 'Architect', 'Analyst', 'Specialist', 'Researcher', 'Scientist']
-  },
-  {
-    category: 'Engineering',
-    domains: [
-      'Mechanical', 'Electrical', 'Electronics', 'Automation', 'Robotics',
-      'Mechatronics', 'Civil', 'Structural', 'Geotechnical', 'HVAC',
-      'Industrial', 'Chemical', 'Materials', 'Aerospace', 'Marine',
-      'Biomedical', 'Energy Systems', 'Power Systems', 'Control Systems', 'Optical'
-    ],
-    roles: ['Engineer', 'Technician', 'Consultant', 'Manager', 'Inspector', 'Planner']
-  },
-  {
-    category: 'Science',
-    domains: [
-      'Physics', 'Chemistry', 'Biology', 'Biochemistry', 'Genetics', 'Microbiology',
-      'Neuroscience', 'Environmental Science', 'Food Science', 'Materials Science',
-      'Geology', 'Meteorology', 'Oceanography', 'Astronomy', 'Pharmacology',
-      'Nanotechnology', 'Biotechnology', 'Quantum Science', 'Ecology', 'Zoology'
-    ],
-    roles: ['Scientist', 'Researcher', 'Analyst', 'Lab Technician', 'Associate']
-  },
-  {
-    category: 'Education',
-    domains: [
-      'Math', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English',
-      'Literature', 'History', 'Geography', 'Economics', 'Business', 'Marketing',
-      'Design', 'Art', 'Music', 'Psychology', 'Data Science', 'AI', 'Robotics',
-      'Electronics', 'Automation', 'Finance', 'Law', 'Healthcare', 'Philosophy'
-    ],
-    roles: ['Teacher', 'Lecturer', 'Professor', 'Tutor', 'Curriculum Designer', 'Instructor']
-  },
-  {
-    category: 'Healthcare',
-    domains: [
-      'Cardiology', 'Oncology', 'Pediatrics', 'Neurology', 'Radiology', 'Dermatology',
-      'Orthopedics', 'Pharmacy', 'Dentistry', 'Mental Health', 'Rehabilitation',
-      'Nutrition', 'Public Health', 'Clinical Lab', 'Emergency', 'Anesthesia',
-      'Ophthalmology', 'Pathology'
-    ],
-    roles: ['Specialist', 'Nurse', 'Technician', 'Therapist', 'Researcher', 'Assistant']
-  },
-  {
-    category: 'Business',
-    domains: [
-      'Strategy', 'Operations', 'HR', 'Supply Chain', 'Retail', 'E-commerce',
-      'Product', 'Project', 'Procurement', 'Risk', 'Compliance', 'Customer Success',
-      'Business Development', 'Sales', 'Partnerships', 'Analytics', 'Consulting'
-    ],
-    roles: ['Manager', 'Analyst', 'Consultant', 'Specialist', 'Director', 'Coordinator']
-  },
-  {
-    category: 'Marketing',
-    domains: [
-      'Brand', 'Growth', 'Performance', 'Content', 'SEO', 'Social Media',
-      'CRM', 'PR', 'Market Research', 'Community', 'Influencer', 'Product Marketing'
-    ],
-    roles: ['Specialist', 'Manager', 'Analyst', 'Strategist', 'Lead']
-  },
-  {
-    category: 'Finance',
-    domains: [
-      'Accounting', 'Audit', 'Tax', 'Corporate Finance', 'Investment', 'Risk',
-      'Insurance', 'Treasury', 'Banking', 'FinTech', 'Wealth', 'Credit'
-    ],
-    roles: ['Analyst', 'Manager', 'Advisor', 'Specialist', 'Controller']
-  },
-  {
-    category: 'Legal',
-    domains: [
-      'Corporate', 'IP', 'Compliance', 'Tax', 'Labor', 'International',
-      'Data Privacy', 'Regulatory', 'Contracts', 'Real Estate'
-    ],
-    roles: ['Lawyer', 'Advisor', 'Specialist', 'Counsel', 'Analyst']
-  },
-  {
-    category: 'Media',
-    domains: [
-      'Video', 'Film', 'Animation', 'Audio', 'Journalism', 'Podcast',
-      'Photography', 'Broadcast', 'Digital Media', 'Gaming', 'Sports Media'
-    ],
-    roles: ['Producer', 'Editor', 'Designer', 'Reporter', 'Director', 'Strategist']
-  },
-  {
-    category: 'Logistics',
-    domains: [
-      'Transportation', 'Warehouse', 'Inventory', 'Import/Export', 'Fleet',
-      'Last-mile', 'Cold Chain', 'Distribution', 'Demand Planning'
-    ],
-    roles: ['Manager', 'Planner', 'Coordinator', 'Analyst', 'Supervisor']
-  },
-  {
-    category: 'Construction',
-    domains: [
-      'Structural', 'MEP', 'Civil', 'Geotechnical', 'HVAC', 'Safety',
-      'Project', 'Site', 'Quality'
-    ],
-    roles: ['Engineer', 'Manager', 'Supervisor', 'Planner', 'Inspector']
-  },
-  {
-    category: 'Agriculture',
-    domains: [
-      'Crop', 'Livestock', 'Aquaculture', 'AgriTech', 'Soil', 'Food Safety',
-      'Supply Chain', 'Greenhouse', 'Seed', 'Irrigation'
-    ],
-    roles: ['Specialist', 'Engineer', 'Technician', 'Manager', 'Consultant']
-  },
-  {
-    category: 'Energy',
-    domains: [
-      'Renewable', 'Solar', 'Wind', 'Hydro', 'Grid', 'Battery',
-      'Oil & Gas', 'Nuclear', 'Energy Storage', 'Power Generation'
-    ],
-    roles: ['Engineer', 'Analyst', 'Technician', 'Consultant', 'Manager']
-  },
-  {
-    category: 'Research',
-    domains: [
-      'AI Safety', 'Quantum Computing', 'Robotics', 'Materials', 'Biotech',
-      'Energy Systems', 'Climate', 'Neuroscience', 'Social Science', 'Economics',
-      'Education', 'Healthcare', 'Behavioral Science'
-    ],
-    roles: ['Researcher', 'Scientist', 'Fellow', 'Associate', 'Lab Director']
-  }
-];
-
-function generateSpecializedCareers() {
-  const items = [];
-  for (const group of SPECIALIZED_BLUEPRINTS) {
-    for (const domain of group.domains) {
-      for (const role of group.roles) {
-        items.push({
-          name: `${domain} ${role}`.replace(/\s+/g, ' ').trim(),
-          category: group.category
-        });
-      }
-    }
-  }
-  return items;
-}
-
+/**
+ * Build career records from CAREER_LIBRARY only
+ * Simplified to keep only general careers (~250 total)
+ */
 function buildCareerRecords() {
   const records = [];
   const seen = new Set();
@@ -320,32 +176,16 @@ function buildCareerRecords() {
       name,
       category,
       required_skills: CATEGORY_SKILLS[category] || ['communication', 'analysis'],
-      salary_range: "Thoa thuan",
+      salary_range: "Thỏa thuận",
       job_outlook: "good",
-      description: `${name} thuoc nhom ${category}`
+      description: `${name} thuộc nhóm ${category}`
     });
   }
 
+  // Only use CAREER_LIBRARY - no specialized blueprints
   for (const [category, names] of Object.entries(CAREER_LIBRARY)) {
     for (const name of names) {
       pushRecord(name, category);
-    }
-  }
-
-  const specialized = generateSpecializedCareers();
-  for (const item of specialized) {
-    pushRecord(item.name, item.category);
-  }
-
-  if (records.length < 1000) {
-    const levels = ['Junior', 'Senior', 'Lead', 'Principal'];
-    const snapshot = [...records];
-    let idx = 0;
-    while (records.length < 1000 && idx < snapshot.length * levels.length) {
-      const base = snapshot[idx % snapshot.length];
-      const level = levels[idx % levels.length];
-      pushRecord(`${level} ${base.name}`, base.category);
-      idx += 1;
     }
   }
 

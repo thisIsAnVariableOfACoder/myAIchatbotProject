@@ -3,8 +3,7 @@ const sqlite3 = require('sqlite3').verbose();
 const { buildCareerRecords } = require('../data/careerLibrary');
 
 /**
- * Script để đồng bộ dữ liệu từ careers table (career_advisor.db)
- * sang jobs table (career_catalog.db) cho tab Explore
+ * Script cleaned version - sync từ careerLibrary sang cả 2 databases
  */
 
 const ADVISOR_DB_PATH = path.join(__dirname, '..', 'database', 'career_advisor.db');
@@ -43,41 +42,101 @@ function getIconForCategory(category) {
     return CATEGORY_ICON_MAP[category] || '/career-icons/default.svg';
 }
 
-async function syncCareerCatalog() {
-    console.log('🚀 Starting career catalog sync...');
+async function fullSync() {
+    console.log('🚀 Starting FULL career sync to both databases...\n');
 
-    // Kết nối đến career_catalog.db
+    // 1. Get careers from library
+    const careers = buildCareerRecords();
+    console.log(`📊 Found ${careers.length} careers from careerLibrary`);
+
+    // 2. Sync to catalog DB (for Explore tab)
+    await syncToCatalogDB(careers);
+
+    // 3. Sync to advisor DB (for recommendations)
+    await syncToAdvisorDB(careers);
+
+    console.log('\n🎉 Full sync completed!');
+}
+
+async function syncToCatalogDB(careers) {
+    console.log('\n📝 Syncing to career_catalog.db...');
     const catalogDb = new sqlite3.Database(CATALOG_DB_PATH);
 
     try {
-        // 1. Đảm bảo schema tồn tại
         await initCatalogSchema(catalogDb);
-        console.log('✅ Catalog schema initialized');
-
-        // 2. Lấy dữ liệu từ career library
-        const careers = buildCareerRecords();
-        console.log(`📊 Found ${careers.length} careers from library`);
-
-        // 3. Clear existing data (optional - comment out nếu muốn giữ data cũ)
         await clearJobsTable(catalogDb);
-        console.log('🗑️  Cleared existing jobs data');
-
-        // 4. Insert careers vào jobs table
         await insertCareersToJobs(catalogDb, careers);
-        console.log(`✅ Synced ${careers.length} careers to jobs table`);
 
-        // 5. Verify
-        const count = await getJobsCount(catalogDb);
-        console.log(`✅ Total jobs in catalog: ${count}`);
+        const count = await getCount(catalogDb, 'jobs');
+        console.log(`✅ Synced ${count} jobs to catalog DB`);
 
         catalogDb.close();
-        console.log('🎉 Sync completed successfully!');
-
     } catch (error) {
-        console.error('❌ Error during sync:', error);
+        console.error('❌ Error syncing to catalog DB:', error.message);
         catalogDb.close();
-        process.exit(1);
+        throw error;
     }
+}
+
+async function syncToAdvisorDB(careers) {
+    console.log('\n📝 Syncing to career_advisor.db...');
+    const advisorDb = new sqlite3.Database(ADVISOR_DB_PATH);
+
+    try {
+        // Remove duplicates first
+        await removeDuplicateCareers(advisorDb);
+
+        // Insert careers with INSERT OR IGNORE to avoid duplicates
+        const stmt = advisorDb.prepare(
+            'INSERT OR IGNORE INTO careers (name, category, required_skills, salary_range, job_outlook, description) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+
+        await new Promise((resolve, reject) => {
+            advisorDb.serialize(() => {
+                for (const c of careers) {
+                    stmt.run([
+                        c.name,
+                        c.category,
+                        JSON.stringify(c.required_skills || []),
+                        c.salary_range,
+                        c.job_outlook,
+                        c.description
+                    ]);
+                }
+                stmt.finalize((err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+        });
+
+        const count = await getCount(advisorDb, 'careers');
+        console.log(`✅ Advisor DB now has ${count} careers`);
+
+        advisorDb.close();
+    } catch (error) {
+        console.error('❌ Error syncing to advisor DB:', error.message);
+        advisorDb.close();
+        throw error;
+    }
+}
+
+async function removeDuplicateCareers(db) {
+    return new Promise((resolve, reject) => {
+        // Keep only the first occurrence of each career name
+        const sql = `
+      DELETE FROM careers
+      WHERE id NOT IN (
+        SELECT MIN(id)
+        FROM careers
+        GROUP BY name
+      )
+    `;
+        db.run(sql, (err) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
 }
 
 function initCatalogSchema(db) {
@@ -140,9 +199,9 @@ function insertCareersToJobs(db, careers) {
     });
 }
 
-function getJobsCount(db) {
+function getCount(db, table) {
     return new Promise((resolve, reject) => {
-        db.get('SELECT COUNT(*) as count FROM jobs', (err, row) => {
+        db.get(`SELECT COUNT(*) as count FROM ${table}`, (err, row) => {
             if (err) return reject(err);
             resolve(row?.count || 0);
         });
@@ -151,15 +210,15 @@ function getJobsCount(db) {
 
 // Run if called directly
 if (require.main === module) {
-    syncCareerCatalog()
+    fullSync()
         .then(() => {
-            console.log('✨ All done!');
+            console.log('\n✨ All done!');
             process.exit(0);
         })
         .catch((err) => {
-            console.error('Fatal error:', err);
+            console.error('\nFatal error:', err);
             process.exit(1);
         });
 }
 
-module.exports = { syncCareerCatalog };
+module.exports = { fullSync };
