@@ -18,7 +18,19 @@ router.get('/jobs', async (req, res) => {
   try {
     await initCatalogSchema();
     const { q, category, tag, limit, offset } = req.query;
-    let result = await listJobs({ q, category, tag, limit, offset });
+    console.log(`[Explore] Request: limit=${limit}, offset=${offset}`);
+
+    // FORCE DEBUG: Check DB path
+    const dbPath = process.env.CAREER_CATALOG_DB_PATH || 'default';
+    console.log(`[Explore] DB Path env: ${dbPath}`);
+
+    // Force default limit to 120 if not specified
+    const effectiveLimit = limit ? Number(limit) : 120;
+    const effectiveOffset = offset ? Number(offset) : 0;
+
+    let result = await listJobs({ q, category, tag, limit: effectiveLimit, offset: effectiveOffset });
+    console.log(`[Explore] Found ${result.total} jobs in DB`);
+
     if (!result.total && q) {
       const fuzzy = await listJobsFuzzy({ q, limit, offset });
       if (fuzzy.total > 0) {
@@ -71,7 +83,7 @@ function safeParse(value, fallback) {
   }
 }
 
-function listFallbackCareers({ q, category, tag, limit = 24, offset = 0 }) {
+function listFallbackCareers({ q, category, tag, limit = 120, offset = 0 }) {
   if (!global.db) return Promise.resolve({ total: 0, rows: [] });
   const where = [];
   const params = [];
@@ -96,7 +108,7 @@ function listFallbackCareers({ q, category, tag, limit = 24, offset = 0 }) {
     ORDER BY name ASC
     LIMIT ? OFFSET ?
   `;
-  const safeLimit = Math.min(100, Math.max(1, Number(limit) || 24));
+  const safeLimit = Math.min(200, Math.max(1, Number(limit) || 120));
   const safeOffset = Math.max(0, Number(offset) || 0);
 
   return new Promise((resolve, reject) => {

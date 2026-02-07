@@ -415,39 +415,2151 @@ function buildGroupCareers() {
 }
 
 const BASE_CAREERS = [
-  { name: 'Kỹ sư phần mềm', category: 'Công nghệ', tags: ['technology', 'data', 'analysis'] },
-  { name: 'Khoa học dữ liệu', category: 'Dữ liệu & AI', tags: ['data_ai', 'data', 'research'] },
-  { name: 'AI Engineer', category: 'Dữ liệu & AI', tags: ['data_ai', 'research', 'analysis'] },
-  { name: 'An ninh mạng', category: 'Công nghệ', tags: ['technology', 'analysis'] },
-  { name: 'Product Manager', category: 'Kinh doanh', tags: ['business', 'leadership', 'people'] },
-  { name: 'Digital Marketing', category: 'Marketing', tags: ['marketing', 'creative'] },
-  { name: 'Sales Executive', category: 'Kinh doanh', tags: ['people', 'business'] },
-  { name: 'UI/UX Designer', category: 'Thiết kế', tags: ['design', 'creative'] },
-  { name: 'Graphic Designer', category: 'Thiết kế', tags: ['design', 'creative'] },
-  { name: 'Content Creator', category: 'Truyền thông', tags: ['media', 'creative'] },
-  { name: 'Giáo viên', category: 'Giáo dục', tags: ['education', 'people'] },
-  { name: 'Giảng viên đại học', category: 'Giáo dục', tags: ['education', 'research'] },
-  { name: 'Điều dưỡng', category: 'Y tế', tags: ['healthcare', 'people'] },
-  { name: 'Bác sĩ', category: 'Y tế', tags: ['healthcare', 'research'] },
-  { name: 'Kỹ sư điện - điện tử', category: 'Kỹ thuật', tags: ['engineering', 'analysis'] },
-  { name: 'Kỹ sư cơ khí', category: 'Kỹ thuật', tags: ['engineering', 'analysis', 'field'] },
-  { name: 'Kỹ sư xây dựng', category: 'Xây dựng', tags: ['construction', 'field'] },
-  { name: 'Kiến trúc sư', category: 'Xây dựng', tags: ['construction', 'design'] },
-  { name: 'Nhà nghiên cứu', category: 'Khoa học', tags: ['research', 'science'] },
-  { name: 'Chuyên viên phân tích tài chính', category: 'Tài chính', tags: ['finance', 'analysis'] },
-  { name: 'Kế toán', category: 'Tài chính', tags: ['finance', 'analysis'] },
-  { name: 'Luật sư', category: 'Pháp lý', tags: ['legal', 'people'] },
-  { name: 'Biên dịch viên', category: 'Ngôn ngữ', tags: ['language', 'people'] },
-  { name: 'Chuyên viên nhân sự', category: 'Quản trị', tags: ['people', 'business'] },
-  { name: 'Chuyên viên logistics', category: 'Logistics', tags: ['logistics', 'analysis'] }
+  {
+    "name": "Software Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Frontend Developer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Backend Developer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Full Stack Developer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Mobile Developer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Game Developer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "QA Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "DevOps Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Cloud Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Network Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Cybersecurity Analyst",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "AI Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Embedded Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Systems Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Site Reliability Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "IT Support",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "IT Administrator",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Database Administrator",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Security Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Automation Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Technical Support Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Web Developer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "System Administrator",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "IT Consultant",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "IT Project Manager",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Data Center Engineer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "IT Trainer",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "IT Auditor",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "IT Sales Specialist",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "IT Procurement Specialist",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "IT Business Analyst",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "IT Operations Specialist",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "IT Service Manager",
+    "category": "Technology",
+    "tags": [
+      "coding",
+      "problem_solving",
+      "sql"
+    ]
+  },
+  {
+    "name": "Data Analyst",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Data Engineer",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Data Scientist",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Business Intelligence Analyst",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Data Visualization Specialist",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Machine Learning Engineer",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Quant Analyst",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Research Analyst",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Product Analyst",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Growth Analyst",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Analytics Engineer",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "BI Developer",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Data Governance Specialist",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Data Quality Analyst",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Data Steward",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "Decision Scientist",
+    "category": "Data",
+    "tags": [
+      "statistics",
+      "sql",
+      "python"
+    ]
+  },
+  {
+    "name": "UI/UX Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Graphic Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Product Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "UX Researcher",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Interaction Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Motion Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "3D Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Brand Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Illustrator",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Game Artist",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Service Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Design Systems Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Visual Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "UX Writer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Art Director",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Industrial Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Packaging Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Fashion Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Interior Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Web Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Advertising Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Animation Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Event Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Video Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Sound Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Book Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Magazine Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Film Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Game Designer",
+    "category": "Design",
+    "tags": [
+      "design",
+      "creativity",
+      "user_research"
+    ]
+  },
+  {
+    "name": "Business Analyst",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Product Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Project Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Operations Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "HR Specialist",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Recruiter",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Sales Representative",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Account Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Customer Success",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Business Development",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Office Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Procurement Specialist",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Strategy Analyst",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Operations Analyst",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Management Consultant",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Customer Experience Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Supply Chain Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "CEO",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "CFO",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "CMO",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "CHRO",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Sales Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "HR Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Marketing Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Market Development Specialist",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Business Data Analyst",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Supply Chain Specialist",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Risk Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Quality Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Customer Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Finance Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Strategy Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Brand Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Sales Specialist",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Contract Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Purchasing Manager",
+    "category": "Business",
+    "tags": [
+      "communication",
+      "analysis",
+      "management"
+    ]
+  },
+  {
+    "name": "Marketing Specialist",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "SEO Specialist",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "Social Media Manager",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "Content Creator",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "Copywriter",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "Performance Marketer",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "PR Specialist",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "Community Manager",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "Event Planner",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "Growth Marketer",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "CRM Specialist",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "Email Marketing Specialist",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "Marketing Analyst",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "Influencer Manager",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "Brand Strategist",
+    "category": "Marketing",
+    "tags": [
+      "communication",
+      "creativity",
+      "analytics"
+    ]
+  },
+  {
+    "name": "Financial Analyst",
+    "category": "Finance",
+    "tags": [
+      "analysis",
+      "excel",
+      "finance"
+    ]
+  },
+  {
+    "name": "Accountant",
+    "category": "Finance",
+    "tags": [
+      "analysis",
+      "excel",
+      "finance"
+    ]
+  },
+  {
+    "name": "Auditor",
+    "category": "Finance",
+    "tags": [
+      "analysis",
+      "excel",
+      "finance"
+    ]
+  },
+  {
+    "name": "Tax Specialist",
+    "category": "Finance",
+    "tags": [
+      "analysis",
+      "excel",
+      "finance"
+    ]
+  },
+  {
+    "name": "Investment Analyst",
+    "category": "Finance",
+    "tags": [
+      "analysis",
+      "excel",
+      "finance"
+    ]
+  },
+  {
+    "name": "Risk Analyst",
+    "category": "Finance",
+    "tags": [
+      "analysis",
+      "excel",
+      "finance"
+    ]
+  },
+  {
+    "name": "Treasury Specialist",
+    "category": "Finance",
+    "tags": [
+      "analysis",
+      "excel",
+      "finance"
+    ]
+  },
+  {
+    "name": "Credit Analyst",
+    "category": "Finance",
+    "tags": [
+      "analysis",
+      "excel",
+      "finance"
+    ]
+  },
+  {
+    "name": "Insurance Specialist",
+    "category": "Finance",
+    "tags": [
+      "analysis",
+      "excel",
+      "finance"
+    ]
+  },
+  {
+    "name": "Financial Planner",
+    "category": "Finance",
+    "tags": [
+      "analysis",
+      "excel",
+      "finance"
+    ]
+  },
+  {
+    "name": "Investment Banker",
+    "category": "Finance",
+    "tags": [
+      "analysis",
+      "excel",
+      "finance"
+    ]
+  },
+  {
+    "name": "Actuary",
+    "category": "Finance",
+    "tags": [
+      "analysis",
+      "excel",
+      "finance"
+    ]
+  },
+  {
+    "name": "Giáo viên Tiểu học",
+    "category": "Education",
+    "tags": [
+      "teaching",
+      "communication",
+      "subject_knowledge"
+    ]
+  },
+  {
+    "name": "Giáo viên Trung học cơ sở",
+    "category": "Education",
+    "tags": [
+      "teaching",
+      "communication",
+      "subject_knowledge"
+    ]
+  },
+  {
+    "name": "Giáo viên Trung học phổ thông",
+    "category": "Education",
+    "tags": [
+      "teaching",
+      "communication",
+      "subject_knowledge"
+    ]
+  },
+  {
+    "name": "Giảng viên Đại học / Cao đẳng",
+    "category": "Education",
+    "tags": [
+      "teaching",
+      "communication",
+      "subject_knowledge"
+    ]
+  },
+  {
+    "name": "Giáo viên Đào tạo nghề",
+    "category": "Education",
+    "tags": [
+      "teaching",
+      "communication",
+      "subject_knowledge"
+    ]
+  },
+  {
+    "name": "Giáo viên Giáo dục đặc biệt",
+    "category": "Education",
+    "tags": [
+      "teaching",
+      "communication",
+      "subject_knowledge"
+    ]
+  },
+  {
+    "name": "Gia sư / Giáo viên kèm",
+    "category": "Education",
+    "tags": [
+      "teaching",
+      "communication",
+      "subject_knowledge"
+    ]
+  },
+  {
+    "name": "Bác sĩ",
+    "category": "Healthcare",
+    "tags": [
+      "care",
+      "communication",
+      "medical"
+    ]
+  },
+  {
+    "name": "Y tá / Điều dưỡng",
+    "category": "Healthcare",
+    "tags": [
+      "care",
+      "communication",
+      "medical"
+    ]
+  },
+  {
+    "name": "Dược sĩ",
+    "category": "Healthcare",
+    "tags": [
+      "care",
+      "communication",
+      "medical"
+    ]
+  },
+  {
+    "name": "Nha sĩ",
+    "category": "Healthcare",
+    "tags": [
+      "care",
+      "communication",
+      "medical"
+    ]
+  },
+  {
+    "name": "Kỹ thuật viên Y tế",
+    "category": "Healthcare",
+    "tags": [
+      "care",
+      "communication",
+      "medical"
+    ]
+  },
+  {
+    "name": "Nhân viên Chăm sóc sức khỏe",
+    "category": "Healthcare",
+    "tags": [
+      "care",
+      "communication",
+      "medical"
+    ]
+  },
+  {
+    "name": "Nhà Tâm lý học Lâm sàng",
+    "category": "Healthcare",
+    "tags": [
+      "care",
+      "communication",
+      "medical"
+    ]
+  },
+  {
+    "name": "Vật lý trị liệu",
+    "category": "Healthcare",
+    "tags": [
+      "care",
+      "communication",
+      "medical"
+    ]
+  },
+  {
+    "name": "Chuyên viên Dinh dưỡng",
+    "category": "Healthcare",
+    "tags": [
+      "care",
+      "communication",
+      "medical"
+    ]
+  },
+  {
+    "name": "Quản lý Y tế",
+    "category": "Healthcare",
+    "tags": [
+      "care",
+      "communication",
+      "medical"
+    ]
+  },
+  {
+    "name": "Kỹ sư Xây dựng",
+    "category": "Engineering",
+    "tags": [
+      "math",
+      "physics",
+      "design"
+    ]
+  },
+  {
+    "name": "Kỹ sư Cơ khí",
+    "category": "Engineering",
+    "tags": [
+      "math",
+      "physics",
+      "design"
+    ]
+  },
+  {
+    "name": "Kỹ sư Điện",
+    "category": "Engineering",
+    "tags": [
+      "math",
+      "physics",
+      "design"
+    ]
+  },
+  {
+    "name": "Kỹ sư Công nghiệp",
+    "category": "Engineering",
+    "tags": [
+      "math",
+      "physics",
+      "design"
+    ]
+  },
+  {
+    "name": "Kỹ sư Tự động hóa",
+    "category": "Engineering",
+    "tags": [
+      "math",
+      "physics",
+      "design"
+    ]
+  },
+  {
+    "name": "Kiến trúc sư",
+    "category": "Engineering",
+    "tags": [
+      "math",
+      "physics",
+      "design"
+    ]
+  },
+  {
+    "name": "Kỹ sư Hóa học",
+    "category": "Engineering",
+    "tags": [
+      "math",
+      "physics",
+      "design"
+    ]
+  },
+  {
+    "name": "Kỹ sư Môi trường",
+    "category": "Engineering",
+    "tags": [
+      "math",
+      "physics",
+      "design"
+    ]
+  },
+  {
+    "name": "Kỹ sư Năng lượng",
+    "category": "Engineering",
+    "tags": [
+      "math",
+      "physics",
+      "design"
+    ]
+  },
+  {
+    "name": "Luật sư",
+    "category": "Legal",
+    "tags": [
+      "writing",
+      "analysis",
+      "research"
+    ]
+  },
+  {
+    "name": "Trợ lý Pháp lý",
+    "category": "Legal",
+    "tags": [
+      "writing",
+      "analysis",
+      "research"
+    ]
+  },
+  {
+    "name": "Chuyên viên Tuân thủ",
+    "category": "Legal",
+    "tags": [
+      "writing",
+      "analysis",
+      "research"
+    ]
+  },
+  {
+    "name": "Tư vấn Pháp lý",
+    "category": "Legal",
+    "tags": [
+      "writing",
+      "analysis",
+      "research"
+    ]
+  },
+  {
+    "name": "Chuyên viên Hợp đồng",
+    "category": "Legal",
+    "tags": [
+      "writing",
+      "analysis",
+      "research"
+    ]
+  },
+  {
+    "name": "Quản lý Khách sạn",
+    "category": "Hospitality",
+    "tags": [
+      "service",
+      "communication",
+      "organization"
+    ]
+  },
+  {
+    "name": "Hướng dẫn viên Du lịch",
+    "category": "Hospitality",
+    "tags": [
+      "service",
+      "communication",
+      "organization"
+    ]
+  },
+  {
+    "name": "Đầu bếp",
+    "category": "Hospitality",
+    "tags": [
+      "service",
+      "communication",
+      "organization"
+    ]
+  },
+  {
+    "name": "Quản lý Nhà hàng",
+    "category": "Hospitality",
+    "tags": [
+      "service",
+      "communication",
+      "organization"
+    ]
+  },
+  {
+    "name": "Tư vấn Du lịch",
+    "category": "Hospitality",
+    "tags": [
+      "service",
+      "communication",
+      "organization"
+    ]
+  },
+  {
+    "name": "Điều phối Sự kiện",
+    "category": "Hospitality",
+    "tags": [
+      "service",
+      "communication",
+      "organization"
+    ]
+  },
+  {
+    "name": "Chuyên viên Chuỗi cung ứng",
+    "category": "Logistics",
+    "tags": [
+      "analysis",
+      "process",
+      "organization"
+    ]
+  },
+  {
+    "name": "Điều phối Logistics",
+    "category": "Logistics",
+    "tags": [
+      "analysis",
+      "process",
+      "organization"
+    ]
+  },
+  {
+    "name": "Quản lý Kho",
+    "category": "Logistics",
+    "tags": [
+      "analysis",
+      "process",
+      "organization"
+    ]
+  },
+  {
+    "name": "Chuyên viên Hải quan",
+    "category": "Logistics",
+    "tags": [
+      "analysis",
+      "process",
+      "organization"
+    ]
+  },
+  {
+    "name": "Quản lý Vận tải",
+    "category": "Logistics",
+    "tags": [
+      "analysis",
+      "process",
+      "organization"
+    ]
+  },
+  {
+    "name": "Nhà báo",
+    "category": "Media",
+    "tags": [
+      "storytelling",
+      "editing",
+      "creativity"
+    ]
+  },
+  {
+    "name": "Biên tập viên Video",
+    "category": "Media",
+    "tags": [
+      "storytelling",
+      "editing",
+      "creativity"
+    ]
+  },
+  {
+    "name": "Nhiếp ảnh gia",
+    "category": "Media",
+    "tags": [
+      "storytelling",
+      "editing",
+      "creativity"
+    ]
+  },
+  {
+    "name": "Nhà sản xuất Truyền thông",
+    "category": "Media",
+    "tags": [
+      "storytelling",
+      "editing",
+      "creativity"
+    ]
+  },
+  {
+    "name": "Chuyên gia Nội dung",
+    "category": "Media",
+    "tags": [
+      "storytelling",
+      "editing",
+      "creativity"
+    ]
+  },
+  {
+    "name": "Nhà sản xuất Podcast",
+    "category": "Media",
+    "tags": [
+      "storytelling",
+      "editing",
+      "creativity"
+    ]
+  },
+  {
+    "name": "Họa sĩ Hoạt hình",
+    "category": "Media",
+    "tags": [
+      "storytelling",
+      "editing",
+      "creativity"
+    ]
+  },
+  {
+    "name": "Biên kịch",
+    "category": "Media",
+    "tags": [
+      "storytelling",
+      "editing",
+      "creativity"
+    ]
+  },
+  {
+    "name": "Chuyên gia PR",
+    "category": "Media",
+    "tags": [
+      "storytelling",
+      "editing",
+      "creativity"
+    ]
+  },
+  {
+    "name": "Quản lý Truyền thông Xã hội",
+    "category": "Media",
+    "tags": [
+      "storytelling",
+      "editing",
+      "creativity"
+    ]
+  },
+  {
+    "name": "Chuyên viên Chính sách",
+    "category": "Government",
+    "tags": [
+      "policy",
+      "communication",
+      "analysis"
+    ]
+  },
+  {
+    "name": "Công chức",
+    "category": "Government",
+    "tags": [
+      "policy",
+      "communication",
+      "analysis"
+    ]
+  },
+  {
+    "name": "Nhà Ngoại giao",
+    "category": "Government",
+    "tags": [
+      "policy",
+      "communication",
+      "analysis"
+    ]
+  },
+  {
+    "name": "Quy hoạch Đô thị",
+    "category": "Government",
+    "tags": [
+      "policy",
+      "communication",
+      "analysis"
+    ]
+  },
+  {
+    "name": "Nhà Nghiên cứu Khoa học",
+    "category": "Science",
+    "tags": [
+      "research",
+      "analysis",
+      "lab"
+    ]
+  },
+  {
+    "name": "Kỹ thuật viên Phòng thí nghiệm",
+    "category": "Science",
+    "tags": [
+      "research",
+      "analysis",
+      "lab"
+    ]
+  },
+  {
+    "name": "Nhà Khoa học Môi trường",
+    "category": "Science",
+    "tags": [
+      "research",
+      "analysis",
+      "lab"
+    ]
+  },
+  {
+    "name": "Nhà Khoa học Thực phẩm",
+    "category": "Science",
+    "tags": [
+      "research",
+      "analysis",
+      "lab"
+    ]
+  },
+  {
+    "name": "Thợ Điện",
+    "category": "Trades",
+    "tags": [
+      "hands_on",
+      "precision",
+      "safety"
+    ]
+  },
+  {
+    "name": "Thợ Cơ khí",
+    "category": "Trades",
+    "tags": [
+      "hands_on",
+      "precision",
+      "safety"
+    ]
+  },
+  {
+    "name": "Thợ Sửa ống nước",
+    "category": "Trades",
+    "tags": [
+      "hands_on",
+      "precision",
+      "safety"
+    ]
+  },
+  {
+    "name": "Thợ Mộc",
+    "category": "Trades",
+    "tags": [
+      "hands_on",
+      "precision",
+      "safety"
+    ]
+  },
+  {
+    "name": "Thợ Hàn",
+    "category": "Trades",
+    "tags": [
+      "hands_on",
+      "precision",
+      "safety"
+    ]
+  },
+  {
+    "name": "Kỹ thuật viên",
+    "category": "Trades",
+    "tags": [
+      "hands_on",
+      "precision",
+      "safety"
+    ]
+  },
+  {
+    "name": "Thợ Sơn",
+    "category": "Trades",
+    "tags": [
+      "hands_on",
+      "precision",
+      "safety"
+    ]
+  },
+  {
+    "name": "Kỹ sư Nông nghiệp",
+    "category": "Agriculture",
+    "tags": [
+      "biology",
+      "process",
+      "care"
+    ]
+  },
+  {
+    "name": "Quản lý Trang trại",
+    "category": "Agriculture",
+    "tags": [
+      "biology",
+      "process",
+      "care"
+    ]
+  },
+  {
+    "name": "Chuyên gia Công nghệ Thực phẩm",
+    "category": "Agriculture",
+    "tags": [
+      "biology",
+      "process",
+      "care"
+    ]
+  },
+  {
+    "name": "Trợ lý Thú y",
+    "category": "Agriculture",
+    "tags": [
+      "biology",
+      "process",
+      "care"
+    ]
+  },
+  {
+    "name": "Chuyên viên An toàn Thực phẩm",
+    "category": "Agriculture",
+    "tags": [
+      "biology",
+      "process",
+      "care"
+    ]
+  },
+  {
+    "name": "Môi giới Bất động sản",
+    "category": "RealEstate",
+    "tags": [
+      "sales",
+      "communication",
+      "negotiation"
+    ]
+  },
+  {
+    "name": "Quản lý Tài sản",
+    "category": "RealEstate",
+    "tags": [
+      "sales",
+      "communication",
+      "negotiation"
+    ]
+  },
+  {
+    "name": "Chuyên viên Phân tích Bất động sản",
+    "category": "RealEstate",
+    "tags": [
+      "sales",
+      "communication",
+      "negotiation"
+    ]
+  },
+  {
+    "name": "Tư vấn Cho thuê",
+    "category": "RealEstate",
+    "tags": [
+      "sales",
+      "communication",
+      "negotiation"
+    ]
+  },
+  {
+    "name": "Quản lý Bán lẻ",
+    "category": "Retail",
+    "tags": [
+      "service",
+      "sales",
+      "organization"
+    ]
+  },
+  {
+    "name": "Chuyên viên Hàng hóa",
+    "category": "Retail",
+    "tags": [
+      "service",
+      "sales",
+      "organization"
+    ]
+  },
+  {
+    "name": "Giám sát Cửa hàng",
+    "category": "Retail",
+    "tags": [
+      "service",
+      "sales",
+      "organization"
+    ]
+  },
+  {
+    "name": "Quản lý Tồn kho",
+    "category": "Retail",
+    "tags": [
+      "service",
+      "sales",
+      "organization"
+    ]
+  },
+  {
+    "name": "Quản lý Thương mại điện tử",
+    "category": "Retail",
+    "tags": [
+      "service",
+      "sales",
+      "organization"
+    ]
+  },
+  {
+    "name": "Chuyên viên Trang điểm",
+    "category": "Beauty",
+    "tags": [
+      "aesthetics",
+      "service",
+      "communication"
+    ]
+  },
+  {
+    "name": "Nhà Tạo mẫu Tóc",
+    "category": "Beauty",
+    "tags": [
+      "aesthetics",
+      "service",
+      "communication"
+    ]
+  },
+  {
+    "name": "Chuyên gia Chăm sóc Da",
+    "category": "Beauty",
+    "tags": [
+      "aesthetics",
+      "service",
+      "communication"
+    ]
+  },
+  {
+    "name": "Nhân viên Spa",
+    "category": "Beauty",
+    "tags": [
+      "aesthetics",
+      "service",
+      "communication"
+    ]
+  },
+  {
+    "name": "Huấn luyện viên",
+    "category": "Sports",
+    "tags": [
+      "discipline",
+      "training",
+      "teamwork"
+    ]
+  },
+  {
+    "name": "Chuyên gia Thể dục",
+    "category": "Sports",
+    "tags": [
+      "discipline",
+      "training",
+      "teamwork"
+    ]
+  },
+  {
+    "name": "Chuyên viên Phân tích Thể thao",
+    "category": "Sports",
+    "tags": [
+      "discipline",
+      "training",
+      "teamwork"
+    ]
+  },
+  {
+    "name": "Chuyền gia Dinh dưỡng Thể thao",
+    "category": "Sports",
+    "tags": [
+      "discipline",
+      "training",
+      "teamwork"
+    ]
+  },
+  {
+    "name": "Chuyên gia Quy hoạch Giao thông",
+    "category": "Transportation",
+    "tags": [
+      "safety",
+      "operations",
+      "navigation"
+    ]
+  },
+  {
+    "name": "Kiểm soát viên Không lưu",
+    "category": "Transportation",
+    "tags": [
+      "safety",
+      "operations",
+      "navigation"
+    ]
+  },
+  {
+    "name": "Nhân viên Điều hành Bay",
+    "category": "Transportation",
+    "tags": [
+      "safety",
+      "operations",
+      "navigation"
+    ]
+  },
+  {
+    "name": "Quản lý Xây dựng",
+    "category": "Construction",
+    "tags": [
+      "planning",
+      "safety",
+      "execution"
+    ]
+  },
+  {
+    "name": "Kỹ sư Công trường",
+    "category": "Construction",
+    "tags": [
+      "planning",
+      "safety",
+      "execution"
+    ]
+  },
+  {
+    "name": "Khảo sát viên",
+    "category": "Construction",
+    "tags": [
+      "planning",
+      "safety",
+      "execution"
+    ]
+  },
+  {
+    "name": "Chuyên viên An toàn Xây dựng",
+    "category": "Construction",
+    "tags": [
+      "planning",
+      "safety",
+      "execution"
+    ]
+  },
+  {
+    "name": "Kỹ sư Kết cấu",
+    "category": "Construction",
+    "tags": [
+      "planning",
+      "safety",
+      "execution"
+    ]
+  }
 ];
 
-const CAREERS = Array.from(
-  new Map(
-    [...BASE_CAREERS, ...buildSubjectCareers(), ...buildGroupCareers()]
-      .map((c) => [c.name, c])
-  ).values()
-);
+const CAREERS = BASE_CAREERS;
 
 function readJson(key, fallback) {
   try {
@@ -862,7 +2974,7 @@ export const offlineApi = {
     const tags = Array.from(new Set(CAREERS.flatMap((c) => c.tags))).filter(Boolean);
     return { success: true, data: { categories, tags } };
   },
-  exploreJobs({ q, category, tag, limit = 24, offset = 0 }) {
+  exploreJobs({ q, category, tag, limit = 120, offset = 0 }) {
     const query = normalizeText(String(q || ''));
     let list = CAREERS.map((c, idx) => ({
       id: idx + 1,

@@ -13,6 +13,12 @@ const exploreRoutes = require('./routes/explore');
 const chatbotRoutes = require('./routes/chatbot'); // NEW
 
 const app = express();
+
+// DEBUG LOGS
+console.log('🚀 Server starting...');
+console.log(`📂 CWD: ${process.cwd()}`);
+console.log(`🗄️  Env DB Path: ${process.env.CAREER_CATALOG_DB_PATH || 'Not set (using default)'}`);
+
 const PORT = process.env.PORT || 5000;
 
 // Security middleware

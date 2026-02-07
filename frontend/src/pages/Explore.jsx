@@ -15,7 +15,7 @@ export default function Explore() {
   const [page, setPage] = useState(0);
   const [error, setError] = useState('');
 
-  const limit = 100; // Load 100 jobs by default
+  const limit = 120; // Load 120 jobs by default
 
   useEffect(() => {
     let cancelled = false;
