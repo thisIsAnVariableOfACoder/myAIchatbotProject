@@ -219,20 +219,28 @@ export default function Chat() {
   }
 
   async function saveProfile(payload) {
+    console.log("Saving profile with payload:", payload);
     if (!IS_OFFLINE && (!token || !userId)) return;
     const profileId = userId || 'guest';
-    await api.updateProfile(profileId, token, payload);
+    try {
+      await api.updateProfile(profileId, token, payload);
+      console.log("Profile updated successfully in API");
 
-    // Reactively update local state
-    setProfileInitial(payload);
+      // Reactively update local state
+      setProfileInitial(payload);
+      console.log("profileInitial state updated to:", payload);
 
-    // If clearing profile (education_level is empty), lock chat and clear messages
-    if (!payload.education_level) {
-      setMessages([]);
-      setRecommendations([]);
-      setCurrentNode(null);
-      setCompleted(false);
-      setConversationId(null);
+      // If clearing profile (education_level is empty), lock chat and clear messages
+      if (!payload.education_level) {
+        console.log("Clearing chat session due to profile removal");
+        setMessages([]);
+        setRecommendations([]);
+        setCurrentNode(null);
+        setCompleted(false);
+        setConversationId(null);
+      }
+    } catch (err) {
+      console.error("Error in saveProfile:", err);
     }
   }
 
@@ -298,6 +306,7 @@ export default function Chat() {
           <div className="rounded-2xl border border-[#E8E2D8] bg-white p-4 shadow-sm animate-rise" style={{ animationDelay: '40ms' }}>
             <div className="text-sm font-semibold mb-3">Hồ sơ cá nhân</div>
             <ProfileForm
+              key={profileInitial ? 'loaded' : 'empty'}
               onSave={saveProfile}
               onUserTypeChange={setUserType}
               canSave={!!token || IS_OFFLINE}
