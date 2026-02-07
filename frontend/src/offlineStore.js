@@ -2699,12 +2699,11 @@ function deriveTags(text) {
 
 async function pickNextQuestion(state) {
   const profile = state.userProfile || {};
-  const userType = profile.education_level || 'high_school';
   const history = getMessages(state.conversationId || 'guest');
   const pastBotMessages = history.filter(m => m.sender === 'bot').map(m => m.message);
   const conversationText = history.map(m => `${m.sender}: ${m.message}`).join('\n');
 
-  // Attempt LLM dynamic question ALWAYS
+  // Attempt LLM dynamic question ALWAYS - NO FALLBACKS
   const llmQ = await generateNextQuestionWithLLM(conversationText, profile, pastBotMessages);
   if (llmQ) {
     console.log("Autonomous AI Question:", llmQ);
@@ -2717,79 +2716,12 @@ async function pickNextQuestion(state) {
     };
   }
 
-  // Fallback to randomized static logic
-  const isAsked = (text) => pastBotMessages.some(m => m.includes(text) || text.includes(m));
-
-  if (userType === 'high_school') {
-    if (state.answers.length < 5) {
-      const availableSubjs = SUBJECTS.filter(s => !state.answers.some(a => a.includes(s.label)));
-      const subj = availableSubjs.length > 0
-        ? availableSubjs[Math.floor(Math.random() * availableSubjs.length)]
-        : SUBJECTS[Math.floor(Math.random() * SUBJECTS.length)];
-
-      const topicPool = SUBJECT_TOPICS[subj.key].filter(t => !isAsked(t));
-      const topic = topicPool.length > 0
-        ? topicPool[Math.floor(Math.random() * topicPool.length)]
-        : SUBJECT_TOPICS[subj.key][Math.floor(Math.random() * SUBJECT_TOPICS[subj.key].length)];
-
-      const template = SUBJECT_TEMPLATES[Math.floor(Math.random() * SUBJECT_TEMPLATES.length)];
-
-      return {
-        id: `subj_${subj.key}_${Date.now()}`,
-        text: template(subj.label, topic),
-        tags: [subj.tag, 'education']
-      };
-    }
-  }
-
-  if (userType === 'university' || userType === 'professional') {
-    if (state.answers.length < 4) {
-      const availableGroups = GROUP_BLUEPRINTS.filter(g => !isAsked(g.label));
-      const group = availableGroups.length > 0
-        ? availableGroups[Math.floor(Math.random() * availableGroups.length)]
-        : GROUP_BLUEPRINTS[Math.floor(Math.random() * GROUP_BLUEPRINTS.length)];
-
-      return {
-        id: `group_${group.tag}_${Date.now()}`,
-        text: `Bạn có hứng thú với lĩnh vực ${group.label} (${group.keywords.slice(0, 2).join(', ')}) không?`,
-        tags: [group.tag, 'career_group']
-      };
-    }
-  }
-
-  const focusTag = state.focusTag;
-  const focusType = state.focusType;
-  let focusPool = null;
-
-  if (focusTag && focusType === 'subject') {
-    focusPool = SUBJECT_QUESTIONS[focusTag] || null;
-  } else if (focusTag && focusType === 'group') {
-    focusPool = GROUP_QUESTIONS[focusTag] || null;
-  }
-
-  const shouldUseFocus = focusPool && focusPool.length > 0 && (state.focusCount % 4 !== 3);
-
-  if (shouldUseFocus) {
-    const unaskedFocus = focusPool.filter(q => !isAsked(q.text));
-    const q = unaskedFocus.length > 0
-      ? unaskedFocus[Math.floor(Math.random() * unaskedFocus.length)]
-      : focusPool[Math.floor(Math.random() * focusPool.length)];
-
-    state.focusCount += 1;
-    state.lastQuestionTags = q.tags || [];
-    state.lastQuestionText = q.text;
-    return q;
-  }
-
-  // Random general question
-  const unaskedGeneral = GENERAL_QUESTIONS.filter(q => !isAsked(q.text));
-  const q = unaskedGeneral.length > 0
-    ? unaskedGeneral[Math.floor(Math.random() * unaskedGeneral.length)]
-    : GENERAL_QUESTIONS[Math.floor(Math.random() * GENERAL_QUESTIONS.length)];
-
-  state.lastQuestionTags = q.tags || [];
-  state.lastQuestionText = q.text;
-  return q;
+  // Generic fallback if LLM totally fails (rare)
+  return {
+    id: "fallback",
+    text: "Mình đang phân tích tiếp thông tin của bạn. Bạn có thể chia sẻ thêm về kinh nghiệm hoặc trình độ học vấn của mình không?",
+    tags: ["general"]
+  };
 }
 
 function buildReasons(career, tags, focusTag) {
@@ -3030,10 +2962,10 @@ BƯỚC 4: PHÂN TÍCH & TÍNH XÁC SUẤT NGHỀ NGHIỆP
 PHẢI phân tích người dùng theo 5 TRỤ CỘT SAU:
 
 1. SỞ THÍCH (INTEREST)
-2. NĂNG LỰC / KỸ NĂNG (ABILITY)
+2. NĂNG LỰC / KỸ NĂNG / BẰNG CẤP (ABILITY & QUALIFICATION)
 3. TÍNH CÁCH (PERSONALITY)
 4. GIÁ TRỊ & MONG MUỐN (VALUE)
-5. ĐIỀU KIỆN THỰC TẾ (REALITY: học lực, hoàn cảnh, rủi ro, thời gian)
+5. ĐIỀU KIỆN THỰC TẾ & KINH NGHIỆM (REALITY & EXPERIENCE: trình độ, thâm niên, hoàn cảnh, rủi ro)
 
 Mỗi trụ cột chấm điểm từ 0 đến 20.
 Tổng điểm tối đa: 100 điểm cho mỗi nghề.
@@ -3117,10 +3049,12 @@ async function generateNextQuestionWithLLM(conversationText, profile, pastBotMes
 
       YÊU CẦU KỸ THUẬT:
       1. Hãy tuân thủ tuyệt đối các bước và phong cách trong prompt trên.
-      2. QUAN TRỌNG: Bước 1 (hỏi vai trò) ĐÃ CÓ TRONG HỒ SƠ (${profile.education_level}). 
-      3. Hãy thực hiện ngay BƯỚC 2 hoặc BƯỚC 3 phù hợp với hồ sơ trên.
-      4. KHÔNG lặp lại câu hỏi: ${JSON.stringify(pastBotMessages.slice(-5))}
-      5. Trả về DUY NHẤT một đối tượng JSON:
+      2. QUAN TRỌNG: Hãy khai thác thêm về TRÌNH ĐỘ, BẰNG CẤP và KINH NGHIỆM của người dùng để đánh giá Trụ cột 2 & 5.
+      3. ĐÃ CÓ TRÌNH ĐỘ TRONG HỒ SƠ (${profile.education_level}). 
+      4. Hãy thực hiện ngay BƯỚC 2 hoặc BƯỚC 3 phù hợp với hồ sơ trên.
+      5. KHÔNG được sử dụng bất kỳ danh mục nghề nghiệp hay câu hỏi mẫu nào từ database địa phương, hãy tự kiến tạo dựa trên thực tế thị trường.
+      6. KHÔNG lặp lại câu hỏi: ${JSON.stringify(pastBotMessages.slice(-5))}
+      7. Trả về DUY NHẤT một đối tượng JSON:
       {
         "question": "nội dung câu hỏi tiếp theo (Bước 2 hoặc 3)",
         "intended_tags": ["tag1", "tag2"]
@@ -3336,16 +3270,14 @@ export const offlineApi = {
       }
 
       // Fallback if AI fails
-      const recs = scoreCareers(state);
-      saveRecommendations(convId, recs);
       saveState(convId, state);
       return {
         success: true,
         data: {
-          bot_reply: 'Đây là gợi ý nghề nghiệp dựa trên phân tích dữ liệu môn học:',
-          recommendations: recs,
+          bot_reply: 'Mình đang gặp một chút gián đoạn khi phân tích sâu. Bạn hãy thử nhắn lại một ý gì đó hoặc F5 nhen!',
+          recommendations: [],
           next_node: null,
-          completed: true,
+          completed: false,
           conversation_id: convId
         }
       };
