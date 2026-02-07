@@ -301,7 +301,7 @@ export default function Chat() {
           <div className="mt-4 rounded-2xl border border-[#E8E2D8] bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-semibold">Lịch sử hội đáp</div>
-              {(token || IS_OFFLINE) && history.length > 0 && (
+              {(token || (IS_OFFLINE && userId)) && history.length > 0 && (
                 <button
                   className="text-xs text-[#D64545]"
                   onClick={async () => {
@@ -321,86 +321,96 @@ export default function Chat() {
             </div>
             <div className="space-y-2 text-xs text-[#5B5B57]">
               {historyError && <div>{historyError}</div>}
-              {!token && !IS_OFFLINE && <div>Đăng nhập để xem lịch sử.</div>}
-              {(token || IS_OFFLINE) && history.length === 0 && <div>Chưa có hội đáp.</div>}
-              {(token || IS_OFFLINE) && history.map((h) => (
-                <div key={h.conversation_id} className="flex w-full items-center justify-between rounded-md border border-transparent hover:border-[#E2D8C8] px-2 py-1">
-                  <div className="flex-1">
-                    {editingId === h.conversation_id ? (
-                      <input
-                        className="w-full rounded-md border border-[#E2D8C8] px-2 py-1 text-xs"
-                        value={titleDraft}
-                        onChange={(e) => setTitleDraft(e.target.value)}
-                        placeholder="Nhập tên cuộc trò chuyện"
-                      />
-                    ) : (
-                      <button
-                        className="w-full text-left"
-                        onClick={async () => {
-                          if (!token) return;
-                          await loadConversation(h.conversation_id);
-                        }}
-                      >
-                        {h.title || h.conversation_id}
-                      </button>
-                    )}
-                  </div>
-                  <div className="ml-2 text-xs">{h.message_count} tin</div>
-                  {editingId === h.conversation_id ? (
-                    <>
-                      <button
-                        className="ml-2 text-xs text-[var(--c-primary)]"
-                        onClick={async () => {
-                          await renameConversation(h.conversation_id, titleDraft);
-                          setEditingId(null);
-                        }}
-                      >
-                        Lưu
-                      </button>
-                      <button
-                        className="ml-2 text-xs text-[#5B5B57]"
-                        onClick={() => setEditingId(null)}
-                      >
-                        Hủy
-                      </button>
-                    </>
-                  ) : (
-                    <div className="relative ml-2">
-                      <button
-                        className="text-xs text-[#7A6D5B] px-1"
-                        onClick={() => setMenuId(menuId === h.conversation_id ? null : h.conversation_id)}
-                      >
-                        ...
-                      </button>
-                      {menuId === h.conversation_id && (
-                        <div className="absolute right-0 top-full z-10 mt-1 w-28 rounded-md border border-[#E2D8C8] bg-white shadow-sm">
+
+              {/* Login Prompt for Guest Users */}
+              {(!token && !userId && IS_OFFLINE) || (!token && !IS_OFFLINE) ? (
+                <div className="text-center py-4 bg-[#F7F5F2] rounded-lg">
+                  <div className="mb-2">Đăng ký/đăng nhập để lưu lịch sử chat</div>
+                  <Link to="/auth" className="inline-block px-3 py-1 bg-[var(--c-primary)] text-white rounded hover:opacity-90 transition">
+                    Đăng nhập ngay
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  {history.length === 0 && <div>Chưa có hội đáp.</div>}
+                  {history.map((h) => (
+                    <div key={h.conversation_id} className="flex w-full items-center justify-between rounded-md border border-transparent hover:border-[#E2D8C8] px-2 py-1">
+                      <div className="flex-1">
+                        {editingId === h.conversation_id ? (
+                          <input
+                            className="w-full rounded-md border border-[#E2D8C8] px-2 py-1 text-xs"
+                            value={titleDraft}
+                            onChange={(e) => setTitleDraft(e.target.value)}
+                            placeholder="Nhập tên cuộc trò chuyện"
+                          />
+                        ) : (
                           <button
-                            className="block w-full px-3 py-2 text-left text-xs hover:bg-[#F7F5F2]"
-                            onClick={() => {
-                              setEditingId(h.conversation_id);
-                              setTitleDraft(h.title || '');
-                              setMenuId(null);
-                            }}
-                          >
-                            Đổi tên
-                          </button>
-                          <button
-                            className="block w-full px-3 py-2 text-left text-xs text-[#D64545] hover:bg-[#F7F5F2]"
+                            className="w-full text-left"
                             onClick={async () => {
-                              setMenuId(null);
-                              await deleteConversation(h.conversation_id);
+                              if (!token) return;
+                              await loadConversation(h.conversation_id);
                             }}
                           >
-                            Xóa chat
+                            {h.title || h.conversation_id}
                           </button>
+                        )}
+                      </div>
+                      <div className="ml-2 text-xs">{h.message_count} tin</div>
+                      {editingId === h.conversation_id ? (
+                        <>
+                          <button
+                            className="ml-2 text-xs text-[var(--c-primary)]"
+                            onClick={async () => {
+                              await renameConversation(h.conversation_id, titleDraft);
+                              setEditingId(null);
+                            }}
+                          >
+                            Lưu
+                          </button>
+                          <button
+                            className="ml-2 text-xs text-[#5B5B57]"
+                            onClick={() => setEditingId(null)}
+                          >
+                            Hủy
+                          </button>
+                        </>
+                      ) : (
+                        <div className="relative ml-2">
+                          <button
+                            className="text-xs text-[#7A6D5B] px-1"
+                            onClick={() => setMenuId(menuId === h.conversation_id ? null : h.conversation_id)}
+                          >
+                            ...
+                          </button>
+                          {menuId === h.conversation_id && (
+                            <div className="absolute right-0 top-full z-10 mt-1 w-28 rounded-md border border-[#E2D8C8] bg-white shadow-sm">
+                              <button
+                                className="block w-full px-3 py-2 text-left text-xs hover:bg-[#F7F5F2]"
+                                onClick={() => {
+                                  setEditingId(h.conversation_id);
+                                  setTitleDraft(h.title || '');
+                                  setMenuId(null);
+                                }}
+                              >
+                                Đổi tên
+                              </button>
+                              <button
+                                className="block w-full px-3 py-2 text-left text-xs text-[#D64545] hover:bg-[#F7F5F2]"
+                                onClick={async () => {
+                                  setMenuId(null);
+                                  await deleteConversation(h.conversation_id);
+                                }}
+                              >
+                                Xóa chat
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
             </div>
-          </div>
         </section>
 
         <section className="order-1 lg:order-2">
