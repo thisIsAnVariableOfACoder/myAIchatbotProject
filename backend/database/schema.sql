@@ -99,9 +99,15 @@ CREATE TABLE IF NOT EXISTS careers (
   required_skills TEXT, -- JSON array
   salary_range VARCHAR(100),
   job_outlook VARCHAR(50),
-  description TEXT
+  description TEXT,
+  question_count INTEGER DEFAULT 0, -- Số lần được hỏi về nghề này
+  answer_count INTEGER DEFAULT 0, -- Số lần xuất hiện trong câu trả lời
+  mention_frequency REAL DEFAULT 0.0, -- Tần suất nhắc đến (normalized)
+  weighted_score REAL DEFAULT 0.0 -- Điểm trọng số tích lũy
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_careers_name ON careers(name);
+CREATE INDEX IF NOT EXISTS idx_careers_category ON careers(category);
+CREATE INDEX IF NOT EXISTS idx_careers_frequency ON careers(mention_frequency);
 
 CREATE TABLE IF NOT EXISTS learning_paths (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

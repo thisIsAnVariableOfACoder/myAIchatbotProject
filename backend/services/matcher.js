@@ -182,16 +182,22 @@ function formatLabels(list, labelMap) {
 async function matchCareerAsync(profile, answers) {
   if (global.db) {
     const careers = await new Promise((resolve) => {
-      global.db.all('SELECT name, required_skills, category FROM careers', (err, rows) => {
-        if (err) return resolve([]);
-        return resolve(rows || []);
-      });
+      global.db.all(
+        'SELECT id, name, required_skills, category, mention_frequency, weighted_score FROM careers',
+        (err, rows) => {
+          if (err) return resolve([]);
+          return resolve(rows || []);
+        }
+      );
     });
     if (careers.length > 0) {
       return rankCareers(profile, answers, careers.map(c => ({
+        id: c.id,
         name: c.name,
         required_skills: safeParse(c.required_skills, []),
-        category: c.category || 'Other'
+        category: c.category || 'Other',
+        mention_frequency: c.mention_frequency || 0,
+        weighted_score: c.weighted_score || 0
       })));
     }
   }
@@ -261,17 +267,19 @@ function matchCareer(profile, answers) {
     scores[career.name] = Math.min(score, 100);
   });
 
-  // Chuẩn hóa điểm thành xác suất
-  const totalScore = Object.values(scores).reduce((sum, s) => sum + s, 0);
-  const recs = Object.entries(scores)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([name, score]) => ({
-      career_name: name,
-      match_score: score,
-      probability: totalScore > 0 ? (score / totalScore) : 0,
-      reasons: generateReasons(name, profile)
-    }));
+  // Cải thiện: Normalize probability dựa trên top-k thay vì tất cả
+  const topK = 10;
+  const sortedEntries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  const topEntries = sortedEntries.slice(0, topK);
+  const topScoresSum = topEntries.reduce((sum, [, score]) => sum + score, 0);
+
+  const recs = topEntries.map(([name, score]) => ({
+    career_name: name,
+    match_score: score,
+    probability: topScoresSum > 0 ? (score / topScoresSum) : (1 / topK),
+    confidence: score > 50 ? 'high' : score > 30 ? 'medium' : 'low',
+    reasons: generateReasons(name, profile)
+  }));
 
   return boostRecommendations(recs);
 }
@@ -282,34 +290,54 @@ function rankCareers(profile, answers, careers) {
   const skills = signals.skills;
   const interests = signals.interests;
   const edu = profile.education_level || '';
-      const scores = {};  
-      // Sử dụng danh sách nghề nghiệp từ database (bổ sung mới)
-      const { buildCareerRecords } = require('../data/careerLibrary');
-      const CAREER_LIST = buildCareerRecords().map(c => c.name);
+
   for (const c of careers) {
     let score = 0;
     const required = c.required_skills || [];
+
+    // 1. Skill matching với dynamic weights
     for (const s of skills) {
-      if (required.includes(s)) score += 20;
+      if (required.includes(s)) {
+        score += 20; // Exact match bonus
+      }
+      // Fallback to hardcoded weights if available
       score += (SKILL_WEIGHTS[s]?.[c.name] || 0);
     }
+
+    // 2. Interest matching
     for (const i of interests) {
       score += (INTEREST_WEIGHTS[i]?.[c.name] || 0);
     }
+
+    // 3. Education bonus
     if (edu) score += (EDUCATION_BONUS[edu]?.[c.name] || 0);
+
+    // 4. Keyword boost
     if (signals.text) score += keywordBoost(c.name, signals.text);
+
+    // 5. Category tag boost
     score += tagBoost(c.category, signals.tags);
+
+    // 6. NEW: Frequency-based popularity boost
+    const frequencyBoost = calculateFrequencyBoost(c.mention_frequency || 0);
+    score += frequencyBoost;
+
     scores[c.name] = Math.min(score, 100);
   }
 
-  const recs = Object.entries(scores)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([name, score]) => ({
-      career_name: name,
-      match_score: score,
-      reasons: generateReasons(name, profile)
-    }));
+  // Improved probability calculation with top-k normalization
+  const topK = 10;
+  const sortedEntries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  const topEntries = sortedEntries.slice(0, topK);
+  const topScoresSum = topEntries.reduce((sum, [, score]) => sum + score, 0);
+
+  const recs = topEntries.map(([name, score]) => ({
+    career_name: name,
+    match_score: score,
+    probability: topScoresSum > 0 ? (score / topScoresSum) : (1 / topK),
+    confidence: score > 50 ? 'high' : score > 30 ? 'medium' : 'low',
+    reasons: generateReasons(name, profile)
+  }));
 
   return boostRecommendations(recs);
 }
@@ -504,4 +532,16 @@ function boostRecommendations(recs) {
   return scaled;
 }
 
-module.exports = { matchCareer, matchCareerAsync, generateReasons };
+/**
+ * Tính toán frequency boost dựa trên mention_frequency
+ * Careers được mention nhiều sẽ nhận thêm điểm nhỏ (bias nhẹ)
+ * @param {number} frequency - mention_frequency từ 0.0 đến 1.0
+ * @returns {number} boost score (0-5)
+ */
+function calculateFrequencyBoost(frequency) {
+  if (!frequency || frequency <= 0) return 0;
+  // Linear scale: frequency 0.1 = +1 point, max +5 points
+  return Math.min(5, frequency * 50);
+}
+
+module.exports = { matchCareer, matchCareerAsync, generateReasons, calculateFrequencyBoost };
