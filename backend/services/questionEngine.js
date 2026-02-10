@@ -131,13 +131,23 @@ function getDiscriminatingQuestions(topCareers, askedQuestions, count = 15) {
 /**
  * Record answer for a question
  */
-function recordAnswer(conversationId, questionId, answer) {
+function recordAnswer(conversationId, questionId, answer, aiQuestionText = null) {
   const state = getConversationState(conversationId);
 
-  // Find the question
-  const question = ALL_QUESTIONS.find(q => q.id === questionId);
-  if (!question) {
-    throw new Error(`Question ${questionId} not found`);
+  // Find the question or use provided AI text
+  let questionText = aiQuestionText;
+  if (!questionText) {
+    const question = ALL_QUESTIONS.find(q => q.id === questionId);
+    if (!question) {
+      if (typeof questionId === 'string' && questionId.startsWith('ai_')) {
+        // AI question without explicit text provided (should not happen with updated chatbot.js)
+        questionText = "AI Question";
+      } else {
+        throw new Error(`Question ${questionId} not found`);
+      }
+    } else {
+      questionText = question.text;
+    }
   }
 
   // Normalize answer
@@ -146,7 +156,7 @@ function recordAnswer(conversationId, questionId, answer) {
   // Store answer
   const answerRecord = {
     questionId,
-    question: question.text,
+    question: questionText,
     answer: normalizedAnswer,
     timestamp: Date.now()
   };
@@ -169,15 +179,9 @@ function recordAnswer(conversationId, questionId, answer) {
  * Normalize answer to yes/maybe/no
  */
 function normalizeAnswer(answer) {
-  const lowerAnswer = String(answer).toLowerCase().trim();
-
-  if (['có', 'yes', 'đúng', 'true', '1'].includes(lowerAnswer)) {
-    return 'yes';
-  }
-  if (['không', 'no', 'sai', 'false', '0'].includes(lowerAnswer)) {
-    return 'no';
-  }
-  return 'maybe';
+  // Since we are using an AI agent now, we don't want to force-categorize free-text answers.
+  // We return the raw string (trimmed) so that the LLM can interpret the full meaning.
+  return String(answer).trim();
 }
 
 /**

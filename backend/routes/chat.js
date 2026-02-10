@@ -10,7 +10,7 @@ const MEMORY_MESSAGES = [];
 const MIN_CONF_SCORE = 65;
 const MIN_CONF_COUNT = 4;
 const MAX_QUESTIONS = 36;
- 
+
 function safeParse(value, fallback) {
   try {
     return JSON.parse(value);
@@ -69,24 +69,63 @@ router.post('/message', optionalAuth, async (req, res) => {
       }
     }
 
-    const conceptReply = await explainConceptIfRequested(message);
-    if (conceptReply) {
-      if (userId) {
-        await saveMessage(convId, userId, 'bot', conceptReply, current_node || null);
-      }
-      return res.json({
-        success: true,
-        data: {
-          bot_reply: conceptReply,
-          options: [],
-          next_node: current_node || null,
-          conversation_id: convId
-        }
-      });
-    }
+    // AI Unified Chat Response
+    if (isLlmEnabled()) {
+      const profile = await getProfile(userId);
+      const history = state.answers.map(a => ({ q: a.question, a: a.answer }));
 
-    const state = getConversationState(convId, effectiveUserType);
-    if (message) recordAnswer(state, message);
+      const aiReply = await llmScorer.generateAgentChatReply({
+        profile: profile || { user_type: effectiveUserType },
+        history,
+        currentMessage: message
+      });
+
+      if (aiReply) {
+        if (userId) {
+          await saveMessage(convId, userId, 'bot', aiReply.bot_reply, null);
+        }
+
+        // Check if AI thinks recommendation is ready
+        if (aiReply.is_recommendation_ready && !wantsMore) {
+          const mergedProfile = buildProfileFromState(profile, state, effectiveUserType);
+          const answersText = buildAnswersText(state, message);
+          let recommendations = await matchCareerAsync(mergedProfile, {
+            message,
+            answers: state.answers,
+            answersText,
+            tags: state.tags
+          });
+          const candidates = recommendations.map((r) => r.career_name);
+          const llmScores = await scoreCareersWithLLM({ profile: mergedProfile, answersText, candidates });
+          recommendations = mergeScores(recommendations, llmScores);
+
+          if (userId) {
+            await saveRecommendations(convId, userId, recommendations);
+          }
+
+          return res.json({
+            success: true,
+            data: {
+              bot_reply: aiReply.bot_reply,
+              recommendations,
+              next_node: null,
+              completed: true,
+              conversation_id: convId
+            }
+          });
+        }
+
+        return res.json({
+          success: true,
+          data: {
+            bot_reply: aiReply.bot_reply,
+            options: aiReply.suggested_questions || [],
+            next_node: 'ai_chat',
+            conversation_id: convId
+          }
+        });
+      }
+    }
 
     if (isEnoughInfo(state) && !wantsMore) {
       const profile = await getProfile(userId);
@@ -258,7 +297,7 @@ router.delete('/history/:userId', requireAuth, (req, res) => {
   const delConversations = 'DELETE FROM conversations WHERE user_id = ?';
   global.db.serialize(() => {
     global.db.run(delMessages, [userId]);
-    global.db.run(delRecs, [userId], function(err) {
+    global.db.run(delRecs, [userId], function (err) {
       if (err) return res.status(500).json({ success: false, error: err.message });
       global.db.run(delConversations, [userId], (err2) => {
         if (err2) return res.status(500).json({ success: false, error: err2.message });
@@ -326,7 +365,7 @@ router.delete('/conversation/:conversationId', requireAuth, (req, res) => {
     global.db.serialize(() => {
       global.db.run(deleteMessages, [conversationId]);
       global.db.run(deleteRecs, [conversationId]);
-      global.db.run(deleteConv, [conversationId], function(err2) {
+      global.db.run(deleteConv, [conversationId], function (err2) {
         if (err2) return res.status(500).json({ success: false, error: err2.message });
         res.json({ success: true, data: { deleted: true } });
       });
@@ -350,7 +389,7 @@ async function saveMessage(convId, userId, sender, message, nodeId) {
   return new Promise((resolve, reject) => {
     const query = `INSERT INTO chat_messages (conversation_id, user_id, sender, message, node_id)
                    VALUES (?, ?, ?, ?, ?)`;
-    global.db.run(query, [convId, userId, sender, message, nodeId], function(err) {
+    global.db.run(query, [convId, userId, sender, message, nodeId], function (err) {
       if (err) reject(err);
       else resolve(this.lastID);
     });

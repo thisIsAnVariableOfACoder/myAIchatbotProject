@@ -17,28 +17,36 @@ const llmScorer = require('../services/llmScorer');
  */
 router.post('/start', async (req, res) => {
     try {
-        const { conversationId, userType = 'high_school' } = req.body;
+        const { conversationId, userType = 'high_school', profile = {} } = req.body;
 
         if (!conversationId) {
             return res.status(400).json({ error: 'conversationId is required' });
         }
 
         const state = getConversationState(conversationId, userType);
+        // Lưu hồ sơ vào state để dùng cho các bước sau
+        state.profile = profile;
 
         let firstQuestion = null;
+        let botMessage = "";
+
         if (llmScorer.isEnabled()) {
             const result = await llmScorer.generateAgentQuestion({
-                profile: { user_type: userType },
+                profile: state.profile,
                 history: []
             });
             if (result && result.question) {
+                state.lastQuestionText = result.question;
+                botMessage = result.bot_message || "";
                 firstQuestion = {
                     id: 'ai_1',
                     text: result.question,
-                    type: 'multiple_choice',
-                    options: result.options || ["Có", "Không", "Khác..."],
+                    type: 'text',
                     is_ai: true
                 };
+                if (result.options && result.options.length > 0) {
+                    firstQuestion.options = result.options;
+                }
             }
         }
 
@@ -50,6 +58,7 @@ router.post('/start', async (req, res) => {
             success: true,
             conversationId,
             mode: 'initial',
+            message: botMessage,
             question: firstQuestion,
             canRefine: false,
             isAiAgent: llmScorer.isEnabled()
@@ -71,45 +80,46 @@ router.post('/answer', async (req, res) => {
             return res.status(400).json({ error: 'conversationId, questionId, and answer are required' });
         }
 
-        // Record the answer
-        recordAnswer(conversationId, questionId, answer);
-
-        // Get next question
         const state = getConversationState(conversationId);
+        recordAnswer(conversationId, questionId, answer, state.lastQuestionText);
+
         let nextQuestion = null;
+        let botMessage = "";
 
         if (llmScorer.isEnabled()) {
             const history = state.answers.map(a => ({
-                question: a.question,
-                answer: a.answer
+                q: a.question,
+                a: a.answer
             }));
             const result = await llmScorer.generateAgentQuestion({
-                profile: { user_type: state.userType },
+                profile: state.profile || { user_type: state.userType },
                 history
             });
 
             if (result && result.question && result.question !== "DONE") {
+                state.lastQuestionText = result.question;
+                botMessage = result.bot_message || "";
                 nextQuestion = {
                     id: `ai_${state.answers.length + 1}`,
                     text: result.question,
-                    type: 'multiple_choice',
-                    options: result.options || ["Có", "Không", "Khác..."],
+                    type: 'text',
                     is_ai: true
                 };
+                if (result.options && result.options.length > 0) {
+                    nextQuestion.options = result.options;
+                }
             }
         } else if (state.mode === 'initial') {
             nextQuestion = getNextQuestion(conversationId, state.userType);
         }
 
-        const progress = getRefinementProgress(conversationId);
-
         res.json({
             success: true,
-            recorded: true,
-            nextQuestion,
-            progress,
-            canRefine: !llmScorer.isEnabled() && canStartRefinement(conversationId),
-            done: !nextQuestion
+            conversationId,
+            message: botMessage,
+            question: nextQuestion,
+            completed: !nextQuestion,
+            isAiAgent: llmScorer.isEnabled()
         });
     } catch (error) {
         console.error('Error recording answer:', error);
@@ -129,32 +139,30 @@ router.post('/recommendations', async (req, res) => {
         }
 
         const state = getConversationState(conversationId);
-        let result = null;
 
+        // AI Recommendations
         if (llmScorer.isEnabled()) {
             const history = state.answers.map(a => ({
-                question: a.question,
-                answer: a.answer
+                q: a.question,
+                a: a.answer
             }));
             const aiResult = await llmScorer.generateAgentRecommendations({
-                profile: { user_type: state.userType },
+                profile: state.profile || { user_type: state.userType },
                 history
             });
 
-            if (aiResult?.recommendations) {
-                result = {
+            if (aiResult && aiResult.recommendations) {
+                return res.json({
+                    success: true,
+                    message: aiResult.bot_intro || "Đây là kết quả định hướng của bạn:",
                     recommendations: aiResult.recommendations,
-                    totalAnswers: state.answers.length,
-                    isAiAgent: true
-                };
+                    isAiRefined: true
+                });
             }
         }
 
-        if (!result) {
-            // Fallback to database-driven logic if AI fails
-            result = getCareerRecommendations(conversationId);
-        }
-
+        // Fallback
+        const result = getCareerRecommendations(conversationId);
         res.json({
             success: true,
             ...result
@@ -185,7 +193,7 @@ router.post('/refine', (req, res) => {
         res.json({
             success: true,
             ...refinementData,
-            chatBlocked: true // Signal to frontend to block chat input
+            chatBlocked: true
         });
     } catch (error) {
         console.error('Error starting refinement:', error);

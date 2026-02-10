@@ -157,12 +157,17 @@ async function generateAgentQuestion({ profile, history }) {
   if (!isEnabled()) return null;
 
   const system = [
-    'Bạn là chuyên gia hướng nghiệp thông minh.',
-    'Dựa trên lịch sử hội thoại và hồ sơ, hãy đặt MỘT câu hỏi tiếp theo để hiểu rõ hơn về người dùng.',
-    'Câu hỏi phải giúp thu hẹp các lựa chọn nghề nghiệp.',
-    'Câu hỏi nên ngắn gọn, tự nhiên, thân thiện.',
-    'Nếu đã đủ thông tin, hãy trả về chuỗi "DONE".',
-    'Trả về JSON: {"question": "...", "options": ["Có", "Không", "Khác..."], "reasoning": "Tại sao đặt câu hỏi này"}'
+    'Bạn là chuyên gia tư vấn hướng nghiệp cao cấp.',
+    'Nhiệm vụ: Phân tích sâu Profile người dùng và Lịch sử hội thoại để đưa ra lời dẫn dắt và câu hỏi tiếp theo.',
+    'Bối cảnh: Bạn đang tư vấn cho đối tượng cụ thể (Học sinh/Sinh viên/Người đi làm) dựa trên thông tin hồ sơ được cung cấp.',
+    'Hãy thể hiện sự thấu hiểu về các kỹ năng, sở thích và trình độ học vấn trong hồ sơ.',
+    'Định dạng câu trả lời JSON:',
+    '{',
+    '  "bot_message": "Lời dẫn dắt thân thiện, phản hồi lại ý của người dùng hoặc nhận xét về hồ sơ của họ",',
+    '  "question": "Câu hỏi tiếp theo sắc sảo để khai thác sâu hơn (hoặc DONE nếu đã đủ dữ liệu)",',
+    '  "options": ["Gợi ý 1", "Gợi ý 2"],',
+    '  "reasoning": "Phân tích nội bộ về lý do đưa ra phản hồi này"',
+    '}'
   ].join(' ');
 
   const payload = {
@@ -192,11 +197,22 @@ async function generateAgentRecommendations({ profile, history }) {
   if (!isEnabled()) return null;
 
   const system = [
-    'Bạn là chuyên gia hướng nghiệp cấp cao.',
-    'Hãy đề xuất top 5-10 nghề nghiệp phù hợp nhất dựa trên lịch sử hội thoại.',
-    'KHÔNG giới hạn trong bất kỳ danh sách nào, hãy dùng kiến thức rộng lớn của bạn.',
-    'Với mỗi nghề, cung cấp: tên nghề, match_score (0-100), xác suất (0-1), lý do cụ thể.',
-    'Trả về JSON: {"recommendations": [{"career_name": "...", "match_score": 85, "probability": 0.4, "reasons": ["..."]}]}'
+    'Bạn là chuyên gia định hướng nghề nghiệp hàng đầu.',
+    'Nhiệm vụ: Tổng hợp toàn bộ dữ liệu từ hồ sơ và các câu trả lời để đưa ra bản tư vấn cuối cùng.',
+    'Hãy chào mừng người dùng bằng một lời tổng kết ấn tượng về thế mạnh của họ dựa trên bối cảnh đối tượng (Học sinh/Sinh viên/Người đi làm).',
+    'Đề xuất 5-10 nghề nghiệp mang tính chiến lược.',
+    'Trả về JSON:',
+    '{',
+    '  "bot_intro": "Lời tổng kết sâu sắc về Profile và lộ trình tương lai của người dùng",',
+    '  "recommendations": [',
+    '    {',
+    '      "career_name": "...",',
+    '      "match_score": 95,',
+    '      "probability": 0.35,',
+    '      "reasons": ["Lý do cụ thể trích dẫn từ Profile hoặc câu trả lời"]',
+    '    }',
+    '  ]',
+    '}'
   ].join(' ');
 
   const payload = {
@@ -221,11 +237,55 @@ async function generateAgentRecommendations({ profile, history }) {
     return null;
   }
 }
+async function generateAgentChatReply({ profile, history, currentMessage }) {
+  if (!isEnabled()) return null;
+
+  const system = [
+    'Bạn là chuyên gia tư vấn hướng nghiệp cao cấp.',
+    'Nhiệm vụ: Phản hồi tin nhắn người dùng một cách chuyên nghiệp và hữu ích trong bối cảnh định hướng nghề nghiệp.',
+    'Nếu người dùng hỏi về một khái niệm, hãy giải thích rõ ràng. Nếu người dùng chia sẻ về bản thân, hãy phân tích và dẫn dắt họ.',
+    'Bối cảnh: Tư vấn cho đối tượng cụ thể dựa trên hồ sơ.',
+    'Định dạng câu trả lời JSON:',
+    '{',
+    '  "bot_reply": "Nội dung phản hồi chi tiết cho người dùng",',
+    '  "suggested_questions": ["Câu hỏi gợi ý 1", "Câu hỏi gợi ý 2"],',
+    '  "is_recommendation_ready": false',
+    '}'
+  ].join(' ');
+
+  const payload = {
+    model: OPENAI_MODEL,
+    temperature: 0.6,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: system },
+      {
+        role: 'user',
+        content: JSON.stringify({
+          profile: safeProfile(profile),
+          history,
+          current_message: currentMessage
+        })
+      }
+    ]
+  };
+
+  const data = await postJson(OPENAI_API_URL, payload, LLM_TIMEOUT_MS);
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) return null;
+  try {
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+
 
 module.exports = {
   scoreCareersWithLLM,
   mergeScores,
   isEnabled,
   generateAgentQuestion,
-  generateAgentRecommendations
+  generateAgentRecommendations,
+  generateAgentChatReply
 };
