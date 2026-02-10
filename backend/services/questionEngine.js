@@ -28,8 +28,9 @@ function getConversationState(conversationId, userType = 'high_school') {
 function getNextQuestion(conversationId, userType) {
   const state = getConversationState(conversationId, userType);
 
-  // Initial mode: ask 20-30 broad questions
-  if (state.answers.length >= 25) {
+  // Initial mode: ask a small set of broad questions (tối ưu thời gian)
+  // Giảm từ ~25 câu xuống 10 câu đầu tiên để rút ngắn hội thoại
+  if (state.answers.length >= 10) {
     return null; // Done with initial questions
   }
 
@@ -80,8 +81,9 @@ function startRefinementMode(conversationId) {
     .slice(0, 20)
     .map(([career]) => career);
 
-  // Get 15 discriminating questions that help distinguish between top careers
-  const refinementQuestions = getDiscriminatingQuestions(topCareers, state.askedQuestions, 15);
+  // Get a small set of highly discriminating questions to keep flow short
+  // Giảm từ 15 câu refinement xuống 5 câu tập trung
+  const refinementQuestions = getDiscriminatingQuestions(topCareers, state.askedQuestions, 5);
 
   return {
     mode: 'refinement',
@@ -94,7 +96,7 @@ function startRefinementMode(conversationId) {
 /**
  * Get discriminating questions that help distinguish between careers
  */
-function getDiscriminatingQuestions(topCareers, askedQuestions, count = 15) {
+function getDiscriminatingQuestions(topCareers, askedQuestions, count = 5) {
   // Score each question by how well it discriminates between top careers
   const questionScores = ALL_QUESTIONS
     .filter(q => !askedQuestions.has(q.id))
@@ -213,8 +215,9 @@ function getCareerRecommendations(conversationId) {
   // Combine initial and refinement answers
   const allAnswers = [...state.answers, ...state.refinementAnswers];
 
-  if (allAnswers.length < 10) {
-    throw new Error(`Need at least 10 answers to generate recommendations (current: ${allAnswers.length})`);
+  // Giảm số lượng câu trả lời tối thiểu để sinh gợi ý nghề (từ 10 xuống 6)
+  if (allAnswers.length < 6) {
+    throw new Error(`Need at least 6 answers to generate recommendations (current: ${allAnswers.length})`);
   }
 
   // Calculate scores
@@ -289,7 +292,8 @@ function generateReasons(career, answers) {
 function canStartRefinement(conversationId) {
   const state = getConversationState(conversationId);
   return state.mode === 'initial' &&
-    state.answers.length >= 5 &&
+    // Cho phép vào refinement sớm hơn (từ 5 câu xuống 3 câu)
+    state.answers.length >= 3 &&
     state.refinementAnswers.length === 0;
 }
 
@@ -305,6 +309,12 @@ function getRefinementProgress(conversationId) {
   };
 }
 
+function isEnoughInfo(state) {
+  // Simple heuristic for chat mode: 3 answers is enough to start brainstorming
+  // Giảm từ 5 xuống 3 để bot có thể đề xuất nghề sớm hơn
+  return (state?.answers?.length || 0) >= 3;
+}
+
 module.exports = {
   getConversationState,
   getNextQuestion,
@@ -313,5 +323,6 @@ module.exports = {
   getCareerRecommendations,
   canStartRefinement,
   getRefinementProgress,
-  getDiscriminatingQuestions
+  getDiscriminatingQuestions,
+  isEnoughInfo
 };

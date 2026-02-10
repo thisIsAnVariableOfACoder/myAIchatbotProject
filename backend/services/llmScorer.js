@@ -3,9 +3,18 @@ const https = require('https');
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'nvidia/mistral-nemo-minitron-8b-base';
 // Use the completions endpoint as per user's snippet
-const OPENAI_API_URL = process.env.OPENAI_API_URL.replace('/chat/completions', '/completions');
-const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 15000);
+const rawUrl = process.env.OPENAI_API_URL || 'https://integrate.api.nvidia.com/v1/chat/completions';
+const OPENAI_API_URL = rawUrl.replace('/chat/completions', '/completions');
+const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 30000);
 const LLM_ENABLED = process.env.LLM_RERANK === '1';
+
+const SYSTEM_PROMPT = `Bạn là chuyên gia tư vấn hướng nghiệp cao cấp. 
+Nhiệm vụ: Hỗ trợ người dùng tìm nghề nghiệp phù hợp dựa trên năng lực và sở thích.
+QUY TẮC BỘ NHỚ: 
+1. TUYỆT ĐỐI KHÔNG hỏi lại những gì người dùng đã trả lời hoặc từ chối (xem lịch sử).
+2. Nếu người dùng bảo "không giỏi" hoặc "không thích" điều gì, hãy ghi nhớ và chuyển sang chủ đề khác.
+3. Luôn thấu hiểu bối cảnh và dẫn dắt câu chuyện tự nhiên, không máy móc.
+PHONG CÁCH: Ngắn gọn, súc tích, đi thẳng vào vấn đề, không rườm rà. Mỗi tin nhắn tối đa 2-3 câu.`;
 
 function isEnabled() {
   return Boolean(LLM_ENABLED && OPENAI_API_KEY);
@@ -16,7 +25,7 @@ async function scoreCareersWithLLM({ profile, answersText, candidates }) {
   if (!Array.isArray(candidates) || candidates.length === 0) return null;
 
   const prompt = [
-    `System: ${system}`,
+    `System: ${SYSTEM_PROMPT}`,
     `User: ${JSON.stringify({
       profile: safeProfile(profile),
       answers: answersText || '',
@@ -29,7 +38,7 @@ async function scoreCareersWithLLM({ profile, answersText, candidates }) {
     model: OPENAI_MODEL,
     temperature: 0.2,
     top_p: 0.95,
-    max_tokens: 1000,
+    max_tokens: 500,
     stream: false,
     prompt: prompt
   };
@@ -121,6 +130,7 @@ function ensureUniqueScores(list) {
 function postJson(url, payload, timeoutMs) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(payload);
+    // console.log(`[LLM Request] URL: ${url}`);
     const req = https.request(url, {
       method: 'POST',
       headers: {
@@ -133,18 +143,80 @@ function postJson(url, payload, timeoutMs) {
       res.on('data', (chunk) => { raw += chunk; });
       res.on('end', () => {
         try {
+          if (res.statusCode !== 200) {
+            console.error(`[LLM Error] Status: ${res.statusCode}, Body: ${raw}`);
+            return resolve(null);
+          }
           const parsed = JSON.parse(raw);
           resolve(parsed);
         } catch (err) {
-          reject(err);
+          console.error(`[LLM Parse Error] Body: ${raw}`);
+          resolve(null);
         }
       });
     });
-    req.on('error', reject);
-    req.setTimeout(timeoutMs, () => req.destroy(new Error('LLM timeout')));
+    req.on('error', (e) => {
+      console.error(`[LLM Request Error]: ${e.message}`);
+      resolve(null);
+    });
+    req.setTimeout(timeoutMs, () => {
+      console.error(`[LLM Timeout] after ${timeoutMs}ms`);
+      req.destroy();
+      resolve(null);
+    });
     req.write(data);
     req.end();
   });
+}
+
+/**
+ * Safely parse chat reply JSON from LLM output.
+ * Handles cases where model trả về thêm text ngoài JSON,
+ * hoặc chỉ lặp lại template "Câu trả lời & Câu hỏi MỚI hoàn toàn".
+ */
+function safeParseChatReply(content) {
+  if (!content) return null;
+  const text = String(content).trim();
+  const candidates = [];
+
+  // 1. Thử parse trực tiếp
+  try {
+    candidates.push(JSON.parse(text));
+  } catch {
+    // ignore
+  }
+
+  // 2. Thử trích JSON đầu tiên trong chuỗi
+  const match = text.match(/\{[\s\S]*\}/);
+  if (match) {
+    try {
+      candidates.push(JSON.parse(match[0]));
+    } catch {
+      // ignore
+    }
+  }
+
+  for (const obj of candidates) {
+    if (!obj || typeof obj !== 'object') continue;
+
+    let bot = String(obj.bot_reply || '').trim();
+
+    // Bỏ qua nếu bot_reply chỉ là template mặc định
+    if (!bot ||
+      bot === 'Câu trả lời & Câu hỏi MỚI hoàn toàn' ||
+      bot.toLowerCase() === 'câu trả lời & câu hỏi mới hoàn toàn') {
+      continue;
+    }
+
+    obj.bot_reply = bot;
+    if (!Array.isArray(obj.suggested_questions)) {
+      obj.suggested_questions = [];
+    }
+    obj.is_recommendation_ready = Boolean(obj.is_recommendation_ready);
+    return obj;
+  }
+
+  return null;
 }
 
 async function generateAgentQuestion({ profile, history }) {
@@ -164,7 +236,7 @@ async function generateAgentQuestion({ profile, history }) {
     '}'
   ].join(' ');
 
-  const chatHistory = history.map(h => `User: ${h.q}\nAssistant: ${h.a}`).join('\n');
+  const chatHistory = history.map(h => `Assistant: ${h.q}\nUser: ${h.a}`).join('\n');
   const prompt = [
     `System: ${system}`,
     `Profile: ${JSON.stringify(safeProfile(profile))}`,
@@ -176,7 +248,7 @@ async function generateAgentQuestion({ profile, history }) {
     model: OPENAI_MODEL,
     temperature: 0.7,
     top_p: 0.95,
-    max_tokens: 500,
+    max_tokens: 400,
     stream: false,
     prompt: prompt
   };
@@ -213,7 +285,7 @@ async function generateAgentRecommendations({ profile, history }) {
     '}'
   ].join(' ');
 
-  const chatHistory = history.map(h => `User: ${h.q}\nAssistant: ${h.a}`).join('\n');
+  const chatHistory = history.map(h => `Assistant: ${h.q}\nUser: ${h.a}`).join('\n');
   const prompt = [
     `System: ${system}`,
     `Profile: ${JSON.stringify(safeProfile(profile))}`,
@@ -242,25 +314,39 @@ async function generateAgentRecommendations({ profile, history }) {
 async function generateAgentChatReply({ profile, history, currentMessage }) {
   if (!isEnabled()) return null;
 
+  const isFirstTurn = !history || history.length === 0;
+  const starterContexts = [
+    "Hãy bắt đầu bằng cách tìm hiểu về niềm đam mê lớn nhất của họ trong cuộc sống.",
+    "Hãy bắt đầu bằng cách hỏi về một môn học hoặc kỹ năng họ tự tin nhất.",
+    "Hãy bắt đầu bằng cách hỏi về môi trường làm việc mơ ước của họ (văn phòng hay ngoài trời).",
+    "Hãy bắt đầu bằng cách hỏi về một thần tượng hoặc người truyền cảm hứng nghề nghiệp cho họ."
+  ];
+  const selectedStarter = isFirstTurn ? starterContexts[Date.now() % starterContexts.length] : "";
+
+  const chatHistory = history.map(h => `Assistant: ${h.q}\nUser: ${h.a}`).join('\n');
+  const pastQuestions = history.map(h => h.q).join(' | ');
+
   const system = [
     'Bạn là chuyên gia tư vấn hướng nghiệp cao cấp.',
-    'Nhiệm vụ: Phản hồi tin nhắn người dùng một cách chuyên nghiệp và hữu ích trong bối cảnh định hướng nghề nghiệp.',
-    'Nếu người dùng hỏi về một khái niệm, hãy giải thích rõ ràng. Nếu người dùng chia sẻ về bản thân, hãy phân tích và dẫn dắt họ.',
-    'Bối cảnh: Tư vấn cho đối tượng cụ thể dựa trên hồ sơ.',
+    'Nhiệm vụ: Phản hồi tin nhắn người dùng cực kỳ ngắn gọn (tối đa 2 câu).',
+    'QUY TẮC BẮT BUỘC: KHÔNG hỏi lại bất kỳ câu nào trong danh sách ĐÃ HỎI sau đây:',
+    `[ĐÃ HỎI: ${pastQuestions}]`,
+    'Nếu người dùng đã chia sẻ ít nhất 3-4 ý về sở thích/kỹ năng, hãy đặt "is_recommendation_ready": true.',
+    'ƯU TIÊN: Khi hội thoại đã có khoảng 6-8 lượt trao đổi và bạn đã nắm tương đối rõ sở thích/kỹ năng, hãy mạnh dạn đặt "is_recommendation_ready": true để không kéo dài thêm câu hỏi.',
+    selectedStarter,
     'Định dạng câu trả lời JSON:',
     '{',
-    '  "bot_reply": "Nội dung phản hồi chi tiết cho người dùng",',
-    '  "suggested_questions": ["Câu hỏi gợi ý 1", "Câu hỏi gợi ý 2"],',
+    '  "bot_reply": "Câu trả lời & Câu hỏi MỚI hoàn toàn",',
+    '  "suggested_questions": ["Gợi ý 1", "Gợi ý 2"],',
     '  "is_recommendation_ready": false',
-    '}'
   ].join(' ');
 
-  const chatHistory = history.map(h => `User: ${h.q}\nAssistant: ${h.a}`).join('\n');
   const prompt = [
     `System: ${system}`,
     `Profile: ${JSON.stringify(safeProfile(profile))}`,
     chatHistory,
     `User: ${currentMessage}`,
+    'Assistant: Hãy trả lời bằng tiếng Việt, dưới dạng JSON:',
     'Assistant: '
   ].join('\n\n');
 
@@ -268,19 +354,27 @@ async function generateAgentChatReply({ profile, history, currentMessage }) {
     model: OPENAI_MODEL,
     temperature: 0.6,
     top_p: 0.95,
-    max_tokens: 800,
+    // Giảm max_tokens nhẹ để phản hồi nhanh hơn
+    max_tokens: 220,
     stream: false,
-    prompt: prompt
+    prompt: prompt,
+    stop: ["User:", "Assistant:"]
   };
 
   const data = await postJson(OPENAI_API_URL, payload, LLM_TIMEOUT_MS);
   const content = data?.choices?.[0]?.text;
   if (!content) return null;
-  try {
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
+
+  const parsed = safeParseChatReply(content);
+  if (parsed) return parsed;
+
+  // Fallback an toàn nếu JSON không parse được hoặc chỉ là template
+  const safeReply = 'Mình đã hiểu thêm về bạn. Bạn có thể chia sẻ thêm một hoạt động, dự án hoặc trải nghiệm mà bạn thấy tự hào nhất không?';
+  return {
+    bot_reply: safeReply,
+    suggested_questions: [],
+    is_recommendation_ready: false
+  };
 }
 
 

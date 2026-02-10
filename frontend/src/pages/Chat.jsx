@@ -183,7 +183,6 @@ export default function Chat() {
       const data = json?.data || {};
 
       const botMessage = { id: `${Date.now()}-b`, sender: 'bot', text: data.bot_reply };
-      const shouldDelay = Boolean(data.next_node && !data.completed);
       const applyBotMessage = () => {
         setMessages(prev => ([...prev, botMessage]));
         setLoading(false);
@@ -200,18 +199,11 @@ export default function Chat() {
       if (data.recommendations) {
         const recs = normalizeRecommendations(data.recommendations);
         setRecommendations(recs);
-        setCompleted(recs.length > 0 || Boolean(data.completed));
-      } else if (data.completed) {
-        setCompleted(true);
-      } else {
-        setCompleted(false);
       }
+      setCompleted(Boolean(data.completed));
 
-      if (shouldDelay) {
-        setTimeout(applyBotMessage, 2000);
-      } else {
-        applyBotMessage();
-      }
+      // Bỏ delay 2s để phản hồi nhanh hơn
+      applyBotMessage();
     } catch {
       setLoading(false);
       setApiError('Không kết nối được máy chủ. Vui lòng cấu hình API backend.');
@@ -457,7 +449,11 @@ export default function Chat() {
             {recommendations.length > 0 && (
               <div className="space-y-3">
                 {recommendations.map((r) => {
-                  const percent = Math.min(100, Math.max(0, Number(r.match_score || 0)));
+                  // Ưu tiên dùng probability từ backend (0-1), fallback sang match_score nếu không có
+                  const rawProb = typeof r.probability === 'number'
+                    ? r.probability * 100
+                    : Number(r.match_score || 0);
+                  const percent = Math.min(100, Math.max(0, rawProb));
                   return (
                     <div key={r.career_name} className="flex items-center gap-3">
                       <div className="w-32 text-xs font-medium truncate">{r.career_name}</div>
@@ -477,7 +473,15 @@ export default function Chat() {
 
             {bestCareer && (
               <div className="mb-3 rounded-lg border border-[#E8E2D8] bg-[#FFF8F0] px-3 py-2 text-sm font-semibold">
-                Nghề phù hợp nhất: {bestCareer.career_name} ({Number(bestCareer.match_score || 0).toFixed(1)}%)
+                {(() => {
+                  const rawProb = typeof bestCareer.probability === 'number'
+                    ? bestCareer.probability * 100
+                    : Number(bestCareer.match_score || 0);
+                  const percent = Math.min(100, Math.max(0, rawProb));
+                  return (
+                    <>Nghề phù hợp nhất: {bestCareer.career_name} ({percent.toFixed(1)}%)</>
+                  );
+                })()}
               </div>
             )}
             <div className="space-y-3">

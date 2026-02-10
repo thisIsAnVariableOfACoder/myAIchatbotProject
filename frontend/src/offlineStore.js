@@ -1,4 +1,4 @@
-﻿const USERS_KEY = 'offline_users_v1';
+const USERS_KEY = 'offline_users_v1';
 const PROFILES_KEY = 'offline_profiles_v1';
 const CONVERSATIONS_KEY = 'offline_conversations_v1';
 const STATE_PREFIX = 'offline_state_';
@@ -2703,10 +2703,9 @@ async function pickNextQuestion(state) {
   const pastBotMessages = history.filter(m => m.sender === 'bot').map(m => m.message);
   const conversationText = history.map(m => `${m.sender}: ${m.message}`).join('\n');
 
-  // Attempt LLM dynamic question ALWAYS - NO FALLBACKS
+  // Attempt LLM dynamic question ALWAYS
   const llmQ = await generateNextQuestionWithLLM(conversationText, profile, pastBotMessages);
-  if (llmQ) {
-    console.log("Autonomous AI Question:", llmQ);
+  if (llmQ && llmQ.question) {
     state.lastQuestionTags = llmQ.intended_tags || [];
     state.lastQuestionText = llmQ.question;
     return {
@@ -2716,10 +2715,27 @@ async function pickNextQuestion(state) {
     };
   }
 
-  // Generic fallback if LLM totally fails (rare)
+  // Pool of varied fallbacks to prevent repetition
+  const fallbacks = [
+    "Bạn có thể chia sẻ thêm về kinh nghiệm làm việc hoặc các dự án bạn từng tham gia không?",
+    "Để tư vấn chính xác hơn, bạn hãy kể thêm về trình độ học vấn hoặc các khóa học bạn đã hoàn thành nhé.",
+    "Bên cạnh những thông tin trên, bạn có sở thích hay đam mê nào đặc biệt muốn kết hợp vào sự nghiệp không?",
+    "Bạn mong muốn một môi trường làm việc như thế nào trong tương lai?",
+    "Hãy chia sẻ thêm về một thành tựu mà bạn cảm thấy tự hào nhất để tôi hiểu rõ thế mạnh của bạn nhé."
+  ];
+
+  // Pick one that wasn't used recently
+  let fallbackText = fallbacks[0];
+  for (const f of fallbacks) {
+    if (!pastBotMessages.includes(f)) {
+      fallbackText = f;
+      break;
+    }
+  }
+
   return {
-    id: "fallback",
-    text: "Mình đang phân tích tiếp thông tin của bạn. Bạn có thể chia sẻ thêm về kinh nghiệm hoặc trình độ học vấn của mình không?",
+    id: "fallback_" + Date.now(),
+    text: fallbackText,
     tags: ["general"]
   };
 }
@@ -3246,7 +3262,8 @@ export const offlineApi = {
       }
     }
 
-    const enoughInfo = state.answers.length >= 10;
+    // Giảm số câu trả lời tối thiểu trong chế độ offline để ra gợi ý nhanh hơn
+    const enoughInfo = state.answers.length >= 6;
     if (enoughInfo && !request_more) {
       const messages = getMessages(convId);
       const conversationText = messages.map(m => `${m.sender}: ${m.message}`).join('\n');
