@@ -10,11 +10,12 @@ const {
     getRefinementProgress
 } = require('../services/questionEngine');
 const { matchCareerAsync } = require('../services/matcher');
+const llmScorer = require('../services/llmScorer');
 
 /**
  * Start a new conversation
  */
-router.post('/start', (req, res) => {
+router.post('/start', async (req, res) => {
     try {
         const { conversationId, userType = 'high_school' } = req.body;
 
@@ -23,14 +24,35 @@ router.post('/start', (req, res) => {
         }
 
         const state = getConversationState(conversationId, userType);
-        const firstQuestion = getNextQuestion(conversationId, userType);
+
+        let firstQuestion = null;
+        if (llmScorer.isEnabled()) {
+            const result = await llmScorer.generateAgentQuestion({
+                profile: { user_type: userType },
+                history: []
+            });
+            if (result && result.question) {
+                firstQuestion = {
+                    id: 'ai_1',
+                    text: result.question,
+                    type: 'multiple_choice',
+                    options: result.options || ["Có", "Không", "Khác..."],
+                    is_ai: true
+                };
+            }
+        }
+
+        if (!firstQuestion) {
+            firstQuestion = getNextQuestion(conversationId, userType);
+        }
 
         res.json({
             success: true,
             conversationId,
             mode: 'initial',
             question: firstQuestion,
-            canRefine: false
+            canRefine: false,
+            isAiAgent: llmScorer.isEnabled()
         });
     } catch (error) {
         console.error('Error starting conversation:', error);
@@ -41,7 +63,7 @@ router.post('/start', (req, res) => {
 /**
  * Answer a question
  */
-router.post('/answer', (req, res) => {
+router.post('/answer', async (req, res) => {
     try {
         const { conversationId, questionId, answer } = req.body;
 
@@ -56,10 +78,28 @@ router.post('/answer', (req, res) => {
         const state = getConversationState(conversationId);
         let nextQuestion = null;
 
-        if (state.mode === 'initial') {
+        if (llmScorer.isEnabled()) {
+            const history = state.answers.map(a => ({
+                question: a.question,
+                answer: a.answer
+            }));
+            const result = await llmScorer.generateAgentQuestion({
+                profile: { user_type: state.userType },
+                history
+            });
+
+            if (result && result.question && result.question !== "DONE") {
+                nextQuestion = {
+                    id: `ai_${state.answers.length + 1}`,
+                    text: result.question,
+                    type: 'multiple_choice',
+                    options: result.options || ["Có", "Không", "Khác..."],
+                    is_ai: true
+                };
+            }
+        } else if (state.mode === 'initial') {
             nextQuestion = getNextQuestion(conversationId, state.userType);
         }
-        // In refinement mode, frontend manages question flow
 
         const progress = getRefinementProgress(conversationId);
 
@@ -68,8 +108,8 @@ router.post('/answer', (req, res) => {
             recorded: true,
             nextQuestion,
             progress,
-            canRefine: canStartRefinement(conversationId),
-            done: !nextQuestion && state.mode === 'initial'
+            canRefine: !llmScorer.isEnabled() && canStartRefinement(conversationId),
+            done: !nextQuestion
         });
     } catch (error) {
         console.error('Error recording answer:', error);
@@ -88,7 +128,32 @@ router.post('/recommendations', async (req, res) => {
             return res.status(400).json({ error: 'conversationId is required' });
         }
 
-        const result = getCareerRecommendations(conversationId);
+        const state = getConversationState(conversationId);
+        let result = null;
+
+        if (llmScorer.isEnabled()) {
+            const history = state.answers.map(a => ({
+                question: a.question,
+                answer: a.answer
+            }));
+            const aiResult = await llmScorer.generateAgentRecommendations({
+                profile: { user_type: state.userType },
+                history
+            });
+
+            if (aiResult?.recommendations) {
+                result = {
+                    recommendations: aiResult.recommendations,
+                    totalAnswers: state.answers.length,
+                    isAiAgent: true
+                };
+            }
+        }
+
+        if (!result) {
+            // Fallback to database-driven logic if AI fails
+            result = getCareerRecommendations(conversationId);
+        }
 
         res.json({
             success: true,
