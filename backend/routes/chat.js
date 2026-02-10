@@ -20,7 +20,7 @@ function safeParse(value, fallback) {
 }
 
 function buildProfileFromState(profile, state, fallbackEducationLevel) {
-  const safeProfile = profile || {};
+  const safeProfile = { ...(state?.profile || {}), ...(profile || {}) };
   if (!state) {
     return {
       ...safeProfile,
@@ -53,7 +53,7 @@ function buildAnswersText(state, latestMessage) {
 
 router.post('/message', optionalAuth, async (req, res) => {
   try {
-    const { conversation_id, message, current_node, user_type, request_more } = req.body;
+    const { conversation_id, message, current_node, user_type, request_more, profile: bodyProfile } = req.body;
     const authUser = req.user;
     const userId = authUser?.user_id || null;
     const effectiveUserType = authUser?.user_type || user_type || null;
@@ -69,18 +69,31 @@ router.post('/message', optionalAuth, async (req, res) => {
       }
     }
 
+    const state = getConversationState(convId, effectiveUserType);
+    if (bodyProfile) {
+      state.profile = bodyProfile;
+    }
+
+    // Build history BEFORE recording current message to avoid duplication in payload
+    const history = state.answers.map(a => ({ q: a.question, a: a.answer }));
+
+    if (message) {
+      // Record the answer as an AI-driven or free chat entry
+      recordAnswer(convId, current_node || 'ai_chat', message, state.lastQuestionText);
+    }
+
     // AI Unified Chat Response
     if (isLlmEnabled()) {
       const profile = await getProfile(userId);
-      const history = state.answers.map(a => ({ q: a.question, a: a.answer }));
 
       const aiReply = await llmScorer.generateAgentChatReply({
-        profile: profile || { user_type: effectiveUserType },
+        profile: profile || state.profile || { user_type: effectiveUserType },
         history,
         currentMessage: message
       });
 
       if (aiReply) {
+        state.lastQuestionText = aiReply.bot_reply; // Store the bot's reply for next turn
         if (userId) {
           await saveMessage(convId, userId, 'bot', aiReply.bot_reply, null);
         }

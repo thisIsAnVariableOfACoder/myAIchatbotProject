@@ -139,9 +139,9 @@ function recordAnswer(conversationId, questionId, answer, aiQuestionText = null)
   if (!questionText) {
     const question = ALL_QUESTIONS.find(q => q.id === questionId);
     if (!question) {
-      if (typeof questionId === 'string' && questionId.startsWith('ai_')) {
-        // AI question without explicit text provided (should not happen with updated chatbot.js)
-        questionText = "AI Question";
+      if (typeof questionId === 'string' && (questionId.startsWith('ai_') || questionId.startsWith('ai'))) {
+        // AI question or dynamic chat message
+        questionText = aiQuestionText || "AI Interaction";
       } else {
         throw new Error(`Question ${questionId} not found`);
       }

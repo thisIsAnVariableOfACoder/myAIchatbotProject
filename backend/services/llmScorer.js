@@ -1,8 +1,9 @@
 const https = require('https');
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_MODEL = process.env.OPENAI_MODEL || 'mistralai/mistral-nemo-12b-instruct';
-const OPENAI_API_URL = process.env.OPENAI_API_URL || 'https://integrate.api.nvidia.com/v1/chat/completions';
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'nvidia/mistral-nemo-minitron-8b-base';
+// Use the completions endpoint as per user's snippet
+const OPENAI_API_URL = process.env.OPENAI_API_URL.replace('/chat/completions', '/completions');
 const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 15000);
 const LLM_ENABLED = process.env.LLM_RERANK === '1';
 
@@ -14,34 +15,27 @@ async function scoreCareersWithLLM({ profile, answersText, candidates }) {
   if (!isEnabled()) return null;
   if (!Array.isArray(candidates) || candidates.length === 0) return null;
 
-  const system = [
-    'Bạn là chuyên gia hướng nghiệp.',
-    'Dựa trên hồ sơ và câu trả lời, hãy chấm điểm xác suất phù hợp cho từng nghề.',
-    'Điểm là số thực 0-100; 100 là phù hợp nhất.',
-    'Tránh trùng điểm giữa các nghề (ưu tiên làm khác nhau).',
-    'Giữ nguyên danh sách nghề, không thêm nghề mới.',
-    'Trả về JSON hợp lệ theo định dạng: {"scores":[{"career_name":"...", "match_score": 0}]}'
-  ].join(' ');
+  const prompt = [
+    `System: ${system}`,
+    `User: ${JSON.stringify({
+      profile: safeProfile(profile),
+      answers: answersText || '',
+      candidates
+    })}`,
+    'Assistant: '
+  ].join('\n\n');
 
   const payload = {
     model: OPENAI_MODEL,
     temperature: 0.2,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: system },
-      {
-        role: 'user',
-        content: JSON.stringify({
-          profile: safeProfile(profile),
-          answers: answersText || '',
-          candidates
-        })
-      }
-    ]
+    top_p: 0.95,
+    max_tokens: 1000,
+    stream: false,
+    prompt: prompt
   };
 
   const data = await postJson(OPENAI_API_URL, payload, LLM_TIMEOUT_MS);
-  const content = data?.choices?.[0]?.message?.content;
+  const content = data?.choices?.[0]?.text;
   if (!content) return null;
   try {
     const json = JSON.parse(content);
@@ -170,21 +164,25 @@ async function generateAgentQuestion({ profile, history }) {
     '}'
   ].join(' ');
 
+  const chatHistory = history.map(h => `User: ${h.q}\nAssistant: ${h.a}`).join('\n');
+  const prompt = [
+    `System: ${system}`,
+    `Profile: ${JSON.stringify(safeProfile(profile))}`,
+    chatHistory,
+    'Assistant: '
+  ].join('\n\n');
+
   const payload = {
     model: OPENAI_MODEL,
     temperature: 0.7,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: system },
-      {
-        role: 'user',
-        content: JSON.stringify({ profile: safeProfile(profile), history })
-      }
-    ]
+    top_p: 0.95,
+    max_tokens: 500,
+    stream: false,
+    prompt: prompt
   };
 
   const data = await postJson(OPENAI_API_URL, payload, LLM_TIMEOUT_MS);
-  const content = data?.choices?.[0]?.message?.content;
+  const content = data?.choices?.[0]?.text;
   if (!content) return null;
   try {
     return JSON.parse(content);
@@ -215,21 +213,25 @@ async function generateAgentRecommendations({ profile, history }) {
     '}'
   ].join(' ');
 
+  const chatHistory = history.map(h => `User: ${h.q}\nAssistant: ${h.a}`).join('\n');
+  const prompt = [
+    `System: ${system}`,
+    `Profile: ${JSON.stringify(safeProfile(profile))}`,
+    chatHistory,
+    'Assistant: '
+  ].join('\n\n');
+
   const payload = {
     model: OPENAI_MODEL,
     temperature: 0.5,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: system },
-      {
-        role: 'user',
-        content: JSON.stringify({ profile: safeProfile(profile), history })
-      }
-    ]
+    top_p: 0.95,
+    max_tokens: 1500,
+    stream: false,
+    prompt: prompt
   };
 
   const data = await postJson(OPENAI_API_URL, payload, LLM_TIMEOUT_MS * 2);
-  const content = data?.choices?.[0]?.message?.content;
+  const content = data?.choices?.[0]?.text;
   if (!content) return null;
   try {
     return JSON.parse(content);
@@ -253,25 +255,26 @@ async function generateAgentChatReply({ profile, history, currentMessage }) {
     '}'
   ].join(' ');
 
+  const chatHistory = history.map(h => `User: ${h.q}\nAssistant: ${h.a}`).join('\n');
+  const prompt = [
+    `System: ${system}`,
+    `Profile: ${JSON.stringify(safeProfile(profile))}`,
+    chatHistory,
+    `User: ${currentMessage}`,
+    'Assistant: '
+  ].join('\n\n');
+
   const payload = {
     model: OPENAI_MODEL,
     temperature: 0.6,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: system },
-      {
-        role: 'user',
-        content: JSON.stringify({
-          profile: safeProfile(profile),
-          history,
-          current_message: currentMessage
-        })
-      }
-    ]
+    top_p: 0.95,
+    max_tokens: 800,
+    stream: false,
+    prompt: prompt
   };
 
   const data = await postJson(OPENAI_API_URL, payload, LLM_TIMEOUT_MS);
-  const content = data?.choices?.[0]?.message?.content;
+  const content = data?.choices?.[0]?.text;
   if (!content) return null;
   try {
     return JSON.parse(content);
