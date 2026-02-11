@@ -1,5 +1,103 @@
 const https = require('https');
 
+// ============================================================================
+// VALIDATION LAYER - Prevent inappropriate questions for each user type
+// ============================================================================
+
+// Forbidden keywords for each user type (questions containing these will be rejected)
+const FORBIDDEN_KEYWORDS = {
+  professional: [
+    'môn học', 'điểm số', 'năm học', 'trường học', 'giáo viên', 'bạn bè học đường',
+    'CLB học sinh', 'hoạt động ngoại khóa học đường', 'sở thích tại trường', 'ngoại khóa',
+    'thời khóa biểu', 'lớp học', 'thi cử', 'bài tập', 'đề thi', 'ngành học', 'khoa',
+    'trường đại học', 'trường cấp 3', 'THPT', 'trung học', 'sinh viên', 'học sinh',
+    'người học', 'người đi học', 'tại trường', 'trong trường', 'môn', 'điểm', 'lớp',
+    'thi', 'bài', 'đề', 'học kỳ', 'năm học'
+  ],
+  high_school: [
+    'kinh nghiệm làm việc', 'công ty', 'doanh nghiệp', 'lương', 'thu nhập', 'KPI',
+    'doanh số', 'quản lý nhân sự', 'thăng tiến', 'dự án kinh doanh', 'khởi nghiệp',
+    'nhân viên', 'sếp', 'công việc hiện tại', 'vị trí quản lý', 'chuyên môn',
+    'kỹ năng chuyên sâu', 'chuyển nghề', 'thâm niên'
+  ],
+  university: [
+    'kinh nghiệm làm việc dài hạn', 'quản lý nhân sự', 'KPI công ty',
+    'vị trí quản lý', 'lương cao', 'dự án kinh doanh quy mô lớn',
+    'quản lý', 'giám đốc', 'trưởng phòng', 'CEO', 'CTO'
+  ]
+};
+
+// Safe fallback questions for each user type (used when LLM generates invalid question)
+const FALLBACK_QUESTIONS = {
+  professional: [
+    "Bạn đang làm việc ở vị trí nào và trong lĩnh vực gì?",
+    "Bạn có bao nhiêu năm kinh nghiệm làm việc?",
+    "Bạn có muốn chuyển sang lĩnh vực khác không?",
+    "Điều gì khiến bạn muốn thay đổi công việc hiện tại?",
+    "Bạn có kỹ năng chuyên môn nào muốn phát triển thêm không?",
+    "Bạn thích làm việc trong môi trường như thế nào (remote, văn phòng, hybrid)?",
+    "Mức lương mong muốn của bạn là bao nhiêu?",
+    "Bạn có quan tâm đến các ngành nghề nào không?",
+    "Bạn cảm thấy mình có điểm mạnh nào trong công việc hiện tại?",
+    "Bạn có muốn thăng tiến lên vị trí cao hơn không?"
+  ],
+  high_school: [
+    "Bạn thích môn học nào nhất tại trường?",
+    "Bạn có tham gia CLB hay hoạt động nào không?",
+    "Bạn cảm thấy mình có điểm mạnh nào trong học tập?",
+    "Bạn có quan tâm đến ngành nghề nào không?",
+    "Bạn muốn học trường đại học nào?",
+    "Bạn có sở thích cá nhân nào không?",
+    "Bạn cảm thấy mình có năng lực đặc biệt nào không?",
+    "Bạn thích làm việc nhóm hay làm việc độc lập?",
+    "Bạn có quan tâm đến công nghệ không?",
+    "Bạn muốn làm việc trong lĩnh vực nào?"
+  ],
+  university: [
+    "Bạn đang học ngành gì và năm học mấy?",
+    "Bạn có làm dự án nào liên quan đến ngành học không?",
+    "Bạn có tham gia thực tập hay làm thêm không?",
+    "Bạn có kỹ năng nào đang phát triển không?",
+    "Bạn có chứng chỉ nào không?",
+    "Bạn muốn làm việc trong lĩnh vực nào sau khi ra trường?",
+    "Bạn có quan tâm đến các công ty nào không?",
+    "Bạn thích làm việc trong môi trường như thế nào?",
+    "Bạn có muốn học thêm không?",
+    "Bạn có quan tâm đến nghiên cứu không?"
+  ]
+};
+
+// Validate if a question is appropriate for the user type
+function validateQuestion(userType, question) {
+  const safeUserType = String(userType || 'high_school');
+  const forbidden = FORBIDDEN_KEYWORDS[safeUserType] || [];
+  const questionLower = question.toLowerCase();
+
+  // Check if question contains any forbidden keywords
+  for (const keyword of forbidden) {
+    if (questionLower.includes(keyword.toLowerCase())) {
+      console.log(`[VALIDATION FAILED] userType: ${safeUserType}, forbidden keyword: "${keyword}", question: "${question}"`);
+      return false;
+    }
+  }
+
+  console.log(`[VALIDATION PASSED] userType: ${safeUserType}, question: "${question}"`);
+  return true;
+}
+
+// Get a safe fallback question for the user type
+function getFallbackQuestion(userType) {
+  const safeUserType = String(userType || 'high_school');
+  const fallbacks = FALLBACK_QUESTIONS[safeUserType] || FALLBACK_QUESTIONS.high_school;
+  // Pick a random fallback question
+  const randomIndex = Math.floor(Math.random() * fallbacks.length);
+  return fallbacks[randomIndex];
+}
+
+// ============================================================================
+// LLM CONFIGURATION
+// ============================================================================
+
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 const GROQ_BASE_URL = process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1';
@@ -38,8 +136,18 @@ async function generateCareerQuestion({ userType, profile, memoryAnswers, intent
   console.log('[LLM DEBUG] generateCareerQuestion - profile:', profileText);
   console.log('[LLM DEBUG] generateCareerQuestion - memory:', JSON.stringify(memoryText));
 
-  const systemPrompt = `Bạn là chuyên gia tư vấn hướng nghiệp với nhiều năm kinh nghiệm.
-Nhiệm vụ: tạo 1 câu hỏi TIẾP THEO phù hợp với nhóm người dùng và bối cảnh hiện tại.
+  const systemPrompt = `🚨🚨🚨 CẢNH BÁO QUAN TRỌNG - PHẢI TUÂN THỦ TUYỆT ĐỐI 🚨🚨🚨
+
+BẠN LÀ CHUYÊN GIA TƯ VẤN HƯỚNG NGHIỆP VỚI NHIỀU NĂM KINH NGHIỆM.
+NHIỆM VỤ: tạo 1 câu hỏi TIẾP THEO phù hợp với nhóm người dùng và bối cảnh hiện tại.
+
+🔴 QUY TẮC SỐNG CÒN: Nếu userType = "professional", TUYỆT ĐỐI KHÔNG HỎI BẤT CỨ CÂU NÀO VỀ:
+- MÔN HỌC, ĐIỂM SỐ, NĂM HỌC, TRƯỜNG HỌC
+- CLB HỌC SINH, HOẠT ĐỘNG NGOẠI KHÓA HỌC ĐƯỜNG
+- GIÁO VIÊN, BẠN BÈ HỌC ĐƯỜNG
+- SỞ THÍCH TẠI TRƯỜNG, THỜI KHÓA BIỂU
+
+🔴 NẾU BẠN HỎI SAI - NGƯỜI DÙNG SẼ BỎ HỜNG ỨNG DỤNG!
 
 ⚠️ RÀNG BUỘC CỐT LÕI - PHẢI TUÂN THỦ:
 1. Chỉ hỏi 1 câu, rõ ràng, dễ trả lời.
@@ -168,8 +276,8 @@ Hãy tạo câu hỏi tiếp theo bằng tiếng Việt, xưng hô lịch sự, 
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userContent }
     ],
-    temperature: 0.6,
-    top_p: 0.9,
+    temperature: 0.3,  // Lower temperature for more deterministic output
+    top_p: 0.8,
     max_tokens: 512,
     stream: false
   };
@@ -183,7 +291,21 @@ Hãy tạo câu hỏi tiếp theo bằng tiếng Việt, xưng hô lịch sự, 
   const question = normalizeReplyText(parsed.bot_reply);
   const options = normalizeSuggestedQuestions(parsed.suggested_questions);
   if (!question) return null;
-  return { question, options };
+
+  // ============================================================================
+  // VALIDATION LAYER: Check if the question is appropriate for the user type
+  // ============================================================================
+  if (!validateQuestion(safeUserType, question)) {
+    console.log(`[FALLBACK] Using fallback question for userType: ${safeUserType}`);
+    const fallbackQuestion = getFallbackQuestion(safeUserType);
+    return { question: fallbackQuestion, options: [] };
+  }
+
+  // Also validate suggested questions - filter out inappropriate ones
+  const validOptions = options.filter(opt => validateQuestion(safeUserType, opt));
+  console.log(`[VALIDATION] Filtered suggested questions: ${options.length} -> ${validOptions.length}`);
+
+  return { question, options: validOptions };
 }
 
 function fixCommonMojibake(value) {
