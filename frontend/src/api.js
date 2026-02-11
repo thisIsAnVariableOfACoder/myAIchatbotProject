@@ -7,7 +7,24 @@ function buildUrl(path) {
   return `${API_BASE}${normalizedPath}`;
 }
 
+function shouldBlockRelativeApiCall(path) {
+  const normalizedPath = String(path || '').startsWith('/') ? path : `/${path}`;
+  if (!normalizedPath.startsWith('/api/')) return false;
+  if (API_BASE) return false;
+  if (typeof window === 'undefined') return false;
+  const hostname = String(window.location?.hostname || '');
+  const isLocalhost = /^(localhost|127\.0\.0\.1)$/i.test(hostname);
+  return !isLocalhost;
+}
+
 async function request(path, options = {}) {
+  if (shouldBlockRelativeApiCall(path)) {
+    return {
+      success: false,
+      error: 'Backend API chưa được cấu hình. Cập nhật window.__API_BASE__ trong runtime-config.js.'
+    };
+  }
+
   try {
     const res = await fetch(buildUrl(path), options);
     const text = await res.text();

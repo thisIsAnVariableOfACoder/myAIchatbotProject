@@ -10,8 +10,10 @@ const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
 const isLocalhost = /^(localhost|127\.0\.0\.1)$/i.test(hostname);
 const isGithubPages = /(^|\.)github\.io$/i.test(hostname);
 
+const isInvalidGithubApiBase = isGithubPages && /(^|\.)github\.io$/i.test(String(runtimeApiBase || envApiBase));
+
 const fallbackApiBase = isLocalhost ? 'http://localhost:3001' : '';
-const configuredApiBase = runtimeApiBase || envApiBase || fallbackApiBase;
+const configuredApiBase = isInvalidGithubApiBase ? '' : (runtimeApiBase || envApiBase || fallbackApiBase);
 
 const runtimeOffline = typeof window !== 'undefined' ? window.__IS_OFFLINE__ : undefined;
 const envOffline = import.meta.env.VITE_OFFLINE_MODE === 'true';

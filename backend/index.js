@@ -29,9 +29,15 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "*";
 ========================= */
 
 // CORS fix cho production
+// Note: credentials=true cannot be used with Access-Control-Allow-Origin: '*'
+const allowAnyOrigin = String(FRONTEND_URL).trim() === '*';
 app.use(cors({
-  origin: FRONTEND_URL,
-  credentials: true
+  origin: allowAnyOrigin ? true : FRONTEND_URL,
+  credentials: !allowAnyOrigin
+}));
+app.options('*', cors({
+  origin: allowAnyOrigin ? true : FRONTEND_URL,
+  credentials: !allowAnyOrigin
 }));
 
 app.use(express.json());
