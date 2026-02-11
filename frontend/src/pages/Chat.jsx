@@ -188,7 +188,8 @@ export default function Chat() {
       if (data.conversation_id) {
         const prevId = conversationId;
         setConversationId(data.conversation_id);
-        if (token && userId && data.conversation_id !== prevId) {
+        // Refresh history when conversation changes OR when recommendations are saved
+        if (token && userId && (data.conversation_id !== prevId || data.completed)) {
           await refreshHistory();
         }
       }

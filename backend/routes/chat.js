@@ -14,11 +14,11 @@ const llmScorer = require('../services/llmScorer');
 const { isEnabled: isLlmEnabled } = llmScorer;
 
 const MEMORY_MESSAGES = [];
-const MIN_CONF_SCORE = 65;
+const MIN_CONF_SCORE = 40;
 // Giảm số lượng nghề cần đạt ngưỡng cao từ 4 xuống 3 để chốt sớm hơn
-const MIN_CONF_COUNT = 3;
+const MIN_CONF_COUNT = 2;
 // Giới hạn tổng số câu hỏi trong một cuộc trò chuyện xuống 12 để tránh kéo dài
-const MAX_QUESTIONS = 12;
+const MAX_QUESTIONS = 25;
 
 function safeParse(value, fallback) {
   try {

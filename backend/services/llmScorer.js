@@ -334,11 +334,23 @@ YÊU CẦU:
 3. Chỉ chọn ra 6-10 nghề phù hợp nhất (không dưới 6, không quá 10)
 4. Sắp xếp theo thứ tự giảm dần theo điểm phù hợp
 
-QUY TẮC TÍNH ĐIỂM (0-100):
-- 90-100: Rất phù hợp - khớp hoàn toàn với sở thích, kỹ năng, định hướng
-- 75-89: Phù hợp - khớp tốt với nhiều yếu tố
-- 60-74: Khá phù hợp - có tiềm năng nhưng cần phát triển thêm
-- Dưới 60: Không nên đưa vào danh sách
+QUY TẮC TÍNH ĐIỂM (0-100) - RẤT QUAN TRỌNG:
+- 85-100: CHỈ khi có thông tin CỤ THỂ, CHI TIẾT và ĐỦ ĐỦ về: sở thích rõ ràng, kỹ năng đã được thể hiện, kinh nghiệm thực tế, mục tiêu nghề nghiệp cụ thể
+- 70-84: Phù hợp - có nhiều yếu tố khớp nhưng còn thiếu thông tin chi tiết
+- 55-69: Khá phù hợp - có tiềm năng nhưng thông tin còn mơ hồ, chung chung
+- 40-54: Có thể phù hợp - cần thêm nhiều thông tin để xác định
+- Dưới 40: Không nên đưa vào danh sách
+
+NGUYÊN TẮC CÔNG BẰNG:
+1. KHÔNG bao giờ cho điểm cao (>70) chỉ dựa trên thông tin chung chung như "tôi thích...", "tôi làm gì cũng được", "tôi chưa biết"
+2. Thông tin mơ hồ, chung chung chỉ được tính tối đa 55-65 điểm
+3. Cần CÁC LOẠI thông tin sau để cho điểm cao (>70):
+   - Sở thích cụ thể (không chỉ nói "thích âm nhạc" mà phải nói rõ thích thể loại nào, nhạc cụ nào, vai trò nào)
+   - Kỹ năng đã được thể hiện (đã làm gì, đạt kết quả gì)
+   - Kinh nghiệm thực tế (đã tham gia hoạt động gì, dự án gì)
+   - Định hướng rõ ràng (muốn làm gì, muốn phát triển theo hướng nào)
+4. Nếu người dùng nói "tôi làm ngành nào cũng được" hoặc tương tự, KHÔNG được cho điểm cao cho bất kỳ ngành nào
+5. Điểm số phải phản ánh ĐỘ CHẮC CHẮN dựa trên thông tin CÓ, không phải sự phỏng đoán
 
 BẮT BUỘC: Trả về JSON đúng cấu trúc:
 {
