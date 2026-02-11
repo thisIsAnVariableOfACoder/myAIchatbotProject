@@ -1,22 +1,10 @@
 # Career Advisor Chatbot (Prototype)
+AI Young Guru 2026
 
 ## Quick Start
 - `cd backend`
 - `npm install`
 - `npm run setup-db`
-- `npm run dev`
-
-## Frontend
-- `cd frontend`
-- `npm install`
-- `npm run dev`
-
-## One-Click Run (Windows)
-- Double click `run.bat`
-
-## Single Command (Root)
-- `npm install`
-- `npm run setup`
 - `npm run dev`
 
 ## Single URL (Serve Frontend From Backend)
@@ -49,3 +37,14 @@ Base URL: `http://localhost:3001`
 ## Notes
 - Uses SQLite. Configure `DB_PATH` if needed.
 - Scenario and matcher are rule-based for prototype speed.
+
+## LLM API MODEL
+GPT OSS 120B
+See: https://console.groq.com/playground?model=openai/gpt-oss-120b
+
+-----------------------------------------------------------------------------------
+Credit
+Team LLMagik
+* Phạm Khôi Nguyên @thisIsAnVariableOfACoder
+* Đinh Quang Minh
+* Vũ Minh Hoàng

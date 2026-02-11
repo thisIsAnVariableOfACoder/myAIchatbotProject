@@ -1,9 +1,41 @@
 import { API_BASE, IS_OFFLINE } from './config';
 import { offlineApi } from './offlineStore';
 
+function buildUrl(path) {
+  const normalizedPath = String(path || '').startsWith('/') ? path : `/${path}`;
+  if (!API_BASE) return normalizedPath;
+  return `${API_BASE}${normalizedPath}`;
+}
+
 async function request(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, options);
-  return res.json();
+  try {
+    const res = await fetch(buildUrl(path), options);
+    const text = await res.text();
+    let json = null;
+
+    if (text) {
+      try {
+        json = JSON.parse(text);
+      } catch {
+        json = null;
+      }
+    }
+
+    if (!res.ok) {
+      return {
+        success: false,
+        error: json?.error || `Request failed (${res.status})`
+      };
+    }
+
+    if (json && typeof json === 'object') return json;
+    return { success: true, data: null };
+  } catch {
+    return {
+      success: false,
+      error: 'Khong the ket noi may chu. Vui long kiem tra API hoac thu lai.'
+    };
+  }
 }
 
 export const api = {
