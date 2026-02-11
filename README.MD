@@ -1,4 +1,4 @@
-# Career Advisor Chatbot (Prototype)
+# Career Advisor Chatbot
 AI Young Guru 2026
 
 ## Quick Start
@@ -42,7 +42,7 @@ Base URL: `http://localhost:3001`
 GPT OSS 120B
 See: https://console.groq.com/playground?model=openai/gpt-oss-120b
 
-# Credit
+# CONTRIBUTORS
 ## Team LLMagik
 * Phạm Khôi Nguyên https://github.com/thisIsAnVariableOfACoder
 * Đinh Quang Minh https://github.com/minhhdinh192
