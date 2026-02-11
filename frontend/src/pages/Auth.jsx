@@ -6,7 +6,7 @@ import { api } from '../api';
 export default function Auth() {
   const { login, user } = useAuth();
   const [mode, setMode] = useState('login');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [userType, setUserType] = useState('high_school');
   const [error, setError] = useState('');
@@ -21,8 +21,8 @@ export default function Auth() {
 
     try {
       const body = mode === 'login'
-        ? { email, password }
-        : { email, password, user_type: userType };
+        ? { email: username, password }
+        : { email: username, password, user_type: userType };
 
       const json = mode === 'login'
         ? await api.login(body)
@@ -45,7 +45,7 @@ export default function Auth() {
     return (
       <div className="max-w-md mx-auto card card-elevated p-6">
         <div className="text-lg font-semibold">Bạn đã đăng nhập</div>
-        <div className="text-sm text-[#5B5B57] mt-2">{user.email}</div>
+        <div className="text-sm text-[#5B5B57] mt-2">{user.username || user.email}</div>
       </div>
     );
   }
@@ -63,8 +63,8 @@ export default function Auth() {
       )}
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label className="text-xs text-[#5B5B57]" htmlFor="email">Email</label>
-          <input id="email" className="input-elevated mt-1 w-full px-3 py-2 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <label className="text-xs text-[#5B5B57]" htmlFor="username">Username</label>
+          <input id="username" className="input-elevated mt-1 w-full px-3 py-2 text-sm" value={username} onChange={(e) => setUsername(e.target.value)} />
         </div>
         <div>
           <label className="text-xs text-[#5B5B57]" htmlFor="password">Mật khẩu</label>

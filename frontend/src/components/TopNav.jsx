@@ -13,6 +13,9 @@ export default function TopNav() {
   const baseUrl = import.meta.env.BASE_URL || '/';
   const logoSrc = `${baseUrl}ai-young-guru-logo.png`;
   const fallbackLogo = `${baseUrl}icon.svg`;
+  const projectLogo = `${baseUrl}icon.svg`;
+  const fptLogo = `${baseUrl}fpt-university-logo.png`;
+  const aigLogo = `${baseUrl}ai-young-guru.png`;
   const [themeModeState, setThemeModeState] = useState(() => {
     const stored = getStoredTheme().mode;
     return stored === 'dark' ? 'dark' : 'light';
@@ -22,18 +25,56 @@ export default function TopNav() {
     <header className="sticky top-0 z-40 border-b border-[var(--c-border)]/70 bg-[var(--c-bg)]/80 backdrop-blur-xl shadow-sm">
       <div className="mx-auto max-w-screen-2xl px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="h-12 w-auto">
+          <div className="flex items-center gap-3">
+            <a
+              href="https://aiyoungguru.fpt.edu.vn/"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="AI Young Guru"
+              className="h-12 w-auto"
+            >
+              <img
+                src={logoSrc}
+                alt="AI Young Guru"
+                className="h-12 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = fallbackLogo;
+                }}
+              />
+            </a>
+            <img src={projectLogo} alt="Project" className="h-14 w-14 drop-shadow-sm" />
+            <div className="flex flex-col">
+              <div className="text-xl font-extrabold tracking-tight leading-tight">
+                <span className="bg-gradient-to-r from-[var(--c-primary)] via-[var(--c-accent)] to-[var(--c-primary)] bg-clip-text text-transparent">
+                  Career Guidance Chatbot
+                </span>
+              </div>
+              <div className="text-xs text-[#5B5B57] font-medium">Chọn đúng hướng, bước đúng đường.</div>
+            </div>
+            <a
+              href="https://aiyoungguru.fpt.edu.vn/"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="AI Young Guru Contest"
+              className="inline-flex items-center"
+            >
+              <img
+                src={aigLogo}
+                alt="AI Young Guru Contest"
+                className="h-10 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </a>
             <img
-              src={logoSrc}
-              alt="AI Young Guru"
-              className="h-12 w-auto object-contain"
+              src={fptLogo}
+              alt="FPT University"
+              className="h-10 w-auto object-contain"
               onError={(e) => {
-                e.currentTarget.src = fallbackLogo;
+                e.currentTarget.style.display = 'none';
               }}
             />
-          </div>
-          <div>
-            <div className="text-lg font-semibold">Career Guidance Chatbot</div>
           </div>
         </div>
         <nav className="flex items-center gap-2">

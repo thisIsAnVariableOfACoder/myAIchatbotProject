@@ -2830,25 +2830,27 @@ export const offlineApi = {
     const userId = Number(token.replace('offline:', ''));
     const user = getUsers().find((u) => u.id === userId);
     if (!user) return { success: false };
-    return { success: true, data: { user_id: user.id, email: user.email, user_type: user.user_type } };
+    return { success: true, data: { user_id: user.id, username: user.email, email: user.email, user_type: user.user_type } };
   },
-  login({ email, password }) {
-    const user = getUsers().find((u) => u.email === email && u.password === password);
-    if (!user) return { success: false, error: 'Sai email hoặc mật khẩu' };
+  login({ username, email, password }) {
+    const identifier = (username ?? email);
+    const user = getUsers().find((u) => u.email === identifier && u.password === password);
+    if (!user) return { success: false, error: 'Sai username hoặc mật khẩu' };
     const token = `offline:${user.id}`;
-    return { success: true, data: { user_id: user.id, email: user.email, user_type: user.user_type, token } };
+    return { success: true, data: { user_id: user.id, username: user.email, email: user.email, user_type: user.user_type, token } };
   },
-  register({ email, password, user_type }) {
+  register({ username, email, password, user_type }) {
     const users = getUsers();
-    if (users.find((u) => u.email === email)) {
-      return { success: false, error: 'Email đã tồn tại' };
+    const identifier = (username ?? email);
+    if (users.find((u) => u.email === identifier)) {
+      return { success: false, error: 'Username đã tồn tại' };
     }
     const nextId = Math.max(1, ...users.map((u) => u.id)) + 1;
-    const user = { id: nextId, email, password, user_type: user_type || 'high_school' };
+    const user = { id: nextId, email: identifier, password, user_type: user_type || 'high_school' };
     users.push(user);
     saveUsers(users);
     const token = `offline:${user.id}`;
-    return { success: true, data: { user_id: user.id, email: user.email, user_type: user.user_type, token } };
+    return { success: true, data: { user_id: user.id, username: user.email, email: user.email, user_type: user.user_type, token } };
   },
   getProfile(userId) {
     const profiles = getProfiles();

@@ -51,6 +51,7 @@ export function AuthProvider({ children }) {
       setToken(newToken);
       setUser({
         user_id: data?.user_id,
+        username: data?.username || data?.email,
         email: data?.email,
         user_type: data?.user_type
       });

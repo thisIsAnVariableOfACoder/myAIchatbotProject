@@ -5,7 +5,7 @@
     "node": "18.x"
   },
   "scripts": {
-    "dev": "nodemon index.js",
+    "dev": "set DISABLE_FRONTEND_SERVE=true&& nodemon index.js",
     "start": "node index.js",
     "setup-db": "node scripts/initDb.js",
     "reset-db": "node scripts/initDb.js --force",

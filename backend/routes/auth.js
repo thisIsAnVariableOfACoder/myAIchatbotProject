@@ -9,11 +9,12 @@ const { requireAuth } = require('../middleware/auth');
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, user_type } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ success: false, error: 'Email và mật khẩu là bắt buộc' });
+    const { username, email, password, user_type } = req.body;
+    const identifier = (username ?? email);
+    if (!identifier || !password) {
+      return res.status(400).json({ success: false, error: 'Username và mật khẩu là bắt buộc' });
     }
-    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedEmail = String(identifier).trim().toLowerCase();
     if (normalizedEmail === String(ADMIN_EMAIL || '').trim().toLowerCase()) {
       return res.status(400).json({ success: false, error: 'Tài khoản admin là cố định, không thể tạo mới' });
     }
@@ -25,16 +26,16 @@ router.post('/register', async (req, res) => {
     const userType = user_type || 'high_school';
     
     const query = 'INSERT INTO users (email, password_hash, user_type) VALUES (?, ?, ?)';
-    global.db.run(query, [email, passwordHash, userType], function(err) {
+    global.db.run(query, [identifier, passwordHash, userType], function(err) {
       if (err) {
-        return res.status(400).json({ success: false, error: 'Email đã tồn tại' });
+        return res.status(400).json({ success: false, error: 'Username đã tồn tại' });
       }
       
-      const token = jwt.sign({ user_id: this.lastID, email, user_type: userType }, JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ user_id: this.lastID, username: identifier, email: identifier, user_type: userType }, JWT_SECRET, { expiresIn: '7d' });
       
       res.json({
         success: true,
-        data: { user_id: this.lastID, email, user_type: userType, token }
+        data: { user_id: this.lastID, username: identifier, email: identifier, user_type: userType, token }
       });
     });
   } catch (error) {
@@ -44,21 +45,22 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, email, password } = req.body;
+    const identifier = (username ?? email);
     
-    global.db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
+    global.db.get('SELECT * FROM users WHERE email = ?', [identifier], async (err, user) => {
       if (err || !user) {
-        return res.status(401).json({ success: false, error: 'Sai email hoặc mật khẩu' });
+        return res.status(401).json({ success: false, error: 'Sai username hoặc mật khẩu' });
       }
       
       const valid = await bcrypt.compare(password, user.password_hash);
       if (!valid) {
-        return res.status(401).json({ success: false, error: 'Sai email hoặc mật khẩu' });
+        return res.status(401).json({ success: false, error: 'Sai username hoặc mật khẩu' });
       }
       
-      const token = jwt.sign({ user_id: user.id, email: user.email, user_type: user.user_type }, JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ user_id: user.id, username: user.email, email: user.email, user_type: user.user_type }, JWT_SECRET, { expiresIn: '7d' });
       
-      res.json({ success: true, data: { user_id: user.id, email: user.email, user_type: user.user_type, token } });
+      res.json({ success: true, data: { user_id: user.id, username: user.email, email: user.email, user_type: user.user_type, token } });
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -66,7 +68,14 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/me', requireAuth, (req, res) => {
-  res.json({ success: true, data: req.user });
+  const user = req.user || {};
+  res.json({
+    success: true,
+    data: {
+      ...user,
+      username: user.username || user.email
+    }
+  });
 });
 
 module.exports = router;

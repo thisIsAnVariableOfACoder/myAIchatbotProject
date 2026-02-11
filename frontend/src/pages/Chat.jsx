@@ -167,10 +167,6 @@ export default function Chat() {
     ]));
     setLoading(true);
     try {
-      const normalized = String(text).trim().toLowerCase();
-      if (normalized === 'hello') {
-        setHelloSent(true);
-      }
       const body = {
         user_type: userType,
         conversation_id: conversationId,

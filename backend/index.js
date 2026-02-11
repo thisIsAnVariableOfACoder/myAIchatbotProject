@@ -106,7 +106,10 @@ app.use('/api/explore', exploreRoutes);
 
 const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
 
-if (fs.existsSync(frontendDist)) {
+const disableFrontendServe = String(process.env.DISABLE_FRONTEND_SERVE || '').trim().toLowerCase() === 'true';
+const shouldServeFrontend = !disableFrontendServe;
+
+if (shouldServeFrontend && fs.existsSync(frontendDist)) {
   console.log("🌐 Serving frontend build");
 
   app.use(express.static(frontendDist));
@@ -119,7 +122,26 @@ if (fs.existsSync(frontendDist)) {
   });
 
 } else {
-  console.log("ℹ️ Frontend build not found (normal if using GitHub Pages)");
+  console.log("ℹ️ Frontend build not served (use Vite dev server)");
+
+  app.get('/', (_req, res) => {
+    res.status(200).send(
+      [
+        'Backend is running.',
+        '',
+        'UI is not served from this port in dev mode.',
+        'Open the Vite dev server at: http://localhost:5173/',
+        'API health check: http://localhost:3001/health'
+      ].join('\n')
+    );
+  });
+
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({ success: false, error: 'API not found' });
+    }
+    return res.status(404).send('Not found. In dev mode, open UI at http://localhost:5173/');
+  });
 }
 
 /* =========================
