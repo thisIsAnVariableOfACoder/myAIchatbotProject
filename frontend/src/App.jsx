@@ -104,7 +104,7 @@ export default function App() {
                 <div className="text-sm font-semibold text-[var(--c-text)]">Resources</div>
                 <div className="flex flex-col gap-2 text-sm">
                   <a className="text-[#5B5B57] hover:text-[var(--c-text)] hover:underline" href="https://thisisanvariableofacoder.github.io/myAIchatbotProject">Chat</a>
-                  <a className="text-[#5B5B57] hover:text-[var(--c-text)] hover:underline" href="/explore">Explore</a>
+                  <a className="text-[#5B5B57] hover:text-[var(--c-text)] hover:underline" href="https://thisisanvariableofacoder.github.io/myAIchatbotProject/explore">Explore</a>
                   <a
                     className="text-[#5B5B57] hover:text-[var(--c-text)] hover:underline"
                     href="https://github.com/thisIsAnVariableOfACoder/myAIchatbotProject/tree/main"
