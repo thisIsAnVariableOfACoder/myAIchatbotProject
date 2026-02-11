@@ -1,42 +1,46 @@
-# Career Advisor Chatbot  
-**AI Young Guru 2026 – Team LLMagik**
+# 🚀 Career Advisor Chatbot  
+### AI Young Guru 2026 – Team LLMagik  
 
-An AI-powered career advisory chatbot that helps users explore career paths, discover job information, and receive personalized recommendations.
-
----
-
-## 🚀 Overview
-
-Career Advisor Chatbot is a prototype system designed to:
-
-- Provide career exploration support  
-- Suggest relevant job roles  
-- Serve a searchable job catalog (1000+ roles from O*NET)  
-- Demonstrate LLM-powered conversational guidance  
-
-### Tech Stack
-
-- **Node.js** (Backend)
-- **Frontend Web App**
-- **SQLite** (Database)
-- **Rule-based matching engine** (Prototype)
-- **LLM Integration – GPT-OSS 120B**
+An AI-powered career advisory chatbot that helps users explore career paths, discover job information, and receive personalized recommendations using LLM technology.
 
 ---
 
-## 📦 Project Structure
+## 🌟 Overview
+
+**Career Advisor Chatbot** is a prototype intelligent system designed to:
+
+- 🔎 Support career exploration  
+- 💼 Suggest relevant job roles based on user input  
+- 📚 Provide a searchable job catalog (1000+ roles from O*NET)  
+- 🤖 Deliver LLM-powered conversational guidance  
+
+---
+
+## 🧰 Tech Stack
+
+| Layer      | Technology |
+|------------|------------|
+| Backend    | Node.js |
+| Frontend   | Web Application |
+| Database   | SQLite |
+| AI Engine  | GPT-OSS 120B |
+| Matching   | Rule-based Engine (Prototype) |
+
+---
+
+## 📁 Project Structure
 
 ```bash
 career-advisor-chatbot/
-├── backend/
-└── frontend/
+├── backend/      # API server, database, AI integration
+└── frontend/     # Web client application
 ```
 
 ---
 
 ## 🛠 Installation & Setup
 
-### 1️⃣ Backend
+### 1️⃣ Backend Setup
 
 ```bash
 cd backend
@@ -45,7 +49,7 @@ npm run setup-db
 npm run dev
 ```
 
-### 2️⃣ Frontend
+### 2️⃣ Frontend Setup
 
 ```bash
 cd frontend
@@ -57,15 +61,15 @@ npm run dev
 
 ## 🌐 Production Mode (Single URL Deployment)
 
-Serve frontend from backend:
+Serve frontend directly from backend:
 
 ```bash
 cd backend
-npm run build      # Run once
+npm run build      # Run once to build frontend
 npm run start
 ```
 
-Or run everything with one command:
+Or run everything with a single command from root:
 
 ```bash
 npm run serve
@@ -79,14 +83,16 @@ http://localhost:3001
 
 ---
 
-## 🔌 API
+## 🔌 API Endpoints
 
-**Base URL**
-***Local***
+### Local Development
+
 ```
 http://localhost:3001
 ```
-***Backend API***
+
+### Deployed Backend API
+
 ```
 https://api-myaichatbotproject.onrender.com
 ```
@@ -99,29 +105,29 @@ https://api-myaichatbotproject.onrender.com
 
 - Uses **SQLite**
 - Automatically initializes on first run
-- Custom path configurable via `DB_PATH` environment variable
+- Custom database path configurable via `DB_PATH` environment variable
 
 ### Database Commands
 
 | Command | Description |
 |---------|------------|
-| `npm run setup-db` | Initialize database (skips if exists) |
+| `npm run setup-db` | Initialize database (skips if already exists) |
 | `npm run reset-db` | Delete and recreate database |
-| Auto-init | Server initializes DB if empty |
+| Auto-init | Server initializes DB automatically if empty |
 
 ---
 
 ## 📚 Career Catalog (Job Explorer)
 
-The job catalog uses a separate SQLite database.
+The job catalog is stored in a separate SQLite database.
 
-### Import 1000+ Jobs from O*NET
+### 📥 Import 1000+ Jobs from O*NET
 
 ```bash
 npm --prefix backend run import-jobs
 ```
 
-### Reset & Re-import
+### 🔄 Reset & Re-import Jobs
 
 ```bash
 npm --prefix backend run reset-jobs
@@ -134,24 +140,27 @@ npm --prefix backend run reset-jobs
 - **O*NET Database (Text Version)**  
   https://www.onetcenter.org/dl_files/database/db_30_1_text.zip  
 
-- **O*NET License**  
+- **O*NET License Information**  
   https://www.onetcenter.org/license_db.html  
 
 ---
 
 ## 🤖 LLM Integration
 
-**Model Used:** GPT-OSS 120B  
-https://console.groq.com/playground?model=openai/gpt-oss-120b
+- **Model:** GPT-OSS 120B  
+- **Provider Playground:**  
+  https://console.groq.com/playground?model=openai/gpt-oss-120b  
+
+Used for conversational intelligence, contextual understanding, and personalized career guidance.
 
 ---
 
 ## ⚙️ Architecture Notes
 
-- SQLite for lightweight local deployment  
-- Rule-based scenario engine (optimized for rapid prototyping)  
-- LLM for conversational intelligence  
-- Designed for future ML-based matching extension  
+- 🪶 SQLite for lightweight local deployment  
+- 🧠 Rule-based matching engine (optimized for rapid prototyping)  
+- 🤖 LLM integration for advanced conversational support  
+- 🔮 Designed for future ML-based recommendation system expansion  
 
 ---
 
