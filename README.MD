@@ -44,6 +44,6 @@ See: https://console.groq.com/playground?model=openai/gpt-oss-120b
 
 # Credit
 ## Team LLMagik
-* Phạm Khôi Nguyên @thisIsAnVariableOfACoder
-* Đinh Quang Minh @minhhdinh192
-* Vũ Minh Hoàng @GetInHod
+* Phạm Khôi Nguyên https://github.com/thisIsAnVariableOfACoder
+* Đinh Quang Minh https://github.com/minhhdinh192
+* Vũ Minh Hoàng https://github.com/GetInHod
