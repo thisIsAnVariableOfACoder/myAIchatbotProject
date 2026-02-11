@@ -257,7 +257,8 @@ function recordAnswer(conversationId, questionId, answer, aiQuestionText = null)
 }
 
 /**
- * Normalize answer to yes/maybe/no
+ * Normalize answer to yes/maybe/no with keyword extraction
+ * Returns structured answer with intent and extracted keywords
  */
 function normalizeAnswer(answer) {
   const text = String(answer || '').trim().toLowerCase();
@@ -268,17 +269,95 @@ function normalizeAnswer(answer) {
   if (text === 'maybe') return 'maybe';
   if (text === 'no' || text === 'n' || text === 'false') return 'no';
 
-  // Vietnamese mapping
+  // Vietnamese mapping for explicit yes/maybe/no
   if (/^(có|co|đúng|dung|ok|oke|ừ|u|uh|ừm)\b/.test(text)) return 'yes';
   if (/^(có thể|co the|cũng được|cung duoc|maybe|tùy|tuy|chưa chắc|chua chac)\b/.test(text)) return 'maybe';
   if (/^(không|khong|không thích|khong thich|ko|k|khum|never|không bao giờ|khong bao gio)\b/.test(text)) return 'no';
 
-  // Default: keep raw for memory, but scoring engine expects categorical
-  return text;
+  // Detect positive/negative intent from natural language
+  const positivePatterns = [
+    /thích|yeu|muốn|mong muốn|quan tâm|hứng thú|đam mê|sở thích|yêu thích/,
+    /want to|like|love|interested in|passionate about|enjoy/
+  ];
+  
+  const negativePatterns = [
+    /không thích|ghét|chán|không muốn|tránh|không quan tâm/,
+    /don't like|hate|dislike|avoid|not interested/
+  ];
+
+  const hasPositive = positivePatterns.some(pattern => pattern.test(text));
+  const hasNegative = negativePatterns.some(pattern => pattern.test(text));
+
+  // Extract keywords for career matching
+  const keywords = extractCareerKeywords(text);
+
+  // Return structured answer with intent
+  if (hasPositive && !hasNegative) {
+    return JSON.stringify({ intent: 'yes', keywords, raw: text });
+  } else if (hasNegative && !hasPositive) {
+    return JSON.stringify({ intent: 'no', keywords, raw: text });
+  } else if (hasPositive && hasNegative) {
+    return JSON.stringify({ intent: 'maybe', keywords, raw: text });
+  }
+
+  // Default: keep raw for memory, but try to extract keywords
+  return JSON.stringify({ intent: 'unknown', keywords, raw: text });
 }
 
 /**
- * Calculate career scores from answers using question weights
+ * Extract career-related keywords from text
+ */
+function extractCareerKeywords(text) {
+  const keywords = [];
+  
+  // Design & Creative keywords
+  const designKeywords = [
+    'mỹ thuật', 'thiết kế', 'đồ họa', 'graphic design', 'ui', 'ux', 'vẽ', 'hình ảnh',
+    'nghệ thuật', 'creative', 'art', 'design', 'illustration', 'photography', 'video'
+  ];
+  
+  // Tech keywords
+  const techKeywords = [
+    'lập trình', 'code', 'programming', 'phần mềm', 'software', 'ứng dụng', 'app',
+    'website', 'công nghệ', 'technology', 'ai', 'machine learning', 'data'
+  ];
+  
+  // Business keywords
+  const businessKeywords = [
+    'kinh doanh', 'business', 'marketing', 'quản lý', 'management', 'bán hàng', 'sales',
+    'tài chính', 'finance', 'kế toán', 'accounting', 'giao tiếp', 'communication'
+  ];
+  
+  // Education keywords
+  const educationKeywords = [
+    'giáo dục', 'education', 'dạy', 'teaching', 'học', 'learning', 'giáo viên', 'teacher'
+  ];
+  
+  // Healthcare keywords
+  const healthKeywords = [
+    'y tế', 'healthcare', 'bác sĩ', 'doctor', 'y tá', 'nurse', 'sức khỏe', 'health'
+  ];
+  
+  // Check each category
+  const allKeywords = [
+    ...designKeywords.map(k => ({ keyword: k, category: 'design' })),
+    ...techKeywords.map(k => ({ keyword: k, category: 'tech' })),
+    ...businessKeywords.map(k => ({ keyword: k, category: 'business' })),
+    ...educationKeywords.map(k => ({ keyword: k, category: 'education' })),
+    ...healthKeywords.map(k => ({ keyword: k, category: 'health' }))
+  ];
+  
+  for (const { keyword, category } of allKeywords) {
+    if (text.includes(keyword)) {
+      keywords.push({ keyword, category });
+    }
+  }
+  
+  return keywords;
+}
+
+/**
+ * Calculate career scores from answers using question weights and keyword matching
  */
 function calculateCareerScoresFromAnswers(answers) {
   const scores = {};
@@ -287,14 +366,66 @@ function calculateCareerScoresFromAnswers(answers) {
     const question = ALL_QUESTIONS.find(q => q.id === answerRecord.questionId);
     if (!question) continue;
 
+    // Parse structured answer if available
+    let intent = answerRecord.answer;
+    let keywords = [];
+    
+    try {
+      const parsed = JSON.parse(answerRecord.answer);
+      if (parsed.intent) {
+        intent = parsed.intent;
+        keywords = parsed.keywords || [];
+      }
+    } catch {
+      // Not a JSON string, use as-is
+    }
+
     // Add score for each career based on answer
     for (const [career, weight] of Object.entries(question.career_weights)) {
       if (!scores[career]) scores[career] = 0;
-      scores[career] += getQuestionScore(question, career, answerRecord.answer);
+      scores[career] += getQuestionScore(question, career, intent);
+    }
+
+    // Add keyword-based scoring for natural language answers
+    if (keywords.length > 0) {
+      addKeywordBasedScores(scores, keywords, intent);
     }
   }
 
   return scores;
+}
+
+/**
+ * Add scores based on extracted keywords
+ */
+function addKeywordBasedScores(scores, keywords, intent) {
+  // Keyword to career mapping
+  const keywordCareerMap = {
+    'design': ['UI Designer', 'UX Designer', 'Graphic Designer', 'Product Designer', 'Visual Designer', 'Freelance Designer', 'Art Director', 'Creative Director'],
+    'tech': ['Software Engineer', 'Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Data Engineer', 'DevOps Engineer', 'ML Engineer', 'AI Engineer', 'QA Engineer'],
+    'business': ['Marketing Manager', 'Sales Manager', 'Business Analyst', 'Product Manager', 'Account Manager', 'HR Manager', 'Financial Analyst'],
+    'education': ['Giáo viên Tiểu học', 'Giáo viên Trung học cơ sở', 'Giáo viên Trung học phổ thông', 'Giảng viên Đại học / Cao đẳng', 'Gia sư / Giáo viên kèm'],
+    'health': ['Bác sĩ', 'Y tá / Điều dưỡng', 'Dược sĩ', 'Vật lý trị liệu', 'Nhà Tâm lý học Lâm sàng']
+  };
+
+  // Base scores for different intents
+  const intentScores = {
+    'yes': 25,
+    'maybe': 12,
+    'no': -10,
+    'unknown': 5
+  };
+
+  const baseScore = intentScores[intent] || intentScores['unknown'];
+
+  // Apply scores to careers based on keyword categories
+  for (const { category } of keywords) {
+    const careers = keywordCareerMap[category] || [];
+    for (const career of careers) {
+      if (!scores[career]) scores[career] = 0;
+      scores[career] += baseScore;
+    }
+  }
 }
 
 /**
@@ -369,7 +500,15 @@ function generateReasons(career, answers) {
   // Find relevant answered questions for this career
   const relevantAnswers = answers.filter(a => {
     const question = ALL_QUESTIONS.find(q => q.id === a.questionId);
-    return question && question.career_weights[career] && a.answer === 'yes';
+    
+    // Parse structured answer if available
+    let intent = a.answer;
+    try {
+      const parsed = JSON.parse(a.answer);
+      if (parsed.intent) intent = parsed.intent;
+    } catch {}
+    
+    return question && question.career_weights[career] && (intent === 'yes' || intent === 'maybe');
   }).slice(0, 3);
 
   for (const answer of relevantAnswers) {
@@ -377,6 +516,18 @@ function generateReasons(career, answers) {
     if (question) {
       reasons.push(`Bạn ${question.text.replace('Bạn có ', '').replace(' không?', '')}`);
     }
+  }
+
+  // Check for keyword-based reasons
+  for (const answer of answers) {
+    try {
+      const parsed = JSON.parse(answer.answer);
+      if (parsed.keywords && parsed.keywords.length > 0) {
+        const keyword = parsed.keywords[0].keyword;
+        reasons.push(`Bạn quan tâm đến lĩnh vực ${keyword}`);
+        break;
+      }
+    } catch {}
   }
 
   if (reasons.length === 0) {
@@ -427,5 +578,8 @@ module.exports = {
   isEnoughInfo,
   adaptQuestionText,
   serializeConversationState,
-  hydrateConversationState
+  hydrateConversationState,
+  normalizeAnswer,
+  extractCareerKeywords,
+  calculateCareerScoresFromAnswers
 };
