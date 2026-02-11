@@ -37,13 +37,26 @@ async function generateCareerQuestion({ userType, profile, memoryAnswers, intent
   const systemPrompt = `Bạn là chuyên gia tư vấn hướng nghiệp.
 Nhiệm vụ: tạo 1 câu hỏi TIẾP THEO phù hợp với nhóm người dùng và bối cảnh hiện tại.
 
-Ràng buộc:
+Ràng buộc QUAN TRỌNG - PHẢI TUÂN THỦ:
 - Chỉ hỏi 1 câu, rõ ràng, dễ trả lời.
-- Phù hợp nhóm:
-  - high_school: hỏi về môn học/hoạt động, sở thích, năng lực, môi trường học tập.
-  - university: hỏi về ngành/năm học, dự án/CLB/thực tập, kỹ năng, định hướng.
-  - professional: hỏi về kinh nghiệm, chuyên môn, kỹ năng, mục tiêu chuyển nghề/thăng tiến.
-- Tránh hỏi sai ngữ cảnh (ví dụ hỏi KPI/công ty với học sinh).
+- PHẢI phù hợp CHÍNH XÁC với nhóm người dùng:
+
+NHÓM HIGH_SCHOOL (Học sinh THPT):
+- Hỏi về: môn học yêu thích, hoạt động ngoại khóa, sở thích cá nhân, năng lực đặc biệt, môi trường học tập mong muốn
+- KHÔNG hỏi về: kinh nghiệm làm việc, lương, KPI, công ty, quản lý, thăng tiến
+- Ví dụ câu hỏi phù hợp: "Bạn thích môn học nào nhất tại trường?", "Bạn có tham gia CLB hay hoạt động nào không?"
+
+NHÓM UNIVERSITY (Sinh viên đại học):
+- Hỏi về: ngành học, năm học, dự án đã làm, CLB/thực tập, kỹ năng đang phát triển, định hướng nghề nghiệp
+- KHÔNG hỏi về: kinh nghiệm làm việc dài hạn, quản lý nhân sự, KPI công ty
+- Ví dụ câu hỏi phù hợp: "Bạn đang học ngành gì và năm học mấy?", "Bạn có làm dự án nào liên quan đến ngành học không?"
+
+NHÓM PROFESSIONAL (Người đi làm):
+- Hỏi về: kinh nghiệm làm việc hiện tại, chuyên môn, kỹ năng, mục tiêu chuyển nghề, mong muốn thăng tiến
+- KHÔNG hỏi về: môn học, năm học, CLB học sinh, hoạt động ngoại khóa học đường
+- Ví dụ câu hỏi phù hợp: "Bạn đang làm việc ở vị trí nào?", "Bạn có muốn chuyển sang lĩnh vực khác không?"
+
+- Tránh hỏi sai ngữ cảnh tuyệt đối.
 - Không nhắc tới "database", "template", "trọng số".
 
 BẮT BUỘC: trả về JSON đúng cấu trúc:
@@ -373,6 +386,13 @@ Lưu ý:
   const userContent = `userType: ${safeUserType}
 profile: ${profileText}
 conversation_history: ${JSON.stringify(memoryText)}
+
+Hãy phân tích và đưa ra gợi ý nghề nghiệp phù hợp nhất.
+
+Lưu ý về userType:
+- high_school: Tập trung vào nghề nghiệp phù hợp với học sinh THPT, dựa trên sở thích, năng lực, môn học yêu thích
+- university: Tập trung vào nghề nghiệp phù hợp với sinh viên, dựa trên ngành học, kỹ năng, dự án, định hướng
+- professional: Tập trung vào nghề nghiệp phù hợp với người đi làm, dựa trên kinh nghiệm, chuyên môn, mục tiêu chuyển nghề/thăng tiến
 
 Hãy phân tích và đưa ra gợi ý nghề nghiệp phù hợp nhất.`;
 
