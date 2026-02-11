@@ -36,7 +36,7 @@ export default function ChatWindow({
     <div className="flex h-[calc(100vh-12rem)] min-h-[520px] flex-col lg:h-[70vh]">
       <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {showHelloHint && (
-          <div className="rounded-xl bg-[#F7F5F2] border border-[#E8E2D8] p-3 text-sm text-[#5B5B57]">
+          <div className="card card-soft p-3 text-sm text-[#5B5B57]">
             Hãy trả lời từng câu hỏi để nhận gợi ý nghề nghiệp. Nhập "hello" để bắt đầu cuộc trò chuyện.
           </div>
         )}
@@ -49,7 +49,7 @@ export default function ChatWindow({
         {showFollowUp && (
           <div className="flex">
             <button
-              className="rounded-xl border border-[#E2D8C8] bg-white px-3 py-2 text-xs hover:border-[var(--c-accent)] transition"
+              className="btn-outline rounded-xl px-3 py-2 text-xs"
               onClick={onFollowUp}
             >
               Chưa hài lòng? Hỏi tiếp
@@ -86,7 +86,7 @@ export default function ChatWindow({
             <input
               id="chat-input"
               aria-label="Nhập tin nhắn cho chatbot"
-              className="flex-1 rounded-xl border border-[#E2D8C8] px-3 py-2 outline-none transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:shadow-[0_0_0_3px_rgba(34,211,238,0.35)] focus:scale-[1.01] disabled:bg-[#f3f4f6] disabled:text-[#9ca3af] disabled:cursor-not-allowed"
+              className="input-elevated flex-1 px-3 py-2 outline-none transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:scale-[1.01] disabled:bg-[#f3f4f6] disabled:text-[#9ca3af] disabled:cursor-not-allowed"
               placeholder={disabled ? "" : placeholder}
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -104,7 +104,7 @@ export default function ChatWindow({
             />
             <button
               type="submit"
-              className="px-4 py-2 rounded-xl bg-[var(--c-primary)] text-white hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary px-4 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading || disabled}
             >
               Gửi

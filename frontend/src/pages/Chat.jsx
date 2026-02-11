@@ -280,7 +280,7 @@ export default function Chat() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            className="px-3 py-2 rounded-lg border border-[#E2D8C8] hover:border-[var(--c-primary)] transition"
+            className="btn-outline px-3 py-2 rounded-lg"
             onClick={startNewChat}
           >
             Tạo chat mới
@@ -295,7 +295,7 @@ export default function Chat() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,3fr)_160px]">
         <section className="order-2 lg:order-1">
-          <div className="rounded-2xl border border-[#E8E2D8] bg-white p-4 shadow-sm animate-rise" style={{ animationDelay: '40ms' }}>
+          <div className="card card-elevated p-4 animate-rise" style={{ animationDelay: '40ms' }}>
             <div className="text-sm font-semibold mb-3">Hồ sơ cá nhân</div>
             <ProfileForm
               key={profileInitial ? 'loaded' : 'empty'}
@@ -311,7 +311,7 @@ export default function Chat() {
               </div>
             )}
           </div>
-          <div className="mt-4 rounded-2xl border border-[#E8E2D8] bg-white p-4 shadow-sm">
+          <div className="mt-4 card p-4">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-semibold">Lịch sử hội đáp</div>
               {(token || (IS_OFFLINE && userId)) && history.length > 0 && (
@@ -339,7 +339,7 @@ export default function Chat() {
               {(!token && !userId && IS_OFFLINE) || (!token && !IS_OFFLINE) ? (
                 <div className="text-center py-4 bg-[#F7F5F2] rounded-lg">
                   <div className="mb-2">Đăng ký/đăng nhập để lưu lịch sử chat</div>
-                  <Link to="/auth" className="inline-block px-3 py-1 bg-[var(--c-primary)] text-white rounded hover:opacity-90 transition">
+                  <Link to="/auth" className="btn-primary inline-block px-3 py-1 rounded">
                     Đăng nhập ngay
                   </Link>
                 </div>
@@ -429,7 +429,7 @@ export default function Chat() {
         </section>
 
         <section className="order-1 lg:order-2">
-          <div className="rounded-2xl border border-[#E8E2D8] bg-white shadow-sm overflow-hidden animate-rise" style={{ animationDelay: '80ms' }}>
+          <div className="card card-elevated overflow-hidden animate-rise" style={{ animationDelay: '80ms' }}>
             <ChatWindow
               messages={messages}
               loading={loading}
@@ -441,7 +441,7 @@ export default function Chat() {
               placeholder={!profileInitial?.education_level ? "Vui lòng điền hồ sơ bên trái để bắt đầu..." : "Nhập tin nhắn..."}
             />
           </div>
-          <div className="mt-4 rounded-2xl border border-[#E8E2D8] bg-white p-4 shadow-sm animate-rise" style={{ animationDelay: '100ms' }}>
+          <div className="mt-4 card p-4 animate-rise" style={{ animationDelay: '100ms' }}>
             <div className="text-sm font-semibold mb-3">Biểu đồ xác suất nghề nghiệp (Top 10)</div>
             {recommendations.length === 0 && (
               <div className="text-sm text-[#5B5B57]">Chưa có dữ liệu để hiển thị biểu đồ.</div>
@@ -502,11 +502,11 @@ export default function Chat() {
             )}
           </div>
 
-          <div className="mt-4 rounded-2xl border border-[#E8E2D8] bg-[#FFF8F0] p-4 animate-rise" style={{ animationDelay: '160ms' }}>
+          <div className="mt-4 card card-soft p-4 animate-rise" style={{ animationDelay: '160ms' }}>
             <div className="text-sm font-semibold mb-2">Admin Editor</div>
             <div className="text-xs text-[#7A6D5B]">Cập nhật kịch bản, nodes, edges</div>
             {user?.user_type === 'admin' ? (
-              <Link to="/admin" className="mt-3 inline-block px-3 py-2 rounded-lg bg-[var(--c-accent)] text-white hover:opacity-90 transition">
+              <Link to="/admin" className="btn-primary mt-3 inline-block px-3 py-2 rounded-lg">
                 Mở Scenario Editor
               </Link>
             ) : (

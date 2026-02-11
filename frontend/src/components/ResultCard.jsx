@@ -1,10 +1,10 @@
 export default function ResultCard({ career, score, reasons }) {
   const percent = Math.min(100, Math.max(0, Number(score || 0)));
   return (
-    <div className="rounded-xl border border-[#E8E2D8] p-4 bg-white">
+    <div className="card p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-[#F0F6F4] flex items-center justify-center text-[#0E4D3C]">
+          <div className="h-10 w-10 rounded-lg bg-[var(--c-accent-soft)] flex items-center justify-center text-[var(--c-primary)]">
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
               <path
                 fill="currentColor"

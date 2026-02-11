@@ -19,7 +19,7 @@ export default function Analytics() {
 
   if (!user || user.user_type !== 'admin') {
     return (
-      <div className="rounded-2xl border border-[#E8E2D8] bg-white p-6 shadow-sm">
+      <div className="card card-elevated p-6">
         <div className="text-lg font-semibold">Truy cập bị giới hạn</div>
         <div className="text-sm text-[#5B5B57] mt-2">Chỉ admin mới xem được thống kê.</div>
       </div>
@@ -27,7 +27,7 @@ export default function Analytics() {
   }
   if (IS_OFFLINE) {
     return (
-      <div className="rounded-2xl border border-[#E8E2D8] bg-white p-6 shadow-sm">
+      <div className="card card-elevated p-6">
         <div className="text-lg font-semibold">Chế độ demo offline</div>
         <div className="text-sm text-[#5B5B57] mt-2">Trang Thống kê cần kết nối backend để hoạt động.</div>
       </div>

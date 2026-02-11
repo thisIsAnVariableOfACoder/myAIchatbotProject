@@ -111,29 +111,70 @@ function safeParseChatReply(content) {
   if (!content) return null;
   const text = String(content).trim();
   const candidates = [];
-  try {
-    candidates.push(JSON.parse(text));
-  } catch { }
 
-  const match = text.match(/\{[\s\S]*\}/);
-  if (match) {
+  const tryParseJson = (value) => {
+    if (!value) return null;
     try {
-      candidates.push(JSON.parse(match[0]));
-    } catch { }
-  }
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  };
+
+  const extractFromFence = (value) => {
+    const fence = value.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (!fence) return null;
+    return tryParseJson(fence[1].trim());
+  };
+
+  const extractFirstJsonObject = (value) => {
+    let start = -1;
+    let depth = 0;
+    for (let i = 0; i < value.length; i += 1) {
+      const ch = value[i];
+      if (ch === '{') {
+        if (depth === 0) start = i;
+        depth += 1;
+      } else if (ch === '}') {
+        if (depth > 0) depth -= 1;
+        if (depth === 0 && start !== -1) {
+          const slice = value.slice(start, i + 1);
+          const parsed = tryParseJson(slice);
+          if (parsed) return parsed;
+          start = -1;
+        }
+      }
+    }
+    return null;
+  };
+
+  const parsedFull = tryParseJson(text);
+  if (parsedFull) candidates.push(parsedFull);
+
+  const parsedFence = extractFromFence(text);
+  if (parsedFence) candidates.push(parsedFence);
+
+  const parsedObject = extractFirstJsonObject(text);
+  if (parsedObject) candidates.push(parsedObject);
 
   for (const obj of candidates) {
     if (!obj || typeof obj !== 'object') continue;
     let bot = String(obj.bot_reply || '').trim();
     if (!bot) continue;
 
-    // Nếu model trả về chuỗi template mặc định, ta cố gắng lấy nó làm nội dung
+    // Nếu model trả về chuỗi template mặc định, bỏ qua đối tượng này
     if (bot.toLowerCase().includes('nội dung phản hồi')) continue;
     if (!Array.isArray(obj.suggested_questions)) {
       obj.suggested_questions = [];
     }
     return obj;
   }
+
+  // Fallback: dùng raw text như phản hồi để tránh null
+  if (text && !text.toLowerCase().includes('nội dung phản hồi')) {
+    return { bot_reply: text, suggested_questions: [] };
+  }
+
   return null;
 }
 

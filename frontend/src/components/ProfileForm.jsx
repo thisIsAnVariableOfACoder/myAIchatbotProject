@@ -112,7 +112,7 @@ export default function ProfileForm({
           id="education"
           value={educationLevel}
           onChange={handleUserTypeChange}
-          className="mt-1 w-full rounded-lg border border-[#E2D8C8] px-3 py-2 text-sm transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
+          className="input-elevated mt-1 w-full px-3 py-2 text-sm transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
         >
           <option value="">Chọn nhóm người dùng</option>
           <option value="high_school">Học sinh</option>
@@ -130,7 +130,7 @@ export default function ProfileForm({
             id="grade"
             value={currentGrade}
             onChange={markDirty(setCurrentGrade)}
-            className="mt-1 w-full rounded-lg border border-[#E2D8C8] px-3 py-2 text-sm transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
+            className="input-elevated mt-1 w-full px-3 py-2 text-sm transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
             placeholder={educationLevel === 'high_school' ? 'Nhập lớp hiện tại' : 'Nhập năm học'}
           />
         </div>
@@ -144,7 +144,7 @@ export default function ProfileForm({
               id="work"
               value={workYears}
               onChange={markDirty(setWorkYears)}
-              className="mt-1 w-full rounded-lg border border-[#E2D8C8] px-3 py-2 text-sm transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
+              className="input-elevated mt-1 w-full px-3 py-2 text-sm transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
               placeholder="Nhập số năm"
             />
           </div>
@@ -154,7 +154,7 @@ export default function ProfileForm({
               id="style"
               value={workStyle}
               onChange={markDirty(setWorkStyle)}
-              className="mt-1 w-full rounded-lg border border-[#E2D8C8] px-3 py-2 text-sm transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
+              className="input-elevated mt-1 w-full px-3 py-2 text-sm transition-all focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
             >
               <option value="remote">Remote</option>
               <option value="office">Office</option>
@@ -165,7 +165,7 @@ export default function ProfileForm({
       )}
 
       <button
-        className="w-full rounded-lg bg-[var(--c-primary)] py-2 text-white hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+        className="btn-primary w-full py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
         type="submit"
         disabled={!canSave || !isFormValid}
       >

@@ -30,7 +30,7 @@ export default function App() {
 
   return (
     <BrowserRouter basename={routerBase}>
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_var(--c-accent-soft)_0,_var(--c-bg)_45%,_var(--c-bg)_100%)] text-[var(--c-text)]">
+      <div className="min-h-screen app-shell text-[var(--c-text)]">
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 bg-white px-3 py-2 rounded shadow">
           Skip to main content
         </a>
@@ -45,26 +45,22 @@ export default function App() {
             <Route path="/design" element={<Design />} />
           </Routes>
         </main>
-        <footer className="border-t border-[#E8E2D8] bg-[var(--c-bg)]/60">
+        <footer className="border-t border-[var(--c-border)]/70 bg-[var(--c-bg)]/80 backdrop-blur">
           <div className="mx-auto max-w-7xl px-4 py-8">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
-                <div className="text-base font-semibold text-[var(--c-text)]">
-                  AI Young Guru 2026
-                </div>
-                <div className="text-sm text-[#5B5B57]">
-                  Made by Phạm Khôi Nguyên · Team LLMagik
-                </div>
+                <div className="text-base font-semibold text-[var(--c-text)]">AI Young Guru 2026</div>
+                <div className="text-sm text-[#5B5B57]">Team LLMagik</div>
               </div>
               <a
-                href="https://github.com/thisIsAnVariableOfACoder"
-                className="inline-flex items-center gap-2 rounded-xl border border-[#E2D8C8] px-4 py-2 text-sm text-[var(--c-primary)] hover:border-[var(--c-accent)] hover:text-[var(--c-accent)] transition"
+                href="https://github.com/thisIsAnVariableOfACoder/myAIchatbotProject/tree/main"
+                className="btn-outline inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="GitHub thisIsAnVariableOfACoder"
+                aria-label="GitHub repository"
               >
-                <span className="font-medium">GitHub</span>
-                <span className="text-[#7A6D5B]">github.com/thisIsAnVariableOfACoder</span>
+                <span className="font-medium">GitHub Repo</span>
+                <span className="text-[#7A6D5B]">myAIchatbotProject</span>
               </a>
             </div>
           </div>

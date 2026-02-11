@@ -5,7 +5,7 @@ import { getStoredTheme, setThemeMode } from '../theme';
 import { IS_OFFLINE } from '../config';
 
 const linkClass = ({ isActive }) =>
-  `px-3 py-2 rounded-lg text-sm transition ${isActive ? 'bg-[var(--c-primary)] text-white' : 'text-[var(--c-text)] hover:bg-[var(--c-accent-soft)]'}`;
+  `px-3 py-2 rounded-xl text-sm transition ${isActive ? 'bg-[var(--c-primary)] text-white shadow-sm' : 'text-[var(--c-text)] hover:bg-[var(--c-accent-soft)]/70'}`;
 
 export default function TopNav() {
   const { user, logout } = useAuth();
@@ -19,7 +19,7 @@ export default function TopNav() {
   });
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#E8E2D8] bg-[var(--c-bg)]/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-[var(--c-border)]/70 bg-[var(--c-bg)]/80 backdrop-blur-xl shadow-sm">
       <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="h-12 w-auto">
@@ -34,7 +34,6 @@ export default function TopNav() {
           </div>
           <div>
             <div className="text-lg font-semibold">Career Guidance Chatbot</div>
-            <div className="text-sm text-[#5B5B57]">Bản thử nghiệm</div>
           </div>
         </div>
         <nav className="flex items-center gap-2">

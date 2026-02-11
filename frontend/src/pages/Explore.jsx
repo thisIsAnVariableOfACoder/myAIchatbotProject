@@ -88,15 +88,15 @@ export default function Explore() {
         <div className="text-sm text-[#5B5B57]">Khám phá kho dữ liệu nghề nghiệp</div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.5fr_1fr_1fr_auto]">
+      <div className="card p-4 grid grid-cols-1 gap-3 md:grid-cols-[1.5fr_1fr_1fr_auto]">
         <input
-          className="rounded-lg border border-[#E2D8C8] bg-white px-3 py-2 text-sm transition focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
+          className="input-elevated px-3 py-2 text-sm transition focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
           placeholder="Tìm nghề nghiệp..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
         <select
-          className="rounded-lg border border-[#E2D8C8] bg-white px-3 py-2 text-sm transition focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
+          className="input-elevated px-3 py-2 text-sm transition focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
@@ -106,7 +106,7 @@ export default function Explore() {
           ))}
         </select>
         <select
-          className="rounded-lg border border-[#E2D8C8] bg-white px-3 py-2 text-sm transition focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
+          className="input-elevated px-3 py-2 text-sm transition focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
           value={tag}
           onChange={(e) => setTag(e.target.value)}
         >
@@ -143,7 +143,7 @@ export default function Explore() {
       <div className="mt-4 flex justify-center">
         {jobs.length < total && (
           <button
-            className="rounded-lg border border-[#E2D8C8] px-4 py-2 text-sm hover:border-[var(--c-accent)] transition"
+            className="btn-outline rounded-lg px-4 py-2 text-sm"
             onClick={() => setPage((p) => p + 1)}
             disabled={loading}
           >

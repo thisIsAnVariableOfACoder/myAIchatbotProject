@@ -1,17 +1,17 @@
 const LIGHT_THEME = {
-  primary: '#0B4A6F',
-  accent: '#22D3EE',
-  bg: '#F1F7FB',
+  primary: '#1B4DB1',
+  accent: '#F2B84B',
+  bg: '#F5F8FF',
   surface: '#FFFFFF',
-  text: '#0B1B2B'
+  text: '#101828'
 };
 
 const DARK_THEME = {
-  primary: '#1E40AF',
-  accent: '#22D3EE',
-  bg: '#060B16',
-  surface: '#0B1220',
-  text: '#E6F0FF'
+  primary: '#5B8CFF',
+  accent: '#F2B84B',
+  bg: '#0B1020',
+  surface: '#11182B',
+  text: '#E6EDFF'
 };
 
 function lighten(hex, amount) {

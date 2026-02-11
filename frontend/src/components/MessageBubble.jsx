@@ -1,6 +1,11 @@
 // FILE: frontend/src/components/MessageBubble.jsx
+import { renderChatHtml } from '../sanitizeHtml';
+
 export default function MessageBubble({ message }) {
   const isUser = message.sender === 'user';
+  const rawText = typeof message.text === 'string' ? message.text : String(message.text ?? '');
+  const sanitizedHtml = isUser ? '' : renderChatHtml(rawText);
+
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} bubble-in ${isUser ? 'bubble-in-user' : 'bubble-in-bot'}`}>
       <div
@@ -11,7 +16,11 @@ export default function MessageBubble({ message }) {
         role="article"
         aria-label={isUser ? 'User message' : 'Bot message'}
       >
-        {message.text}
+        {isUser ? (
+          <span className="whitespace-pre-wrap">{rawText}</span>
+        ) : (
+          <div className="chat-rich" dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
+        )}
       </div>
     </div>
   );

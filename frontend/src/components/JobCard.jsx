@@ -13,7 +13,7 @@ export default function JobCard({ job }) {
   const baseUrl = import.meta.env.BASE_URL || '/';
   const [imgSrc, setImgSrc] = useState(resolveAssetUrl(baseUrl, job.image_url));
   return (
-    <div className="rounded-2xl border border-[#E8E2D8] bg-white p-4 shadow-sm hover:shadow-md transition">
+    <div className="card p-4 hover:shadow-md transition">
       <div className="flex items-center gap-3">
         <img
           src={imgSrc}

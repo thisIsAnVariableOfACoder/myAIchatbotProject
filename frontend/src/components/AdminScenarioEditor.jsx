@@ -50,7 +50,7 @@ export default function AdminScenarioEditor({ selected, onSaved }) {
         <label className="text-xs text-[#5B5B57]" htmlFor="sc-name">Tên kịch bản</label>
         <input
           id="sc-name"
-          className="mt-1 w-full rounded-lg border border-[#E2D8C8] px-3 py-2 text-sm"
+          className="input-elevated mt-1 w-full px-3 py-2 text-sm"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="High School Career Discovery"
@@ -60,7 +60,7 @@ export default function AdminScenarioEditor({ selected, onSaved }) {
         <label className="text-xs text-[#5B5B57]" htmlFor="sc-target">Nhóm người dùng</label>
         <select
           id="sc-target"
-          className="mt-1 w-full rounded-lg border border-[#E2D8C8] px-3 py-2 text-sm"
+          className="input-elevated mt-1 w-full px-3 py-2 text-sm"
           value={targetUserType}
           onChange={(e) => setTargetUserType(e.target.value)}
         >
@@ -73,7 +73,7 @@ export default function AdminScenarioEditor({ selected, onSaved }) {
         <label className="text-xs text-[#5B5B57]" htmlFor="sc-nodes">Nodes (JSON)</label>
         <textarea
           id="sc-nodes"
-          className="mt-1 w-full rounded-lg border border-[#E2D8C8] px-3 py-2 text-xs font-mono"
+          className="input-elevated mt-1 w-full px-3 py-2 text-xs font-mono"
           rows={6}
           value={nodesJson}
           onChange={(e) => setNodesJson(e.target.value)}
@@ -83,7 +83,7 @@ export default function AdminScenarioEditor({ selected, onSaved }) {
         <label className="text-xs text-[#5B5B57]" htmlFor="sc-edges">Edges (JSON)</label>
         <textarea
           id="sc-edges"
-          className="mt-1 w-full rounded-lg border border-[#E2D8C8] px-3 py-2 text-xs font-mono"
+          className="input-elevated mt-1 w-full px-3 py-2 text-xs font-mono"
           rows={5}
           value={edgesJson}
           onChange={(e) => setEdgesJson(e.target.value)}
@@ -93,7 +93,7 @@ export default function AdminScenarioEditor({ selected, onSaved }) {
         <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
         Kích hoạt
       </label>
-      <button className="w-full rounded-lg bg-[var(--c-accent)] py-2 text-white hover:opacity-90 transition" type="submit">
+      <button className="btn-primary w-full rounded-lg py-2" type="submit">
         {selected ? 'Cập nhật kịch bản' : 'Tạo kịch bản'}
       </button>
       {error && <div className="text-xs text-[#D64545]">{error}</div>}

@@ -1,7 +1,7 @@
 export default function SplashScreen({ onClose }) {
   const baseUrl = import.meta.env.BASE_URL || '/';
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-[var(--c-bg)]">
+    <div className="fixed inset-0 z-50 grid place-items-center app-shell">
       <div className="flex flex-col items-center gap-4">
         <div className="h-24 w-24 rounded-[28px] bg-[var(--c-surface)] border border-[#E8E2D8] grid place-content-center logo-pulse shadow-lg">
           <img src={`${baseUrl}icon.svg`} alt="Career Guidance" className="h-16 w-16" />

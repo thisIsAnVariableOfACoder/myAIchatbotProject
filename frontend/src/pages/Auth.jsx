@@ -43,7 +43,7 @@ export default function Auth() {
 
   if (user) {
     return (
-      <div className="max-w-md mx-auto rounded-2xl border border-[#E8E2D8] bg-white p-6 shadow-sm">
+      <div className="max-w-md mx-auto card card-elevated p-6">
         <div className="text-lg font-semibold">Ban da dang nhap</div>
         <div className="text-sm text-[#5B5B57] mt-2">{user.email}</div>
       </div>
@@ -51,10 +51,10 @@ export default function Auth() {
   }
 
   return (
-    <div className="max-w-md mx-auto rounded-2xl border border-[#E8E2D8] bg-white p-6 shadow-sm">
+    <div className="max-w-md mx-auto card card-elevated p-6">
       <div className="flex gap-2 mb-4">
-        <button className={`px-3 py-2 rounded-lg text-sm ${mode === 'login' ? 'bg-[var(--c-primary)] text-white' : 'border'}`} onClick={() => setMode('login')}>Dang nhap</button>
-        <button className={`px-3 py-2 rounded-lg text-sm ${mode === 'register' ? 'bg-[var(--c-primary)] text-white' : 'border'}`} onClick={() => setMode('register')}>Tao tai khoan</button>
+        <button className={`px-3 py-2 rounded-lg text-sm ${mode === 'login' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setMode('login')}>Dang nhap</button>
+        <button className={`px-3 py-2 rounded-lg text-sm ${mode === 'register' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setMode('register')}>Tao tai khoan</button>
       </div>
       {IS_OFFLINE && (
         <div className="mb-3 text-xs text-[#B91C1C]">
@@ -64,16 +64,16 @@ export default function Auth() {
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label className="text-xs text-[#5B5B57]" htmlFor="email">Email</label>
-          <input id="email" className="mt-1 w-full rounded-lg border border-[#E2D8C8] px-3 py-2 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input id="email" className="input-elevated mt-1 w-full px-3 py-2 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div>
           <label className="text-xs text-[#5B5B57]" htmlFor="password">Mat khau</label>
-          <input id="password" type="password" className="mt-1 w-full rounded-lg border border-[#E2D8C8] px-3 py-2 text-sm" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input id="password" type="password" className="input-elevated mt-1 w-full px-3 py-2 text-sm" value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
         {mode === 'register' && (
           <div>
             <label className="text-xs text-[#5B5B57]" htmlFor="userType">Loai tai khoan</label>
-            <select id="userType" className="mt-1 w-full rounded-lg border border-[#E2D8C8] px-3 py-2 text-sm" value={userType} onChange={(e) => setUserType(e.target.value)}>
+            <select id="userType" className="input-elevated mt-1 w-full px-3 py-2 text-sm" value={userType} onChange={(e) => setUserType(e.target.value)}>
               <option value="high_school">Hoc sinh</option>
               <option value="university">Sinh vien</option>
               <option value="professional">Nguoi di lam</option>
@@ -82,7 +82,7 @@ export default function Auth() {
           </div>
         )}
         <button
-          className="w-full rounded-lg bg-[var(--c-primary)] py-2 text-white hover:opacity-90 transition disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-primary w-full rounded-lg py-2 disabled:cursor-not-allowed disabled:opacity-60"
           type="submit"
           disabled={submitting}
         >
