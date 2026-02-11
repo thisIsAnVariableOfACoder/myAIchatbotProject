@@ -35,7 +35,7 @@ export default function App() {
           Skip to main content
         </a>
         <TopNav />
-        <main id="main" className="mx-auto max-w-7xl px-4 py-6">
+        <main id="main" className="mx-auto max-w-screen-2xl px-4 py-6">
           <Routes>
             <Route path="/" element={<Chat />} />
             <Route path="/explore" element={<Explore />} />

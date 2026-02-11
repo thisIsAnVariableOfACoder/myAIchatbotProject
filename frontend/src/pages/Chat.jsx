@@ -293,7 +293,7 @@ export default function Chat() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,3fr)_160px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         <section className="order-2 lg:order-1">
           <div className="card card-elevated p-4 animate-rise" style={{ animationDelay: '40ms' }}>
             <div className="text-sm font-semibold mb-3">Hồ sơ cá nhân</div>

@@ -50,7 +50,7 @@ async function request(path, options = {}) {
   } catch {
     return {
       success: false,
-      error: 'Khong the ket noi may chu. Vui long kiem tra API hoac thu lai.'
+      error: 'Không thể kết nối máy chủ. Vui lòng kiểm tra API hoặc thử lại.'
     };
   }
 }
