@@ -46,7 +46,7 @@ export default function App() {
           </Routes>
         </main>
         <footer className="border-t border-[var(--c-border)]/70 bg-[var(--c-bg)]/80 backdrop-blur">
-          <div className="mx-auto max-w-7xl px-4 py-8">
+          <div className="mx-auto max-w-screen-2xl px-4 py-8">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
                 <div className="text-base font-semibold text-[var(--c-text)]">AI Young Guru 2026</div>

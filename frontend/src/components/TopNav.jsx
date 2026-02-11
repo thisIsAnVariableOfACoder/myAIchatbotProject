@@ -20,7 +20,7 @@ export default function TopNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--c-border)]/70 bg-[var(--c-bg)]/80 backdrop-blur-xl shadow-sm">
-      <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
+      <div className="mx-auto max-w-screen-2xl px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="h-12 w-auto">
             <img
