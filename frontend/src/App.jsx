@@ -9,6 +9,8 @@ import Design from './pages/Design';
 import SplashScreen from './components/SplashScreen';
 import { applyTheme, getStoredTheme } from './theme';
 import Explore from './pages/Explore';
+import PolicyModal from './components/PolicyModal';
+import { privacyPolicyContent, termsOfServiceContent, cookiePolicyContent } from './data/policies';
 
 export default function App() {
   // Detect GitHub Pages subdirectory
@@ -16,6 +18,11 @@ export default function App() {
   const routerBase = isGitHubPages ? '/myAIchatbotProject' : '/';
   const [showSplash, setShowSplash] = useState(() => localStorage.getItem('showSplash') !== 'false');
   const [splashVisible, setSplashVisible] = useState(showSplash);
+  
+  // Policy modal state
+  const [policyModalOpen, setPolicyModalOpen] = useState(false);
+  const [policyTitle, setPolicyTitle] = useState('');
+  const [policyContent, setPolicyContent] = useState(null);
 
   useEffect(() => {
     const { theme, mode } = getStoredTheme();
@@ -27,6 +34,33 @@ export default function App() {
     const timer = setTimeout(() => setSplashVisible(false), 5000);
     return () => clearTimeout(timer);
   }, [showSplash]);
+
+  // Functions to open policy modals
+  const openPrivacyPolicy = (e) => {
+    e.preventDefault();
+    setPolicyTitle('Chính sách Quyền riêng tư');
+    setPolicyContent(privacyPolicyContent);
+    setPolicyModalOpen(true);
+  };
+
+  const openTermsOfService = (e) => {
+    e.preventDefault();
+    setPolicyTitle('Điều khoản Dịch vụ');
+    setPolicyContent(termsOfServiceContent);
+    setPolicyModalOpen(true);
+  };
+
+  const openCookiePolicy = (e) => {
+    e.preventDefault();
+    setPolicyTitle('Chính sách Cookie');
+    setPolicyContent(cookiePolicyContent);
+    setPolicyModalOpen(true);
+  };
+
+  const closePolicyModal = () => {
+    setPolicyModalOpen(false);
+    setPolicyContent(null);
+  };
 
   return (
     <BrowserRouter basename={routerBase}>
@@ -69,7 +103,7 @@ export default function App() {
               <div className="space-y-3">
                 <div className="text-sm font-semibold text-[var(--c-text)]">Resources</div>
                 <div className="flex flex-col gap-2 text-sm">
-                  <a className="text-[#5B5B57] hover:text-[var(--c-text)] hover:underline" href="/">Chat</a>
+                  <a className="text-[#5B5B57] hover:text-[var(--c-text)] hover:underline" href="https://thisisanvariableofacoder.github.io/myAIchatbotProject">Chat</a>
                   <a className="text-[#5B5B57] hover:text-[var(--c-text)] hover:underline" href="/explore">Explore</a>
                   <a
                     className="text-[#5B5B57] hover:text-[var(--c-text)] hover:underline"
@@ -85,9 +119,9 @@ export default function App() {
               <div className="space-y-3">
                 <div className="text-sm font-semibold text-[var(--c-text)]">Legal</div>
                 <div className="flex flex-col gap-2 text-sm">
-                  <a className="text-[#5B5B57] hover:text-[var(--c-text)] hover:underline" href="#">Privacy policy</a>
-                  <a className="text-[#5B5B57] hover:text-[var(--c-text)] hover:underline" href="#">Terms of service</a>
-                  <a className="text-[#5B5B57] hover:text-[var(--c-text)] hover:underline" href="#">Cookie policy</a>
+                  <button onClick={openPrivacyPolicy} className="text-left text-[#5B5B57] hover:text-[var(--c-text)] hover:underline">Privacy policy</button>
+                  <button onClick={openTermsOfService} className="text-left text-[#5B5B57] hover:text-[var(--c-text)] hover:underline">Terms of service</button>
+                  <button onClick={openCookiePolicy} className="text-left text-[#5B5B57] hover:text-[var(--c-text)] hover:underline">Cookie policy</button>
                 </div>
               </div>
             </div>
@@ -108,6 +142,12 @@ export default function App() {
           </div>
         </footer>
         {splashVisible && <SplashScreen onClose={() => setSplashVisible(false)} />}
+        <PolicyModal
+          isOpen={policyModalOpen}
+          onClose={closePolicyModal}
+          title={policyTitle}
+          content={policyContent}
+        />
       </div>
     </BrowserRouter>
   );

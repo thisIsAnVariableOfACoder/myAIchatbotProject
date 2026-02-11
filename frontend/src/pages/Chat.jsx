@@ -42,6 +42,7 @@ export default function Chat() {
   const [titleDraft, setTitleDraft] = useState('');
   const [menuId, setMenuId] = useState(null);
   const [helloSent, setHelloSent] = useState(false);
+  const [chatLocked, setChatLocked] = useState(false);
 
   const bestCareer = recommendations.length > 0
     ? recommendations[0]
@@ -159,6 +160,7 @@ export default function Chat() {
       setCurrentNode(null);
       setConversationId(null);
       setCompleted(false);
+      setChatLocked(false); // Reset chat lock when deleting conversation
     }
     await refreshHistory();
   }
@@ -206,6 +208,10 @@ export default function Chat() {
       if (data.recommendations) {
         const recs = normalizeRecommendations(data.recommendations);
         setRecommendations(recs);
+        // Lock chat when recommendations are shown
+        if (recs.length > 0) {
+          setChatLocked(true);
+        }
       }
       setCompleted(Boolean(data.completed));
 
@@ -258,12 +264,14 @@ export default function Chat() {
     const recs = normalizeRecommendations(recJson?.data || []);
     setRecommendations(recs);
     setCompleted(recs.length > 0);
+    setChatLocked(recs.length > 0); // Lock chat if there are recommendations
     setCurrentNode(null);
   }
 
   async function requestMoreQuestions() {
     setRecommendations([]);
     setCompleted(false);
+    setChatLocked(false); // Unlock chat when user wants more questions
     await sendMessage('Tôi chưa hài lòng, hãy hỏi thêm.', { requestMore: true });
   }
 
@@ -276,6 +284,7 @@ export default function Chat() {
     setConversationId(null);
     setHelloSent(false);
     setCompleted(false);
+    setChatLocked(false); // Reset chat lock for new chat
   }
 
   return (
@@ -444,8 +453,8 @@ export default function Chat() {
               showHelloHint={!helloSent}
               showFollowUp={completed && recommendations.length > 0}
               onFollowUp={requestMoreQuestions}
-              disabled={!profileInitial?.education_level}
-              placeholder={!profileInitial?.education_level ? "Vui lòng điền hồ sơ bên trái để bắt đầu..." : "Nhập tin nhắn..."}
+              disabled={!profileInitial?.education_level || chatLocked}
+              placeholder={!profileInitial?.education_level ? "Vui lòng điền hồ sơ bên trái để bắt đầu..." : chatLocked ? "Chat đã khóa. Nhấn 'Chưa hài lòng? Hỏi tiếp' để mở lại." : "Nhập tin nhắn..."}
             />
           </div>
           <div className="mt-4 card p-4 animate-rise" style={{ animationDelay: '100ms' }}>
