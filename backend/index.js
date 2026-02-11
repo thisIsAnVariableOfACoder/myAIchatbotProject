@@ -4,7 +4,9 @@ const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
+
 const { initDbIfNeeded } = require('./services/dbInit');
+const { initCatalogSchema } = require('./services/careerCatalog');
 
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
@@ -12,41 +14,77 @@ const chatRoutes = require('./routes/chat');
 const adminRoutes = require('./routes/admin');
 const analyticsRoutes = require('./routes/analytics');
 const exploreRoutes = require('./routes/explore');
-const { initCatalogSchema } = require('./services/careerCatalog');
 
 const app = express();
-app.use(cors());
+
+/* =========================
+   ENV + BASIC CONFIG
+========================= */
+
+const PORT = process.env.PORT || 3001;
+const FRONTEND_URL = process.env.FRONTEND_URL || "*";
+
+/* =========================
+   MIDDLEWARE
+========================= */
+
+// CORS fix cho production
+app.use(cors({
+  origin: FRONTEND_URL,
+  credentials: true
+}));
+
 app.use(express.json());
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'database', 'career_advisor.db');
-function startServer() {
-  const PORT = process.env.PORT || 3001;
-  app.listen(PORT, () => {
-    console.log(`API running on http://localhost:${PORT}`);
-  });
+/* =========================
+   DATABASE SETUP
+========================= */
+
+// Đảm bảo thư mục database tồn tại
+const dbFolder = path.join(__dirname, 'database');
+if (!fs.existsSync(dbFolder)) {
+  fs.mkdirSync(dbFolder, { recursive: true });
+  console.log("📁 Created database folder");
 }
+
+const DB_PATH = process.env.DB_PATH || path.join(dbFolder, 'career_advisor.db');
+
+console.log("📦 Using DB at:", DB_PATH);
 
 global.db = new sqlite3.Database(DB_PATH, async (err) => {
   if (err) {
-    console.error('DB connect error:', err.message);
+    console.error('❌ DB connect error:', err.message);
     process.exit(1);
   }
-  console.log('DB connected:', DB_PATH);
+
+  console.log('✅ DB connected');
+
   try {
     const result = await initDbIfNeeded(global.db);
-    if (result.seeded) {
-      console.log('DB seeded with sample data');
+    if (result?.seeded) {
+      console.log('🌱 DB seeded with sample data');
     }
+
     await initCatalogSchema();
+    console.log('📚 Catalog schema ready');
+
   } catch (e) {
-    console.error('DB init failed:', e.message);
+    console.error('❌ DB init failed:', e.message);
   } finally {
     startServer();
   }
 });
 
+/* =========================
+   ROUTES
+========================= */
+
 app.get('/health', (req, res) => {
-  res.json({ ok: true, time: new Date().toISOString() });
+  res.json({ 
+    status: "ok",
+    time: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development"
+  });
 });
 
 app.use('/api/auth', authRoutes);
@@ -56,15 +94,49 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/explore', exploreRoutes);
 
+/* =========================
+   FRONTEND SERVE (OPTIONAL)
+========================= */
+
 const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
+
 if (fs.existsSync(frontendDist)) {
+  console.log("🌐 Serving frontend build");
+
   app.use(express.static(frontendDist));
+
   app.get('*', (req, res) => {
     if (req.path.startsWith('/api')) {
-      return res.status(404).json({ success: false, error: 'Not found' });
+      return res.status(404).json({ success: false, error: 'API not found' });
     }
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
+
 } else {
-  console.warn('Frontend build not found. Run: npm --prefix frontend run build');
+  console.log("ℹ️ Frontend build not found (normal if using GitHub Pages)");
 }
+
+/* =========================
+   START SERVER
+========================= */
+
+function startServer() {
+  app.listen(PORT, () => {
+    console.log('🚀 ===============================');
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🔗 Health check: /health`);
+    console.log('🚀 ===============================');
+  });
+}
+
+/* =========================
+   ERROR HANDLER
+========================= */
+
+app.use((err, req, res, next) => {
+  console.error("🔥 Server Error:", err);
+  res.status(500).json({
+    success: false,
+    message: "Internal Server Error"
+  });
+});
