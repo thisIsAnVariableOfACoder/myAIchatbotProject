@@ -126,8 +126,13 @@ export default function Chat() {
   }, [userId, token]);
 
   async function refreshHistory() {
-    if (!IS_OFFLINE && (!userId || !token)) return;
+    console.log('[FRONTEND DEBUG] refreshHistory called - userId:', userId, 'token:', !!token);
+    if (!IS_OFFLINE && (!userId || !token)) {
+      console.log('[FRONTEND DEBUG] refreshHistory skipped - no userId or token');
+      return;
+    }
     const jsonHistory = await api.getHistory(userId, token);
+    console.log('[FRONTEND DEBUG] refreshHistory response:', jsonHistory);
     setHistory(jsonHistory?.data || []);
   }
 
@@ -176,8 +181,10 @@ export default function Chat() {
         request_more: options.requestMore || false,
         user_id: userId || null
       };
+      console.log('[FRONTEND DEBUG] sendMessage - userType:', userType, 'userId:', userId, 'conversationId:', conversationId);
       const json = await api.sendMessage(body, token);
       const data = json?.data || {};
+      console.log('[FRONTEND DEBUG] sendMessage - response data:', data);
 
       const botMessage = { id: `${Date.now()}-b`, sender: 'bot', text: data.bot_reply };
       const applyBotMessage = () => {
@@ -188,9 +195,11 @@ export default function Chat() {
       if (data.conversation_id) {
         const prevId = conversationId;
         setConversationId(data.conversation_id);
-        // Refresh history when conversation changes OR when recommendations are saved
-        if (token && userId && (data.conversation_id !== prevId || data.completed)) {
+        // Always refresh history after every message for logged-in users
+        if (token && userId) {
+          console.log('[FRONTEND DEBUG] About to refreshHistory after message');
           await refreshHistory();
+          console.log('[FRONTEND DEBUG] refreshHistory completed');
         }
       }
       setCurrentNode(data.next_node || null);

@@ -34,6 +34,10 @@ async function generateCareerQuestion({ userType, profile, memoryAnswers, intent
     ? memoryAnswers.slice(-8).map((a) => ({ q: a?.question || a?.q, a: a?.answer || a?.a })).filter((x) => x.q || x.a)
     : [];
 
+  console.log('[LLM DEBUG] generateCareerQuestion - userType:', safeUserType);
+  console.log('[LLM DEBUG] generateCareerQuestion - profile:', profileText);
+  console.log('[LLM DEBUG] generateCareerQuestion - memory:', JSON.stringify(memoryText));
+
   const systemPrompt = `Bạn là chuyên gia tư vấn hướng nghiệp.
 Nhiệm vụ: tạo 1 câu hỏi TIẾP THEO phù hợp với nhóm người dùng và bối cảnh hiện tại.
 
@@ -70,6 +74,11 @@ Nếu câu hỏi dạng tự do thì suggested_questions = [].`;
 profile: ${profileText}
 memory: ${JSON.stringify(memoryText)}
 intent: ${JSON.stringify(intent || {})}
+
+TRỌNG: Hãy kiểm tra kỹ userType và chỉ tạo câu hỏi phù hợp với nhóm đó.
+Nếu userType là "professional", tuyệt đối KHÔNG hỏi về môn học hay hoạt động học đường.
+Nếu userType là "high_school", tuyệt đối KHÔNG hỏi về kinh nghiệm làm việc hay công ty.
+Nếu userType là "university", tuyệt đối KHÔNG hỏi về kinh nghiệm làm việc dài hạn hay quản lý nhân sự.
 
 Hãy tạo câu hỏi tiếp theo bằng tiếng Việt, xưng hô lịch sự, ngắn gọn.`;
 

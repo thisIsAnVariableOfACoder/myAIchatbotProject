@@ -100,6 +100,12 @@ router.post('/message', optionalAuth, async (req, res) => {
     const userId = authUser?.user_id || null;
     const effectiveUserType = authUser?.user_type || user_type || null;
 
+    // DEBUG: Log userType flow
+    console.log('[CHAT DEBUG] /message - authUser.user_type:', authUser?.user_type);
+    console.log('[CHAT DEBUG] /message - req.body.user_type:', user_type);
+    console.log('[CHAT DEBUG] /message - effectiveUserType:', effectiveUserType);
+    console.log('[CHAT DEBUG] /message - userId:', userId);
+
     const convId = conversation_id || `conv_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
     if (userId) {
@@ -251,9 +257,13 @@ router.post('/message', optionalAuth, async (req, res) => {
 
 router.get('/history/:userId', requireAuth, async (req, res) => {
   const { userId } = req.params;
+  console.log('[CHAT DEBUG] /history/:userId - userId:', userId, 'req.user.user_id:', req.user.user_id);
+  
   if (req.user.user_type !== 'admin' && String(req.user.user_id) !== String(userId)) {
+    console.log('[CHAT DEBUG] /history - Forbidden: user_id mismatch');
     return res.status(403).json({ success: false, error: 'Forbidden' });
   }
+  
   const query = `
     SELECT m.conversation_id,
            COALESCE(c.title, m.conversation_id) as title,
@@ -266,8 +276,13 @@ router.get('/history/:userId', requireAuth, async (req, res) => {
     GROUP BY m.conversation_id
     ORDER BY updated_at DESC
   `;
+  
   global.db.all(query, [userId], (err, rows) => {
-    if (err) return res.status(500).json({ success: false, error: err.message });
+    if (err) {
+      console.log('[CHAT DEBUG] /history ERROR:', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+    console.log('[CHAT DEBUG] /history SUCCESS - rows:', rows?.length || 0, 'data:', rows);
     res.json({ success: true, data: rows });
   });
 });
@@ -415,7 +430,10 @@ router.delete('/conversation/:conversationId', requireAuth, (req, res) => {
 });
 
 async function saveMessage(convId, userId, sender, message, nodeId) {
+  console.log('[CHAT DEBUG] saveMessage called - convId:', convId, 'userId:', userId, 'sender:', sender, 'nodeId:', nodeId);
+  
   if (!global.db) {
+    console.log('[CHAT DEBUG] saveMessage - No database, using memory');
     MEMORY_MESSAGES.push({
       conversation_id: convId,
       user_id: userId,
@@ -431,8 +449,13 @@ async function saveMessage(convId, userId, sender, message, nodeId) {
     const query = `INSERT INTO chat_messages (conversation_id, user_id, sender, message, node_id)
                    VALUES (?, ?, ?, ?, ?)`;
     global.db.run(query, [convId, userId, sender, message, nodeId], function (err) {
-      if (err) reject(err);
-      else resolve(this.lastID);
+      if (err) {
+        console.log('[CHAT DEBUG] saveMessage ERROR:', err);
+        reject(err);
+      } else {
+        console.log('[CHAT DEBUG] saveMessage SUCCESS - messageId:', this.lastID);
+        resolve(this.lastID);
+      }
     });
   });
 }
