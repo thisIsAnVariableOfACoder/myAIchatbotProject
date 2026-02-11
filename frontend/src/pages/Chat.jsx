@@ -176,6 +176,7 @@ export default function Chat() {
         conversation_id: conversationId,
         message: text,
         current_node: currentNode,
+        profile: options.profile || null,
         request_more: options.requestMore || false,
         user_id: userId || null
       };

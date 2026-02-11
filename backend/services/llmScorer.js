@@ -21,6 +21,67 @@ function countReplacementChars(value) {
   return (String(value || '').match(/\uFFFD/g) || []).length;
 }
 
+async function generateCareerQuestion({ userType, profile, memoryAnswers, intent }) {
+  if (!isEnabled()) {
+    return null;
+  }
+
+  const safeUserType = String(userType || 'high_school');
+  const profileText = profile ? JSON.stringify(profile) : '';
+  const memoryText = Array.isArray(memoryAnswers)
+    ? memoryAnswers.slice(-8).map((a) => ({ q: a?.question || a?.q, a: a?.answer || a?.a })).filter((x) => x.q || x.a)
+    : [];
+
+  const systemPrompt = `Bạn là chuyên gia tư vấn hướng nghiệp.
+Nhiệm vụ: tạo 1 câu hỏi TIẾP THEO phù hợp với nhóm người dùng và bối cảnh hiện tại.
+
+Ràng buộc:
+- Chỉ hỏi 1 câu, rõ ràng, dễ trả lời.
+- Phù hợp nhóm:
+  - high_school: hỏi về môn học/hoạt động, sở thích, năng lực, môi trường học tập.
+  - university: hỏi về ngành/năm học, dự án/CLB/thực tập, kỹ năng, định hướng.
+  - professional: hỏi về kinh nghiệm, chuyên môn, kỹ năng, mục tiêu chuyển nghề/thăng tiến.
+- Tránh hỏi sai ngữ cảnh (ví dụ hỏi KPI/công ty với học sinh).
+- Không nhắc tới "database", "template", "trọng số".
+
+BẮT BUỘC: trả về JSON đúng cấu trúc:
+{
+  "bot_reply": "<câu hỏi tiếp theo>",
+  "suggested_questions": ["<option 1>", "<option 2>"]
+}
+Nếu câu hỏi dạng tự do thì suggested_questions = [].`;
+
+  const userContent = `userType: ${safeUserType}
+profile: ${profileText}
+memory: ${JSON.stringify(memoryText)}
+intent: ${JSON.stringify(intent || {})}
+
+Hãy tạo câu hỏi tiếp theo bằng tiếng Việt, xưng hô lịch sự, ngắn gọn.`;
+
+  const payload = {
+    model: GROQ_MODEL,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent }
+    ],
+    temperature: 0.6,
+    top_p: 0.9,
+    max_tokens: 512,
+    stream: false
+  };
+
+  const data = await postJson(LLM_CHAT_URL, payload, LLM_TIMEOUT_MS);
+  const content = data?.choices?.[0]?.message?.content;
+  const parsed = safeParseChatReply(content);
+  if (!parsed) return null;
+
+  // safeParseChatReply expects {bot_reply, suggested_questions}
+  const question = normalizeReplyText(parsed.bot_reply);
+  const options = normalizeSuggestedQuestions(parsed.suggested_questions);
+  if (!question) return null;
+  return { question, options };
+}
+
 function fixCommonMojibake(value) {
   const text = String(value || '');
   if (!text) return '';
@@ -259,5 +320,6 @@ module.exports = {
   isEnabled,
   generateAgentQuestion,
   generateAgentRecommendations,
-  generateAgentChatReply
+  generateAgentChatReply,
+  generateCareerQuestion
 };

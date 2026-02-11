@@ -5,6 +5,70 @@ const { generateAllQuestions, getQuestionScore } = require('../data/careerQuesti
 const ALL_QUESTIONS = generateAllQuestions();
 const CONVERSATIONS = new Map();
 
+const CORE_QUESTIONS = {
+  high_school: [
+    { id: 'core_hs_1', text: 'Bạn đang học lớp mấy và bạn mạnh nhất ở môn/hoạt động nào?' },
+    { id: 'core_hs_2', text: 'Bạn thích làm việc với gì hơn: con người, số liệu, máy tính, hay sáng tạo nội dung? Vì sao?' },
+    { id: 'core_hs_3', text: 'Bạn muốn ưu tiên điều gì nhất khi chọn nghề: thu nhập, ổn định, đam mê, hay cân bằng thời gian?' }
+  ],
+  university: [
+    { id: 'core_uni_1', text: 'Bạn đang học ngành gì/năm mấy, và bạn thích nhất mảng nào trong ngành (hoặc ngoài ngành)?' },
+    { id: 'core_uni_2', text: 'Bạn đã từng làm dự án/CLB/thực tập gì chưa? Bạn thích vai trò nào nhất trong đó?' },
+    { id: 'core_uni_3', text: 'Bạn muốn theo hướng công việc nào: chuyên môn sâu, thiên về quản lý, hay thiên về sáng tạo/kinh doanh?' }
+  ],
+  professional: [
+    { id: 'core_pro_1', text: 'Hiện bạn đang làm vị trí gì và chuyên môn chính của bạn là gì?' },
+    { id: 'core_pro_2', text: 'Bạn có bao nhiêu năm kinh nghiệm và bạn muốn chuyển nghề hay nâng cấp trong cùng lĩnh vực?' },
+    { id: 'core_pro_3', text: 'Bạn muốn ưu tiên điều gì nhất: thu nhập, cơ hội thăng tiến, ổn định, hay cân bằng cuộc sống?' }
+  ]
+};
+
+function adaptQuestionText(text, userType) {
+  const raw = String(text || '');
+  if (!raw) return '';
+  if (userType === 'professional') return raw;
+
+  // For students, avoid wording that assumes employment.
+  return raw
+    .replace(/trong công việc hàng ngày/gi, 'trong hoạt động hàng ngày')
+    .replace(/trong công việc/gi, 'trong học tập/dự án cá nhân')
+    .replace(/công việc hàng ngày/gi, 'hoạt động hàng ngày')
+    .replace(/trong công việc\?/gi, 'trong học tập/dự án cá nhân?');
+}
+
+function serializeConversationState(state) {
+  if (!state) return null;
+  return {
+    userType: state.userType,
+    answers: state.answers || [],
+    refinementAnswers: state.refinementAnswers || [],
+    askedQuestions: Array.from(state.askedQuestions || []),
+    mode: state.mode || 'initial',
+    createdAt: state.createdAt || Date.now(),
+    lastQuestionText: state.lastQuestionText || null,
+    lastQuestionId: state.lastQuestionId || null,
+    profile: state.profile || null
+  };
+}
+
+function hydrateConversationState(conversationId, data, userTypeFallback) {
+  if (!conversationId || !data) return null;
+  const asked = new Set(Array.isArray(data.askedQuestions) ? data.askedQuestions : []);
+  const state = {
+    userType: data.userType || userTypeFallback || 'high_school',
+    answers: Array.isArray(data.answers) ? data.answers : [],
+    askedQuestions: asked,
+    mode: data.mode || 'initial',
+    refinementAnswers: Array.isArray(data.refinementAnswers) ? data.refinementAnswers : [],
+    createdAt: data.createdAt || Date.now(),
+    lastQuestionText: data.lastQuestionText || null,
+    lastQuestionId: data.lastQuestionId || null,
+    profile: data.profile || null
+  };
+  CONVERSATIONS.set(conversationId, state);
+  return state;
+}
+
 /**
  * Get or create conversation state
  */
@@ -34,8 +98,23 @@ function getNextQuestion(conversationId, userType) {
     return null; // Done with initial questions
   }
 
-  // Get broad questions from different categories
-  const categories = ['skill', 'interest', 'scenario', 'workstyle'];
+  const effectiveUserType = state.userType || userType || 'high_school';
+  const coreList = CORE_QUESTIONS[effectiveUserType] || CORE_QUESTIONS.high_school;
+  const remainingCore = coreList.filter((q) => !state.askedQuestions.has(q.id));
+  if (state.answers.length < 3 && remainingCore.length > 0) {
+    const q = remainingCore[0];
+    return {
+      id: q.id,
+      text: adaptQuestionText(q.text, effectiveUserType),
+      type: 'text',
+      options: []
+    };
+  }
+
+  // Get broad questions from different categories, tuned by user type
+  const categories = (state.userType || userType) === 'professional'
+    ? ['skill', 'scenario', 'workstyle', 'interest']
+    : ['interest', 'skill', 'scenario', 'workstyle'];
   const targetCategory = categories[state.answers.length % categories.length];
 
   const availableQuestions = ALL_QUESTIONS.filter(q =>
@@ -60,7 +139,7 @@ function getNextQuestion(conversationId, userType) {
   const question = availableQuestions[0];
   return {
     id: question.id,
-    text: question.text,
+    text: adaptQuestionText(question.text, state.userType || userType),
     type: 'yes_no_maybe',
     options: ['Có', 'Có thể', 'Không']
   };
@@ -181,9 +260,21 @@ function recordAnswer(conversationId, questionId, answer, aiQuestionText = null)
  * Normalize answer to yes/maybe/no
  */
 function normalizeAnswer(answer) {
-  // Since we are using an AI agent now, we don't want to force-categorize free-text answers.
-  // We return the raw string (trimmed) so that the LLM can interpret the full meaning.
-  return String(answer).trim();
+  const text = String(answer || '').trim().toLowerCase();
+  if (!text) return '';
+
+  // Accept explicit yes/maybe/no
+  if (text === 'yes' || text === 'y' || text === 'true') return 'yes';
+  if (text === 'maybe') return 'maybe';
+  if (text === 'no' || text === 'n' || text === 'false') return 'no';
+
+  // Vietnamese mapping
+  if (/^(có|co|đúng|dung|ok|oke|ừ|u|uh|ừm)\b/.test(text)) return 'yes';
+  if (/^(có thể|co the|cũng được|cung duoc|maybe|tùy|tuy|chưa chắc|chua chac)\b/.test(text)) return 'maybe';
+  if (/^(không|khong|không thích|khong thich|ko|k|khum|never|không bao giờ|khong bao gio)\b/.test(text)) return 'no';
+
+  // Default: keep raw for memory, but scoring engine expects categorical
+  return text;
 }
 
 /**
@@ -223,12 +314,18 @@ function getCareerRecommendations(conversationId) {
   // Calculate scores
   const scores = calculateCareerScoresFromAnswers(allAnswers);
 
-  // Filter out careers with very low scores (minimum threshold)
+  const sortedScores = Object.entries(scores)
+    .sort((a, b) => b[1] - a[1]);
+
+  // Filter out careers with very low scores (minimum threshold) but ensure >= 6 careers
   const minScoreThreshold = Math.max(...Object.values(scores)) * 0.1; // 10% of max score
-  const filteredScores = Object.entries(scores)
+  let filteredScores = sortedScores
     .filter(([, score]) => score >= minScoreThreshold)
-    .sort((a, b) => b[1] - a[1])
     .slice(0, 10);
+
+  if (filteredScores.length < 6) {
+    filteredScores = sortedScores.slice(0, 6);
+  }
 
   if (filteredScores.length === 0) {
     throw new Error('No careers match your profile');
@@ -243,14 +340,17 @@ function getCareerRecommendations(conversationId) {
 
   const sumExp = expScores.reduce((sum, [, exp]) => sum + exp, 0);
 
-  const recommendations = expScores.map(([career, exp], index) => ({
-    career_name: career,
-    match_score: Math.round(filteredScores[index][1]),
-    probability: exp / sumExp,
-    confidence: filteredScores[index][1] > 150 ? 'high' :
-      filteredScores[index][1] > 75 ? 'medium' : 'low',
-    reasons: generateReasons(career, allAnswers)
-  }));
+  const recommendations = expScores.map(([career, exp], index) => {
+    const probability = exp / sumExp;
+    const matchScore = Math.round(probability * 1000) / 10;
+    return {
+      career_name: career,
+      match_score: matchScore,
+      probability,
+      confidence: matchScore >= 75 ? 'high' : matchScore >= 50 ? 'medium' : 'low',
+      reasons: generateReasons(career, allAnswers)
+    };
+  });
 
   return {
     recommendations,
@@ -324,5 +424,8 @@ module.exports = {
   canStartRefinement,
   getRefinementProgress,
   getDiscriminatingQuestions,
-  isEnoughInfo
+  isEnoughInfo,
+  adaptQuestionText,
+  serializeConversationState,
+  hydrateConversationState
 };

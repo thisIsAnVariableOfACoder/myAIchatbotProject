@@ -47,6 +47,15 @@ CREATE TABLE IF NOT EXISTS conversations (
 );
 CREATE INDEX IF NOT EXISTS idx_conversations_user ON conversations(user_id);
 
+CREATE TABLE IF NOT EXISTS conversation_state (
+  conversation_id VARCHAR(100) PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  state_json TEXT NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_conversation_state_user ON conversation_state(user_id);
+
 CREATE TABLE IF NOT EXISTS scenarios (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name VARCHAR(255) NOT NULL,

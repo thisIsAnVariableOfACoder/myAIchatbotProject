@@ -2,7 +2,14 @@ const express = require('express');
 const https = require('https');
 const router = express.Router();
 const { optionalAuth, requireAuth } = require('../middleware/auth');
-const { getConversationState, recordAnswer } = require('../services/questionEngine');
+const {
+  getConversationState,
+  recordAnswer,
+  getNextQuestion,
+  getCareerRecommendations,
+  serializeConversationState,
+  hydrateConversationState
+} = require('../services/questionEngine');
 const llmScorer = require('../services/llmScorer');
 const { isEnabled: isLlmEnabled } = llmScorer;
 
@@ -52,6 +59,41 @@ function buildAnswersText(state, latestMessage) {
   return parts.join(' ');
 }
 
+async function loadConversationState(convId, userId, userTypeFallback) {
+  if (!global.db || !convId || !userId) return null;
+  const row = await new Promise((resolve) => {
+    global.db.get(
+      'SELECT state_json FROM conversation_state WHERE conversation_id = ? AND user_id = ? LIMIT 1',
+      [convId, userId],
+      (err, r) => {
+        if (err) return resolve(null);
+        resolve(r || null);
+      }
+    );
+  });
+  if (!row?.state_json) return null;
+  const parsed = safeParse(row.state_json, null);
+  if (!parsed) return null;
+  return hydrateConversationState(convId, parsed, userTypeFallback);
+}
+
+async function saveConversationState(convId, userId, state) {
+  if (!global.db || !convId || !userId || !state) return;
+  const payload = serializeConversationState(state);
+  if (!payload) return;
+  await new Promise((resolve) => {
+    global.db.run(
+      `INSERT INTO conversation_state (conversation_id, user_id, state_json, updated_at)
+       VALUES (?, ?, ?, datetime('now'))
+       ON CONFLICT(conversation_id) DO UPDATE SET
+         state_json = excluded.state_json,
+         updated_at = datetime('now')`,
+      [convId, userId, JSON.stringify(payload)],
+      () => resolve()
+    );
+  });
+}
+
 
 router.post('/message', optionalAuth, async (req, res) => {
   try {
@@ -67,56 +109,102 @@ router.post('/message', optionalAuth, async (req, res) => {
       await saveMessage(convId, userId, 'user', message || '', current_node || null);
     }
 
-    const state = getConversationState(convId, effectiveUserType);
+    let state = getConversationState(convId, effectiveUserType);
+    if (userId) {
+      const hydrated = await loadConversationState(convId, userId, effectiveUserType);
+      if (hydrated) state = hydrated;
+    }
     if (bodyProfile) {
       state.profile = bodyProfile;
     }
 
-    // AI Chat Interaction
-    if (llmScorer.isEnabled()) {
-      const history = state.answers.map(a => ({ q: a.question, a: a.answer }));
+    if (message) {
+      const questionId = state.lastQuestionId || current_node || 'ai_chat';
+      recordAnswer(convId, questionId, message, state.lastQuestionText);
+    }
 
-      // Record answer if message exists
-      if (message) {
-        recordAnswer(convId, current_node || 'ai_chat', message, state.lastQuestionText);
+    let recommendations = null;
+    let completed = false;
+    try {
+      const rec = getCareerRecommendations(convId);
+      recommendations = rec?.recommendations || null;
+      if (Array.isArray(recommendations)) {
+        completed = !shouldAskMore(recommendations, state);
       }
+    } catch {
+      recommendations = null;
+      completed = false;
+    }
 
-      const aiReply = await llmScorer.generateAgentChatReply({
-        history,
-        currentMessage: message || "Xin chào!"
-      });
+    if (request_more) {
+      completed = false;
+      recommendations = null;
+    }
 
-      if (aiReply) {
-        state.lastQuestionText = aiReply.bot_reply;
+    let botReply = '';
+    let nextNode = null;
+    const options = [];
 
-        if (userId) {
-          await saveMessage(convId, userId, 'bot', aiReply.bot_reply, null);
+    if (completed && Array.isArray(recommendations) && recommendations.length) {
+      const top = recommendations.slice(0, 10);
+      const lines = top.map((r, idx) => `${idx + 1}. ${r.career_name} (${Number(r.match_score || 0).toFixed(1)}%)`);
+      botReply = `Mình đã tổng hợp xong gợi ý nghề nghiệp phù hợp nhất với bạn.\n\nTop gợi ý:\n${lines.join('\n')}`;
+      nextNode = null;
+    } else {
+      const q = getNextQuestion(convId, effectiveUserType || 'high_school');
+      if (q) {
+        state.lastQuestionId = q.id;
+        if (!llmScorer.isEnabled()) {
+          botReply = 'Hiện backend chưa được cấu hình LLM (thiếu GROQ_API_KEY), nên hệ thống không thể tự tạo câu hỏi như yêu cầu. Bạn hãy cấu hình GROQ_API_KEY trên Render và redeploy backend để tiếp tục.';
+          nextNode = q.id;
+          return res.status(503).json({
+            success: false,
+            error: botReply,
+            data: {
+              bot_reply: botReply,
+              options: [],
+              next_node: nextNode,
+              conversation_id: convId,
+              completed: false
+            }
+          });
         }
-
-        return res.json({
-          success: true,
-          data: {
-            bot_reply: aiReply.bot_reply,
-            options: aiReply.suggested_questions || [],
-            next_node: 'ai_chat',
-            conversation_id: convId
-          }
+        const intent = { id: q.id, type: q.type, category: q.category, options: q.options || [] };
+        const aiQuestion = await llmScorer.generateCareerQuestion({
+          userType: effectiveUserType || 'high_school',
+          profile: state.profile || bodyProfile || null,
+          memoryAnswers: [...(state.answers || []), ...(state.refinementAnswers || [])],
+          intent
         });
+        const questionText = aiQuestion?.question || q.text;
+        const questionOptions = Array.isArray(aiQuestion?.options) ? aiQuestion.options : (q.options || []);
+        state.lastQuestionText = questionText;
+        botReply = questionText;
+        nextNode = q.id;
+        questionOptions.forEach((opt) => options.push(opt));
+      } else {
+        botReply = 'Mình đã có đủ thông tin để bắt đầu gợi ý. Bạn hãy mô tả thêm 1-2 điều quan trọng nhất bạn muốn ưu tiên (thu nhập, ổn định, sáng tạo, cân bằng thời gian) nhé.';
+        nextNode = state.lastQuestionId || 'ai_chat';
       }
     }
 
-    // Default Fallback
-    const genericFallback = "Chào bạn! Tôi có thể giúp gì cho bạn hôm nay?";
     if (userId) {
-      await saveMessage(convId, userId, 'bot', genericFallback, null);
+      await saveMessage(convId, userId, 'bot', botReply, nextNode);
+      await saveConversationState(convId, userId, state);
+      if (completed && Array.isArray(recommendations)) {
+        await saveRecommendations(convId, userId, recommendations);
+      }
     }
+
     return res.json({
       success: true,
       data: {
-        bot_reply: genericFallback,
-        options: ["Hỏi thêm", "Kết thúc"],
-        next_node: 'ai_chat',
-        conversation_id: convId
+        bot_reply: botReply,
+        options,
+        next_node: nextNode,
+        conversation_id: convId,
+        recommendations: recommendations || undefined,
+        completed
       }
     });
 
