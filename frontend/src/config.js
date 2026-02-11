@@ -9,9 +9,7 @@ const envApiBase = normalizeBaseUrl(import.meta.env.VITE_API_BASE);
 const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
 const isLocalhost = /^(localhost|127\.0\.0\.1)$/i.test(hostname);
 
-const fallbackApiBase = isLocalhost
-  ? 'http://localhost:3001'
-  : 'https://api-myaichatbotproject.onrender.com';
+const fallbackApiBase = isLocalhost ? 'http://localhost:3001' : '';
 const configuredApiBase = runtimeApiBase || envApiBase || fallbackApiBase;
 
 const runtimeOffline = typeof window !== 'undefined' ? window.__IS_OFFLINE__ : undefined;

@@ -41,43 +41,13 @@ export default function Admin() {
       );
     }
 
-  const [apiKey, setApiKey] = useState(localStorage.getItem('GEMINI_API_KEY') || '');
-
-  useEffect(() => {
-    localStorage.setItem('GEMINI_API_KEY', apiKey);
-  }, [apiKey]);
-
   return (
     <div className="space-y-6">
-      {/* AI Configuration Section */}
       <div className="card card-elevated p-6">
-        <h2 className="text-xl font-semibold mb-4">Cấu hình AI thông minh</h2>
-        <div className="max-w-2xl space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[#5B5B57] mb-1">
-              Google Gemini API Key
-            </label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  className="input-elevated flex-1 px-4 py-2 focus:ring-2 focus:ring-[var(--c-accent)] focus:outline-none"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Nhập API Key từ AI Studio..."
-                />
-                <button
-                  onClick={() => alert('Đã lưu API Key!')}
-                  className="btn-primary px-4 py-2 rounded-lg"
-                >
-                  Lưu
-                </button>
-              </div>
-            <p className="mt-2 text-xs text-[#7A6D5B]">
-              Chatbot sẽ dùng LLM để hiểu ý định người dùng (ví dụ: "cos" thành "có") và tính điểm chính xác hơn.
-              Lấy key miễn phí tại <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[var(--c-primary)] underline font-medium">Google AI Studio</a>.
-            </p>
-          </div>
-        </div>
+        <h2 className="text-xl font-semibold mb-2">Quản trị hệ thống</h2>
+        <p className="text-sm text-[#5B5B57]">
+          LLM đã được chuyển hoàn toàn sang backend. Frontend không còn lưu hoặc gọi API key AI trực tiếp.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_400px]">
