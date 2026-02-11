@@ -82,9 +82,13 @@ http://localhost:3001
 ## 🔌 API
 
 **Base URL**
-
+***Local***
 ```
 http://localhost:3001
+```
+***Backend API***
+```
+https://api-myaichatbotproject.onrender.com
 ```
 
 ---
