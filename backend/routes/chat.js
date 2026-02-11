@@ -123,17 +123,53 @@ router.post('/message', optionalAuth, async (req, res) => {
       recordAnswer(convId, questionId, message, state.lastQuestionText);
     }
 
+    // Combine all answers for AI analysis
+    const allAnswers = [...(state.answers || []), ...(state.refinementAnswers || [])];
+    const totalAnswers = allAnswers.length;
+
+    // Determine if we have enough information for AI recommendations
+    // Minimum 3 answers for initial assessment, but AI decides when to stop
+    const minAnswersForRecommendation = 3;
+    const maxQuestions = 10; // AI should stop before this if confident
+
     let recommendations = null;
     let completed = false;
-    try {
-      const rec = getCareerRecommendations(convId);
-      recommendations = rec?.recommendations || null;
-      if (Array.isArray(recommendations)) {
-        completed = !shouldAskMore(recommendations, state);
+
+    // Use AI to generate recommendations when we have enough information
+    if (totalAnswers >= minAnswersForRecommendation && totalAnswers <= maxQuestions && !request_more) {
+      try {
+        const aiRec = await llmScorer.generateCareerRecommendations({
+          userType: effectiveUserType || 'high_school',
+          profile: state.profile || bodyProfile || null,
+          memoryAnswers: allAnswers
+        });
+
+        if (aiRec && aiRec.recommendations && aiRec.recommendations.length >= 6) {
+          recommendations = aiRec.recommendations;
+          completed = true;
+        }
+      } catch (error) {
+        console.error('AI recommendation error:', error);
+        // Fall back to continue asking questions
       }
-    } catch {
-      recommendations = null;
-      completed = false;
+    }
+
+    // Force completion if we've asked too many questions
+    if (!completed && totalAnswers >= maxQuestions) {
+      try {
+        const aiRec = await llmScorer.generateCareerRecommendations({
+          userType: effectiveUserType || 'high_school',
+          profile: state.profile || bodyProfile || null,
+          memoryAnswers: allAnswers
+        });
+
+        if (aiRec && aiRec.recommendations) {
+          recommendations = aiRec.recommendations;
+          completed = true;
+        }
+      } catch (error) {
+        console.error('Final AI recommendation error:', error);
+      }
     }
 
     if (request_more) {
@@ -147,44 +183,45 @@ router.post('/message', optionalAuth, async (req, res) => {
 
     if (completed && Array.isArray(recommendations) && recommendations.length) {
       const top = recommendations.slice(0, 10);
-      const lines = top.map((r, idx) => `${idx + 1}. ${r.career_name} (${Number(r.match_score || 0).toFixed(1)}%)`);
-      botReply = `Mình đã tổng hợp xong gợi ý nghề nghiệp phù hợp nhất với bạn.\n\nTop gợi ý:\n${lines.join('\n')}`;
+      const lines = top.map((r, idx) => `${idx + 1}. ${r.career_name} (${r.match_score}/100)`);
+      botReply = `Mình đã phân tích xong và tìm ra những nghề nghiệp phù hợp nhất với bạn.\n\nTop gợi ý:\n${lines.join('\n')}\n\nChi tiết phân tích đã được cập nhật trong biểu đồ bên dưới.`;
       nextNode = null;
     } else {
-      const q = getNextQuestion(convId, effectiveUserType || 'high_school');
-      if (q) {
-        state.lastQuestionId = q.id;
-        if (!llmScorer.isEnabled()) {
-          botReply = 'Hiện backend chưa được cấu hình LLM (thiếu GROQ_API_KEY), nên hệ thống không thể tự tạo câu hỏi như yêu cầu. Bạn hãy cấu hình GROQ_API_KEY trên Render và redeploy backend để tiếp tục.';
-          nextNode = q.id;
-          return res.status(503).json({
-            success: false,
-            error: botReply,
-            data: {
-              bot_reply: botReply,
-              options: [],
-              next_node: nextNode,
-              conversation_id: convId,
-              completed: false
-            }
-          });
-        }
-        const intent = { id: q.id, type: q.type, category: q.category, options: q.options || [] };
-        const aiQuestion = await llmScorer.generateCareerQuestion({
-          userType: effectiveUserType || 'high_school',
-          profile: state.profile || bodyProfile || null,
-          memoryAnswers: [...(state.answers || []), ...(state.refinementAnswers || [])],
-          intent
+      // Use AI to generate the next question
+      if (!llmScorer.isEnabled()) {
+        botReply = 'Hiện backend chưa được cấu hình LLM (thiếu GROQ_API_KEY), nên hệ thống không thể tư vấn. Bạn hãy cấu hình GROQ_API_KEY trên Render và redeploy backend để tiếp tục.';
+        nextNode = 'ai_chat';
+        return res.status(503).json({
+          success: false,
+          error: botReply,
+          data: {
+            bot_reply: botReply,
+            options: [],
+            next_node: nextNode,
+            conversation_id: convId,
+            completed: false
+          }
         });
-        const questionText = aiQuestion?.question || q.text;
-        const questionOptions = Array.isArray(aiQuestion?.options) ? aiQuestion.options : (q.options || []);
-        state.lastQuestionText = questionText;
-        botReply = questionText;
-        nextNode = q.id;
-        questionOptions.forEach((opt) => options.push(opt));
+      }
+
+      const aiQuestion = await llmScorer.generateCareerQuestion({
+        userType: effectiveUserType || 'high_school',
+        profile: state.profile || bodyProfile || null,
+        memoryAnswers: allAnswers,
+        intent: { id: 'ai_chat', type: 'free_text' }
+      });
+
+      if (aiQuestion && aiQuestion.question) {
+        state.lastQuestionId = 'ai_chat';
+        state.lastQuestionText = aiQuestion.question;
+        botReply = aiQuestion.question;
+        nextNode = 'ai_chat';
+        if (Array.isArray(aiQuestion.options)) {
+          aiQuestion.options.forEach((opt) => options.push(opt));
+        }
       } else {
-        botReply = 'Mình đã có đủ thông tin để bắt đầu gợi ý. Bạn hãy mô tả thêm 1-2 điều quan trọng nhất bạn muốn ưu tiên (thu nhập, ổn định, sáng tạo, cân bằng thời gian) nhé.';
-        nextNode = state.lastQuestionId || 'ai_chat';
+        botReply = 'Cảm ơn bạn đã chia sẻ. Mình đang phân tích thông tin để đưa ra gợi ý phù hợp nhất. Vui lòng đợi một chút...';
+        nextNode = 'ai_chat';
       }
     }
 

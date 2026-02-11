@@ -7,9 +7,11 @@ const GROQ_BASE_URL = process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/
 const LLM_CHAT_URL = `${GROQ_BASE_URL.replace(/\/$/, '')}/chat/completions`;
 const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 30000);
 
-const SYSTEM_PROMPT = `Bạn là một trợ lý ảo AI thông minh, thân thiện và hữu ích.
-Nhiệm vụ: Hỗ trợ người dùng trả lời câu hỏi, giải quyết vấn đề và trò chuyện một cách tự nhiên.
-PHONG CÁCH: Ngắn gọn, súc tích, đi thẳng vào vấn đề. Mỗi tin nhắn tối đa 2-3 câu trừ khi được yêu cầu giải thích chi tiết.
+const SYSTEM_PROMPT = `Bạn là AI tư vấn HƯỚNG NGHIỆP.
+Mục tiêu DUY NHẤT: thu thập thông tin cần thiết và tư vấn nghề nghiệp phù hợp theo nhóm người dùng (học sinh/sinh viên/người đi làm).
+Bạn phải chủ động đặt câu hỏi tiếp theo để hiểu người dùng.
+KHÔNG làm các việc ngoài hướng nghiệp (không giải toán, không viết code, không tư vấn ngoài lề). Nếu người dùng hỏi ngoài phạm vi, hãy lịch sự kéo về mục tiêu hướng nghiệp.
+PHONG CÁCH: Ngắn gọn, súc tích, đi thẳng vào vấn đề.
 
 BẮT BUỘC: Bạn phải luôn trả lời bằng định dạng JSON sau:
 {
@@ -308,6 +310,169 @@ function safeParseChatReply(content) {
   return null;
 }
 
+/**
+ * Generate career recommendations with scores (0-100) based on user answers
+ * This is the main function for AI-powered career counseling
+ */
+async function generateCareerRecommendations({ userType, profile, memoryAnswers }) {
+  if (!isEnabled()) {
+    return null;
+  }
+
+  const safeUserType = String(userType || 'high_school');
+  const profileText = profile ? JSON.stringify(profile) : '';
+  const memoryText = Array.isArray(memoryAnswers)
+    ? memoryAnswers.map((a) => ({ q: a?.question || a?.q, a: a?.answer || a?.a })).filter((x) => x.q || x.a)
+    : [];
+
+  const systemPrompt = `Bạn là chuyên gia tư vấn hướng nghiệp với 30 năm kinh nghiệm.
+Nhiệm vụ: Phân tích thông tin người dùng và đưa ra gợi ý nghề nghiệp phù hợp nhất.
+
+YÊU CẦU:
+1. Phân tích kỹ lưỡng tất cả câu trả lời của người dùng
+2. Tính toán độ phù hợp của từng nghề nghiệp trên thang điểm 0-100
+3. Chỉ chọn ra 6-10 nghề phù hợp nhất (không dưới 6, không quá 10)
+4. Sắp xếp theo thứ tự giảm dần theo điểm phù hợp
+
+QUY TẮC TÍNH ĐIỂM (0-100):
+- 90-100: Rất phù hợp - khớp hoàn toàn với sở thích, kỹ năng, định hướng
+- 75-89: Phù hợp - khớp tốt với nhiều yếu tố
+- 60-74: Khá phù hợp - có tiềm năng nhưng cần phát triển thêm
+- Dưới 60: Không nên đưa vào danh sách
+
+BẮT BUỘC: Trả về JSON đúng cấu trúc:
+{
+  "recommendations": [
+    {
+      "career_name": "Tên nghề nghiệp (tiếng Việt)",
+      "match_score": 85,
+      "reasons": ["Lý do 1", "Lý do 2", "Lý do 3"]
+    }
+  ],
+  "summary": "Tóm tắt ngắn gọn về phân tích"
+}
+
+Lưu ý:
+- career_name: Tên nghề nghiệp đầy đủ, chính xác
+- match_score: Số nguyên từ 0-100
+- reasons: 3 lý do ngắn gọn (mỗi lý do tối đa 15 từ)
+- summary: Tóm tắt 1-2 câu về định hướng nghề nghiệp của người dùng`;
+
+  const userContent = `userType: ${safeUserType}
+profile: ${profileText}
+conversation_history: ${JSON.stringify(memoryText)}
+
+Hãy phân tích và đưa ra gợi ý nghề nghiệp phù hợp nhất.`;
+
+  const payload = {
+    model: GROQ_MODEL,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent }
+    ],
+    temperature: 0.5,
+    top_p: 0.9,
+    max_tokens: 2048,
+    stream: false
+  };
+
+  const data = await postJson(LLM_CHAT_URL, payload, LLM_TIMEOUT_MS);
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) {
+    console.error('[LLM] No content in recommendation response');
+    return null;
+  }
+
+  const parsed = safeParseRecommendations(content);
+  console.log('[LLM] Career Recommendations:', JSON.stringify(parsed, null, 2));
+  return parsed;
+}
+
+/**
+ * Parse AI response for career recommendations
+ */
+function safeParseRecommendations(content) {
+  if (!content) return null;
+  const text = String(content).replace(/\uFEFF/g, '').trim();
+
+  const tryParseJson = (value) => {
+    if (!value) return null;
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed === 'string') {
+        try {
+          return JSON.parse(parsed);
+        } catch {
+          return parsed;
+        }
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  const extractFromFence = (value) => {
+    const fence = value.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (!fence) return null;
+    return tryParseJson(fence[1].trim());
+  };
+
+  const extractFirstJsonObject = (value) => {
+    let start = -1;
+    let depth = 0;
+    for (let i = 0; i < value.length; i += 1) {
+      const ch = value[i];
+      if (ch === '{') {
+        if (depth === 0) start = i;
+        depth += 1;
+      } else if (ch === '}') {
+        if (depth > 0) depth -= 1;
+        if (depth === 0 && start !== -1) {
+          const slice = value.slice(start, i + 1);
+          const parsed = tryParseJson(slice);
+          if (parsed) return parsed;
+          start = -1;
+        }
+      }
+    }
+    return null;
+  };
+
+  // Try different parsing methods
+  let parsed = tryParseJson(text);
+  if (!parsed) parsed = extractFromFence(text);
+  if (!parsed) parsed = extractFirstJsonObject(text);
+
+  if (!parsed || !parsed.recommendations || !Array.isArray(parsed.recommendations)) {
+    console.error('[LLM] Invalid recommendations format');
+    return null;
+  }
+
+  // Validate and sanitize recommendations
+  const recommendations = parsed.recommendations
+    .filter(r => r.career_name && typeof r.match_score === 'number')
+    .map(r => ({
+      career_name: normalizeReplyText(r.career_name),
+      match_score: Math.max(0, Math.min(100, Math.round(r.match_score))),
+      probability: r.match_score / 100,
+      confidence: r.match_score >= 75 ? 'high' : r.match_score >= 60 ? 'medium' : 'low',
+      reasons: Array.isArray(r.reasons) ? r.reasons.slice(0, 3).map(normalizeReplyText) : []
+    }))
+    .sort((a, b) => b.match_score - a.match_score)
+    .slice(0, 10);
+
+  // Ensure at least 6 recommendations
+  if (recommendations.length < 6) {
+    console.warn('[LLM] Less than 6 recommendations generated');
+  }
+
+  return {
+    recommendations,
+    summary: normalizeReplyText(parsed.summary) || 'Phân tích hoàn tất'
+  };
+}
+
 async function generateAgentQuestion() {
   return null;
 }
@@ -321,5 +486,6 @@ module.exports = {
   generateAgentQuestion,
   generateAgentRecommendations,
   generateAgentChatReply,
-  generateCareerQuestion
+  generateCareerQuestion,
+  generateCareerRecommendations
 };
