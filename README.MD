@@ -42,8 +42,8 @@ Base URL: `http://localhost:3001`
 GPT OSS 120B
 See: https://console.groq.com/playground?model=openai/gpt-oss-120b
 
-#Credit
-##Team LLMagik
-*Phạm Khôi Nguyên @thisIsAnVariableOfACoder
-*Đinh Quang Minh @minhhdinh192
-*Vũ Minh Hoàng @GetInHod
+# Credit
+## Team LLMagik
+* Phạm Khôi Nguyên @thisIsAnVariableOfACoder
+* Đinh Quang Minh @minhhdinh192
+* Vũ Minh Hoàng @GetInHod
