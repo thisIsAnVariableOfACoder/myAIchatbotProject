@@ -128,9 +128,9 @@ router.post('/message', optionalAuth, async (req, res) => {
     const totalAnswers = allAnswers.length;
 
     // Determine if we have enough information for AI recommendations
-    // Minimum 3 answers for initial assessment, but AI decides when to stop
-    const minAnswersForRecommendation = 3;
-    const maxQuestions = 10; // AI should stop before this if confident
+    // Minimum 5 answers for accurate scoring (more data = better results)
+    const minAnswersForRecommendation = 5;
+    const maxQuestions = 12; // AI should stop before this if confident
 
     let recommendations = null;
     let completed = false;
