@@ -1,11 +1,10 @@
 const express = require('express');
 const https = require('https');
 const router = express.Router();
-const { matchCareerAsync } = require('../services/matcher');
 const { optionalAuth, requireAuth } = require('../middleware/auth');
-const { getConversationState, recordAnswer, getNextQuestion, isEnoughInfo } = require('../services/questionEngine');
+const { getConversationState, recordAnswer } = require('../services/questionEngine');
 const llmScorer = require('../services/llmScorer');
-const { scoreCareersWithLLM, mergeScores, isEnabled: isLlmEnabled } = llmScorer;
+const { isEnabled: isLlmEnabled } = llmScorer;
 
 const MEMORY_MESSAGES = [];
 const MIN_CONF_SCORE = 65;
@@ -60,16 +59,12 @@ router.post('/message', optionalAuth, async (req, res) => {
     const authUser = req.user;
     const userId = authUser?.user_id || null;
     const effectiveUserType = authUser?.user_type || user_type || null;
-    const wantsMore = Boolean(request_more);
 
     const convId = conversation_id || `conv_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
     if (userId) {
       await ensureConversation(convId, userId, message);
       await saveMessage(convId, userId, 'user', message || '', current_node || null);
-      if (!current_node) {
-        await logEvent('conversation_started', userId, { conversation_id: convId, user_type: effectiveUserType });
-      }
     }
 
     const state = getConversationState(convId, effectiveUserType);
@@ -77,90 +72,31 @@ router.post('/message', optionalAuth, async (req, res) => {
       state.profile = bodyProfile;
     }
 
-    // Build history BEFORE recording current message to avoid duplication in payload
-    const history = state.answers.map(a => ({ q: a.question, a: a.answer }));
+    // AI Chat Interaction
+    if (llmScorer.isEnabled()) {
+      const history = state.answers.map(a => ({ q: a.question, a: a.answer }));
 
-    if (message) {
-      // Record the answer as an AI-driven or free chat entry
-      recordAnswer(convId, current_node || 'ai_chat', message, state.lastQuestionText);
-    }
+      // Record answer if message exists
+      if (message) {
+        recordAnswer(convId, current_node || 'ai_chat', message, state.lastQuestionText);
+      }
 
-    // AI Unified Chat Response
-    if (isLlmEnabled()) {
-      const profile = await getProfile(userId);
-      const mergedProfile = buildProfileFromState(profile, state, effectiveUserType);
-      const answersText = buildAnswersText(state, message);
-
-      // --- PARALLEL EXECUTION: Chat Reply & Initial Matching (tối ưu) ---
-      const aiReplyPromise = llmScorer.generateAgentChatReply({
-        profile: profile || state.profile || { user_type: effectiveUserType },
+      const aiReply = await llmScorer.generateAgentChatReply({
         history,
-        currentMessage: message
+        currentMessage: message || "Xin chào!"
       });
-      // Chỉ tính match nghề khi đã có tối thiểu một vài thông tin,
-      // tránh tốn thời gian khi người dùng mới "hello" hoặc hỏi vu vơ.
-      const hasInfoForMatch = (state.answers.length >= 1) || ((message || '').length > 40);
-      const initialMatchPromise = hasInfoForMatch
-        ? matchCareerAsync(mergedProfile, {
-            message,
-            answers: state.answers,
-            answersText,
-            tags: state.tags
-          })
-        : Promise.resolve([]);
-
-      // Wait for both to start/finish
-      let [aiReply, liveRecs] = await Promise.all([aiReplyPromise, initialMatchPromise]);
 
       if (aiReply) {
         state.lastQuestionText = aiReply.bot_reply;
+
         if (userId) {
           await saveMessage(convId, userId, 'bot', aiReply.bot_reply, null);
-        }
-
-        // Anti-Repetition
-        if (!state.askedBotQuestions) state.askedBotQuestions = new Set();
-        state.askedBotQuestions.add(aiReply.bot_reply);
-
-        // --- OPTIMIZED RERANKING ---
-        const isGreeting = (message?.toLowerCase().includes('hello') || message?.toLowerCase().includes('chào'));
-        const hasInfo = (state.answers.length >= 1) || ((message || '').length > 30);
-
-        if (!isGreeting && hasInfo && liveRecs.length > 0) {
-          liveRecs = liveRecs.slice(0, 10);
-
-          // Speculative Reranking: Trigger if AI says ready OR enough answers
-          if (aiReply.is_recommendation_ready || state.answers.length >= 4) {
-            const candidates = liveRecs.map((r) => r.career_name);
-            const llmScores = await llmScorer.scoreCareersWithLLM({ profile: mergedProfile, answersText, candidates });
-            liveRecs = llmScorer.mergeScores(liveRecs, llmScores);
-          }
-        }
-
-        // Check if AI thinks recommendation is ready
-        if (aiReply.is_recommendation_ready && !wantsMore) {
-          if (userId && liveRecs.length > 0) {
-            await saveRecommendations(convId, userId, liveRecs);
-          }
-
-          return res.json({
-            success: true,
-            data: {
-              bot_reply: aiReply.bot_reply,
-              recommendations: liveRecs,
-              next_node: null,
-              completed: true,
-              show_statistics: liveRecs.length >= 10,
-              conversation_id: convId
-            }
-          });
         }
 
         return res.json({
           success: true,
           data: {
             bot_reply: aiReply.bot_reply,
-            recommendations: liveRecs, // Include live recs here too
             options: aiReply.suggested_questions || [],
             next_node: 'ai_chat',
             conversation_id: convId
@@ -169,109 +105,16 @@ router.post('/message', optionalAuth, async (req, res) => {
       }
     }
 
-    if (isEnoughInfo(state) && !wantsMore) {
-      const profile = await getProfile(userId);
-      const mergedProfile = buildProfileFromState(profile, state, effectiveUserType);
-      const answersText = buildAnswersText(state, message);
-      let recommendations = await matchCareerAsync(mergedProfile, {
-        message,
-        answers: state.answers,
-        answersText,
-        tags: state.tags
-      });
-      if (isLlmEnabled()) {
-        const candidates = recommendations.map((r) => r.career_name);
-        const llmScores = await scoreCareersWithLLM({ profile: mergedProfile, answersText, candidates });
-        recommendations = mergeScores(recommendations, llmScores);
-      }
-
-      if (shouldAskMore(recommendations, state)) {
-        const followUp = getNextQuestion(convId, effectiveUserType);
-        if (followUp) {
-          if (userId) {
-            await saveMessage(convId, userId, 'bot', followUp.text, followUp.id);
-          }
-          return res.json({
-            success: true,
-            data: {
-              bot_reply: followUp.text,
-              options: followUp.options,
-              next_node: followUp.id,
-              conversation_id: convId
-            }
-          });
-        }
-      }
-
-      if (userId) {
-        await saveMessage(convId, userId, 'bot', 'Tôi đã gợi ý nghề nghiệp phù hợp cho bạn.', null);
-        await saveRecommendations(convId, userId, recommendations);
-        await logEvent('conversation_completed', userId, { conversation_id: convId });
-      }
-
-      return res.json({
-        success: true,
-        data: {
-          bot_reply: 'Đây là gợi ý nghề nghiệp phù hợp:',
-          recommendations,
-          next_node: null,
-          completed: true,
-          conversation_id: convId
-        }
-      });
+    // Default Fallback
+    const genericFallback = "Chào bạn! Tôi có thể giúp gì cho bạn hôm nay?";
+    if (userId) {
+      await saveMessage(convId, userId, 'bot', genericFallback, null);
     }
-
-    // Nếu người dùng báo chưa hài lòng, reset xác suất và hỏi lại từ đầu
-    if (wantsMore) {
-      state.answers = [];
-      state.tags = [];
-      state.node_id = null;
-      state.recommendations = [];
-      nextQuestion = getNextQuestion(convId, effectiveUserType);
-      if (nextQuestion) {
-        if (userId) {
-          await saveMessage(convId, userId, 'bot', nextQuestion.text, nextQuestion.id);
-        }
-        return res.json({
-          success: true,
-          data: {
-            bot_reply: nextQuestion.text,
-            options: nextQuestion.options,
-            next_node: nextQuestion.id,
-            conversation_id: convId
-          }
-        });
-      }
-    }
-
-    // Diverse fallbacks to prevent repetition when AI fails
-    const fallbacks = [
-      "Tôi hiểu rồi. Bạn có thể chia sẻ thêm về những kỹ năng mà bạn cảm thấy tự hào nhất không?",
-      "Để tư vấn tốt hơn, bạn hãy kể cho tôi nghe về một dự án hoặc công việc bạn từng làm mà bạn thấy thú vị nhất nhé.",
-      "Ngoài những thông tin trên, bạn có đam mê hay sở thích đặc biệt nào muốn áp dụng vào sự nghiệp không?",
-      "Bạn mong muốn môi trường làm việc lý tưởng của mình sẽ như thế nào?",
-      "Hãy chia sẻ thêm về mục tiêu ngắn hạn trong 1-2 năm tới của bạn để tôi có thêm cơ sở tư vấn nhé.",
-      "Bạn thích làm việc độc lập hay muốn trở thành một phần của đội ngũ sáng tạo?",
-      "Có lĩnh vực công nghệ hay nghệ thuật nào mà bạn luôn muốn khám phá nhưng chưa có cơ hội không?"
-    ];
-
-    if (!state.askedBotQuestions) state.askedBotQuestions = new Set();
-
-    // Pick first fallback that hasn't been used
-    let chosenFallback = fallbacks[0];
-    for (const fb of fallbacks) {
-      if (!state.askedBotQuestions.has(fb)) {
-        chosenFallback = fb;
-        break;
-      }
-    }
-    state.askedBotQuestions.add(chosenFallback);
-
     return res.json({
       success: true,
       data: {
-        bot_reply: chosenFallback,
-        options: ["Kể về kỹ năng", "Kể về sở thích", "Kể về mục tiêu"],
+        bot_reply: genericFallback,
+        options: ["Hỏi thêm", "Kết thúc"],
         next_node: 'ai_chat',
         conversation_id: convId
       }

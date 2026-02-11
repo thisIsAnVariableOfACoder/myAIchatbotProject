@@ -24,44 +24,30 @@ router.post('/start', async (req, res) => {
         }
 
         const state = getConversationState(conversationId, userType);
-        // Lưu hồ sơ vào state để dùng cho các bước sau
         state.profile = profile;
 
-        let firstQuestion = null;
-        let botMessage = "";
+        const aiReply = await llmScorer.generateAgentChatReply({
+            history: [],
+            currentMessage: "Xin chào! Bạn có thể giúp gì cho tôi?"
+        });
 
-        if (llmScorer.isEnabled()) {
-            const result = await llmScorer.generateAgentQuestion({
-                profile: state.profile,
-                history: []
-            });
-            if (result && result.question) {
-                state.lastQuestionText = result.question;
-                botMessage = result.bot_message || "";
-                firstQuestion = {
-                    id: 'ai_1',
-                    text: result.question,
-                    type: 'text',
-                    is_ai: true
-                };
-                if (result.options && result.options.length > 0) {
-                    firstQuestion.options = result.options;
-                }
-            }
-        }
-
-        if (!firstQuestion) {
-            firstQuestion = getNextQuestion(conversationId, userType);
-        }
+        const botReply = aiReply?.bot_reply || "Chào bạn! Tôi có thể giúp gì cho bạn hôm nay?";
+        state.lastQuestionText = botReply;
 
         res.json({
             success: true,
             conversationId,
             mode: 'initial',
-            message: botMessage,
-            question: firstQuestion,
+            message: botReply,
+            question: {
+                id: 'ai_1',
+                text: botReply,
+                type: 'text',
+                is_ai: true,
+                options: aiReply?.suggested_questions || []
+            },
             canRefine: false,
-            isAiAgent: llmScorer.isEnabled()
+            isAiAgent: true
         });
     } catch (error) {
         console.error('Error starting conversation:', error);
@@ -76,50 +62,50 @@ router.post('/answer', async (req, res) => {
     try {
         const { conversationId, questionId, answer } = req.body;
 
-        if (!conversationId || !questionId || answer === undefined) {
-            return res.status(400).json({ error: 'conversationId, questionId, and answer are required' });
+        if (!conversationId || answer === undefined) {
+            return res.status(400).json({ error: 'conversationId and answer are required' });
         }
 
         const state = getConversationState(conversationId);
-        recordAnswer(conversationId, questionId, answer, state.lastQuestionText);
+        recordAnswer(conversationId, questionId || 'ai_chat', answer, state.lastQuestionText);
 
-        let nextQuestion = null;
-        let botMessage = "";
+        const history = state.answers.map(a => ({
+            q: a.question,
+            a: a.answer
+        }));
 
-        if (llmScorer.isEnabled()) {
-            const history = state.answers.map(a => ({
-                q: a.question,
-                a: a.answer
-            }));
-            const result = await llmScorer.generateAgentQuestion({
-                profile: state.profile || { user_type: state.userType },
-                history
-            });
+        const aiReply = await llmScorer.generateAgentChatReply({
+            history,
+            currentMessage: answer
+        });
 
-            if (result && result.question && result.question !== "DONE") {
-                state.lastQuestionText = result.question;
-                botMessage = result.bot_message || "";
-                nextQuestion = {
+        if (aiReply) {
+            state.lastQuestionText = aiReply.bot_reply;
+            return res.json({
+                success: true,
+                conversationId,
+                message: aiReply.bot_reply,
+                question: {
                     id: `ai_${state.answers.length + 1}`,
-                    text: result.question,
+                    text: aiReply.bot_reply,
                     type: 'text',
-                    is_ai: true
-                };
-                if (result.options && result.options.length > 0) {
-                    nextQuestion.options = result.options;
-                }
-            }
-        } else if (state.mode === 'initial') {
-            nextQuestion = getNextQuestion(conversationId, state.userType);
+                    is_ai: true,
+                    options: aiReply.suggested_questions || []
+                },
+                completed: false,
+                isAiAgent: true
+            });
         }
 
+        // Fallback
+        const fallback = "Tôi đã ghi nhận ý kiến của bạn. Bạn muốn trao đổi thêm về chủ đề gì không?";
         res.json({
             success: true,
             conversationId,
-            message: botMessage,
-            question: nextQuestion,
-            completed: !nextQuestion,
-            isAiAgent: llmScorer.isEnabled()
+            message: fallback,
+            question: null,
+            completed: true,
+            isAiAgent: true
         });
     } catch (error) {
         console.error('Error recording answer:', error);
@@ -128,44 +114,25 @@ router.post('/answer', async (req, res) => {
 });
 
 /**
- * Get recommendations
+ * Get recommendations (Simplified for General AI)
  */
 router.post('/recommendations', async (req, res) => {
+    // Với General AI, chúng ta không dùng DB Career, nhưng có thể sinh gợi ý dựa trên chat
     try {
         const { conversationId } = req.body;
-
-        if (!conversationId) {
-            return res.status(400).json({ error: 'conversationId is required' });
-        }
-
         const state = getConversationState(conversationId);
+        const history = state.answers.map(a => ({ q: a.question, a: a.answer }));
 
-        // AI Recommendations
-        if (llmScorer.isEnabled()) {
-            const history = state.answers.map(a => ({
-                q: a.question,
-                a: a.answer
-            }));
-            const aiResult = await llmScorer.generateAgentRecommendations({
-                profile: state.profile || { user_type: state.userType },
-                history
-            });
+        const aiReply = await llmScorer.generateAgentChatReply({
+            history,
+            currentMessage: "Dựa trên cuộc trò chuyện của chúng ta, bạn có gợi ý gì cho tôi không?"
+        });
 
-            if (aiResult && aiResult.recommendations) {
-                return res.json({
-                    success: true,
-                    message: aiResult.bot_intro || "Đây là kết quả định hướng của bạn:",
-                    recommendations: aiResult.recommendations,
-                    isAiRefined: true
-                });
-            }
-        }
-
-        // Fallback
-        const result = getCareerRecommendations(conversationId);
         res.json({
             success: true,
-            ...result
+            message: aiReply?.bot_reply || "Tôi chưa có đủ thông tin để đưa ra gợi ý cụ thể.",
+            recommendations: [],
+            isAiRefined: true
         });
     } catch (error) {
         console.error('Error getting recommendations:', error);
