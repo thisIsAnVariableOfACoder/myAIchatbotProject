@@ -17,6 +17,63 @@ BẮT BUỘC: Bạn phải luôn trả lời bằng định dạng JSON sau:
   "suggested_questions": ["Câu hỏi gợi ý 1", "Câu hỏi gợi ý 2"]
 }`;
 
+function countReplacementChars(value) {
+  return (String(value || '').match(/\uFFFD/g) || []).length;
+}
+
+function fixCommonMojibake(value) {
+  const text = String(value || '');
+  if (!text) return '';
+
+  // Heuristic: common UTF-8 -> Latin-1 mojibake prefixes.
+  if (!/[ÃÂâ]/.test(text)) return text;
+
+  try {
+    const repaired = Buffer.from(text, 'latin1').toString('utf8');
+    if (!repaired || repaired === text) return text;
+    if (countReplacementChars(repaired) <= countReplacementChars(text)) {
+      return repaired;
+    }
+  } catch {
+    // Ignore and keep original text.
+  }
+
+  return text;
+}
+
+function decodeEscapedText(value) {
+  return String(value || '')
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\');
+}
+
+function normalizeReplyText(value) {
+  let text = String(value || '').replace(/\uFEFF/g, '').trim();
+  if (!text) return '';
+
+  text = decodeEscapedText(text);
+  text = fixCommonMojibake(text);
+
+  if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'"))) {
+    text = text.slice(1, -1).trim();
+  }
+
+  return text.replace(/\u0000/g, '').trim();
+}
+
+function normalizeSuggestedQuestions(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => normalizeReplyText(item))
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
 function isEnabled() {
   return Boolean(GROQ_API_KEY);
 }
@@ -77,9 +134,12 @@ function postJson(url, payload, timeoutMs) {
         Authorization: `Bearer ${GROQ_API_KEY}`
       }
     }, (res) => {
-      let raw = '';
-      res.on('data', (chunk) => { raw += chunk; });
+      const chunks = [];
+      res.on('data', (chunk) => {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      });
       res.on('end', () => {
+        const raw = Buffer.concat(chunks).toString('utf8');
         try {
           if (res.statusCode !== 200) {
             console.error(`[LLM Error] Status: ${res.statusCode}, Body: ${raw}`);
@@ -109,13 +169,21 @@ function postJson(url, payload, timeoutMs) {
 
 function safeParseChatReply(content) {
   if (!content) return null;
-  const text = String(content).trim();
+  const text = String(content).replace(/\uFEFF/g, '').trim();
   const candidates = [];
 
   const tryParseJson = (value) => {
     if (!value) return null;
     try {
-      return JSON.parse(value);
+      const parsed = JSON.parse(value);
+      if (typeof parsed === 'string') {
+        try {
+          return JSON.parse(parsed);
+        } catch {
+          return parsed;
+        }
+      }
+      return parsed;
     } catch {
       return null;
     }
@@ -159,20 +227,21 @@ function safeParseChatReply(content) {
 
   for (const obj of candidates) {
     if (!obj || typeof obj !== 'object') continue;
-    let bot = String(obj.bot_reply || '').trim();
+    let bot = normalizeReplyText(obj.bot_reply);
     if (!bot) continue;
 
     // Nếu model trả về chuỗi template mặc định, bỏ qua đối tượng này
     if (bot.toLowerCase().includes('nội dung phản hồi')) continue;
-    if (!Array.isArray(obj.suggested_questions)) {
-      obj.suggested_questions = [];
-    }
-    return obj;
+    return {
+      bot_reply: bot,
+      suggested_questions: normalizeSuggestedQuestions(obj.suggested_questions)
+    };
   }
 
   // Fallback: dùng raw text như phản hồi để tránh null
-  if (text && !text.toLowerCase().includes('nội dung phản hồi')) {
-    return { bot_reply: text, suggested_questions: [] };
+  const normalizedText = normalizeReplyText(text);
+  if (normalizedText && !normalizedText.toLowerCase().includes('nội dung phản hồi')) {
+    return { bot_reply: normalizedText, suggested_questions: [] };
   }
 
   return null;

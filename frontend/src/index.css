@@ -351,7 +351,8 @@ body::before {
 }
 
 .border-\[\#E8E2D8\],
-.border-\[\#E2D8C8\] {
+.border-\[\#E2D8C8\],
+.border-\[\#EFEAE2\] {
   border-color: var(--c-border) !important;
 }
 
@@ -445,6 +446,11 @@ body::before {
 }
 
 [data-theme="dark"] .border-\[\#E8E2D8\] {
+  border-color: var(--c-border) !important;
+}
+
+[data-theme="dark"] .border-\[\#E2D8C8\],
+[data-theme="dark"] .border-\[\#EFEAE2\] {
   border-color: var(--c-border) !important;
 }
 

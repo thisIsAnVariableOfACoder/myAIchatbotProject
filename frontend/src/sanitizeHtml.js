@@ -91,6 +91,26 @@ const ALLOWED_URI_REGEXP = /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+\.\-]+(?:[^a-
 
 let hooksInitialized = false;
 
+function countReplacementChars(value) {
+  return (String(value || '').match(/\uFFFD/g) || []).length;
+}
+
+function fixCommonMojibake(value) {
+  const text = String(value ?? '');
+  if (!text || !/[ÃÂâ]/.test(text)) return text;
+  try {
+    const bytes = new Uint8Array(Array.from(text, (char) => char.charCodeAt(0) & 0xff));
+    const repaired = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    if (!repaired || repaired === text) return text;
+    if (countReplacementChars(repaired) <= countReplacementChars(text)) {
+      return repaired;
+    }
+  } catch {
+    // Keep original if conversion fails.
+  }
+  return text;
+}
+
 function extractJsonSlice(text) {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
@@ -100,29 +120,39 @@ function extractJsonSlice(text) {
 
 function decodeEscapes(value) {
   const stringValue = String(value ?? '');
+  if (!stringValue) return '';
+
   const normalized = stringValue
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
     .replace(/\r/g, '\\r')
     .replace(/\n/g, '\\n')
     .replace(/\t/g, '\\t');
+
+  let decoded = stringValue;
   try {
-    return JSON.parse(`"${normalized}"`);
+    decoded = JSON.parse(`"${normalized}"`);
   } catch {
-    return stringValue
-      .replace(/\\n/g, '\n')
-      .replace(/\\r/g, '\r')
-      .replace(/\\t/g, '\t')
-      .replace(/\\"/g, '"')
-      .replace(/\\\\/g, '\\');
+    decoded = stringValue;
   }
+
+  decoded = String(decoded)
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\');
+
+  return fixCommonMojibake(decoded).replace(/\u0000/g, '');
 }
 
 function normalizeChatText(input) {
   if (input == null) return '';
   if (typeof input === 'object') {
     if (Object.prototype.hasOwnProperty.call(input, 'bot_reply')) {
-      return String(input?.bot_reply ?? '');
+      return decodeEscapes(String(input?.bot_reply ?? ''));
     }
     try {
       return JSON.stringify(input, null, 2);
@@ -132,15 +162,15 @@ function normalizeChatText(input) {
   }
   const raw = String(input ?? '');
   const trimmed = raw.trim();
-  if (!trimmed) return raw;
-  if (!trimmed.includes('"bot_reply"')) return raw;
+  if (!trimmed) return decodeEscapes(raw);
+  if (!trimmed.includes('"bot_reply"')) return decodeEscapes(raw);
 
   const slice = extractJsonSlice(trimmed);
   if (slice) {
     try {
       const parsed = JSON.parse(slice);
       if (parsed && Object.prototype.hasOwnProperty.call(parsed, 'bot_reply')) {
-        return String(parsed.bot_reply ?? '');
+        return decodeEscapes(String(parsed.bot_reply ?? ''));
       }
     } catch {
       // Ignore JSON parse errors and fallback to regex extraction.
@@ -155,7 +185,7 @@ function normalizeChatText(input) {
     return decodeEscapes(stripped);
   }
 
-  return raw;
+  return decodeEscapes(raw);
 }
 
 function initHooks() {

@@ -76,15 +76,7 @@ export const api = {
     });
   },
   async sendMessage(payload, token) {
-    if (IS_OFFLINE) {
-      return offlineApi.sendMessage({
-        conversation_id: payload.conversation_id,
-        message: payload.message,
-        user_id: payload.user_id,
-        user_type: payload.user_type,
-        request_more: payload.request_more
-      });
-    }
+    // Backend-only: chatbot replies must always come from server APIs.
     return request('/api/chat/message', {
       method: 'POST',
       headers: {
