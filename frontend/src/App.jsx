@@ -10,7 +10,7 @@ import SplashScreen from './components/SplashScreen';
 import { applyTheme, getStoredTheme } from './theme';
 import Explore from './pages/Explore';
 import PolicyModal from './components/PolicyModal';
-import { privacyPolicyContent, termsOfServiceContent, cookiePolicyContent } from './data/policies';
+import { privacyPolicyContent, termsOfServiceContent, cookiePolicyContent } from './data/policies.jsx';
 
 export default function App() {
   // Detect GitHub Pages subdirectory
