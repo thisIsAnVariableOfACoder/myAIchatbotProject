@@ -14,8 +14,6 @@ export default function TopNav() {
   const logoSrc = `${baseUrl}ai-young-guru-logo.png`;
   const fallbackLogo = `${baseUrl}icon.svg`;
   const projectLogo = `${baseUrl}icon.svg`;
-  const fptLogo = `${baseUrl}fpt-university-logo.png`;
-  const aigLogo = `${baseUrl}ai-young-guru.png`;
   const [themeModeState, setThemeModeState] = useState(() => {
     const stored = getStoredTheme().mode;
     return stored === 'dark' ? 'dark' : 'light';
@@ -58,23 +56,7 @@ export default function TopNav() {
               aria-label="AI Young Guru Contest"
               className="inline-flex items-center"
             >
-              <img
-                src={aigLogo}
-                alt="AI Young Guru Contest"
-                className="h-10 w-auto object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
             </a>
-            <img
-              src={fptLogo}
-              alt="FPT University"
-              className="h-10 w-auto object-contain"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
           </div>
         </div>
         <nav className="flex items-center gap-2">
