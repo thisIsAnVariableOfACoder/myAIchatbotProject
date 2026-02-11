@@ -7,11 +7,11 @@ const LIGHT_THEME = {
 };
 
 const DARK_THEME = {
-  primary: '#5B8CFF',
-  accent: '#F2B84B',
+  primary: '#8B5CF6',
+  accent: '#38BDF8',
   bg: '#0B1020',
-  surface: '#11182B',
-  text: '#E6EDFF'
+  surface: '#10182B',
+  text: '#E9EEFF'
 };
 
 function lighten(hex, amount) {

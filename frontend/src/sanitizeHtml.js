@@ -91,6 +91,73 @@ const ALLOWED_URI_REGEXP = /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+\.\-]+(?:[^a-
 
 let hooksInitialized = false;
 
+function extractJsonSlice(text) {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) return null;
+  return text.slice(start, end + 1);
+}
+
+function decodeEscapes(value) {
+  const stringValue = String(value ?? '');
+  const normalized = stringValue
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
+    .replace(/\t/g, '\\t');
+  try {
+    return JSON.parse(`"${normalized}"`);
+  } catch {
+    return stringValue
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t')
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\');
+  }
+}
+
+function normalizeChatText(input) {
+  if (input == null) return '';
+  if (typeof input === 'object') {
+    if (Object.prototype.hasOwnProperty.call(input, 'bot_reply')) {
+      return String(input?.bot_reply ?? '');
+    }
+    try {
+      return JSON.stringify(input, null, 2);
+    } catch {
+      return String(input);
+    }
+  }
+  const raw = String(input ?? '');
+  const trimmed = raw.trim();
+  if (!trimmed) return raw;
+  if (!trimmed.includes('"bot_reply"')) return raw;
+
+  const slice = extractJsonSlice(trimmed);
+  if (slice) {
+    try {
+      const parsed = JSON.parse(slice);
+      if (parsed && Object.prototype.hasOwnProperty.call(parsed, 'bot_reply')) {
+        return String(parsed.bot_reply ?? '');
+      }
+    } catch {
+      // Ignore JSON parse errors and fallback to regex extraction.
+    }
+    const match = slice.match(/"bot_reply"\s*:\s*"([\s\S]*?)"\s*(?:,|\})/);
+    if (match) return decodeEscapes(match[1]);
+  }
+
+  const prefixRegex = /^\s*\{\s*"bot_reply"\s*:\s*"/;
+  if (prefixRegex.test(trimmed)) {
+    const stripped = trimmed.replace(prefixRegex, '').replace(/"\s*\}\s*$/, '');
+    return decodeEscapes(stripped);
+  }
+
+  return raw;
+}
+
 function initHooks() {
   if (hooksInitialized) return;
   DOMPurify.addHook('afterSanitizeAttributes', (node) => {
@@ -119,7 +186,7 @@ export function sanitizeChatHtml(html) {
 }
 
 export function renderChatHtml(input) {
-  const raw = String(input ?? '');
+  const raw = normalizeChatText(input);
   const html = markdown.render(raw);
   return sanitizeChatHtml(html);
 }

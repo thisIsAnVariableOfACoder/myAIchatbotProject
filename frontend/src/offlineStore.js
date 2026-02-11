@@ -2537,7 +2537,8 @@ function saveConversations(conversations) {
 }
 
 function getState(conversationId) {
-  return readJson(`${STATE_PREFIX}${conversationId}`, {
+  const state = readJson(`${STATE_PREFIX}${conversationId}`, {
+    conversationId: conversationId || null,
     index: 0,
     generalIndex: 0,
     focusIndex: 0,
@@ -2545,9 +2546,15 @@ function getState(conversationId) {
     focusTag: null,
     focusType: null,
     lastQuestionTags: [],
+    lastQuestionText: '',
+    fallbackIndex: 0,
     answers: [],
     tags: {}
   });
+  if (!state.conversationId) state.conversationId = conversationId || null;
+  if (typeof state.fallbackIndex !== 'number') state.fallbackIndex = 0;
+  if (typeof state.lastQuestionText !== 'string') state.lastQuestionText = '';
+  return state;
 }
 
 function saveState(conversationId, state) {
@@ -2699,20 +2706,25 @@ function deriveTags(text) {
 
 async function pickNextQuestion(state) {
   const profile = state.userProfile || {};
-  const history = getMessages(state.conversationId || 'guest');
+  const conversationKey = state.conversationId || state.conversation_id || state.conversation || 'guest';
+  const history = getMessages(conversationKey);
   const pastBotMessages = history.filter(m => m.sender === 'bot').map(m => m.message);
   const conversationText = history.map(m => `${m.sender}: ${m.message}`).join('\n');
 
   // Attempt LLM dynamic question ALWAYS
   const llmQ = await generateNextQuestionWithLLM(conversationText, profile, pastBotMessages);
   if (llmQ && llmQ.question) {
-    state.lastQuestionTags = llmQ.intended_tags || [];
-    state.lastQuestionText = llmQ.question;
-    return {
-      id: `ai_${Date.now()}`,
-      text: llmQ.question,
-      tags: llmQ.intended_tags || []
-    };
+    const normalized = normalizeText(llmQ.question);
+    const lastNormalized = normalizeText(state.lastQuestionText || '');
+    if (!normalized || normalized !== lastNormalized) {
+      state.lastQuestionTags = llmQ.intended_tags || [];
+      state.lastQuestionText = llmQ.question;
+      return {
+        id: `ai_${Date.now()}`,
+        text: llmQ.question,
+        tags: llmQ.intended_tags || []
+      };
+    }
   }
 
   // Pool of varied fallbacks to prevent repetition
@@ -2724,14 +2736,25 @@ async function pickNextQuestion(state) {
     "Hãy chia sẻ thêm về một thành tựu mà bạn cảm thấy tự hào nhất để tôi hiểu rõ thế mạnh của bạn nhé."
   ];
 
-  // Pick one that wasn't used recently
-  let fallbackText = fallbacks[0];
-  for (const f of fallbacks) {
-    if (!pastBotMessages.includes(f)) {
-      fallbackText = f;
+  const lastTextNormalized = normalizeText(state.lastQuestionText || '');
+  const startIndex = Number(state.fallbackIndex || 0);
+  let fallbackText = fallbacks[startIndex % fallbacks.length];
+  let pickedIndex = startIndex;
+
+  for (let i = 0; i < fallbacks.length; i += 1) {
+    const candidateIndex = (startIndex + i) % fallbacks.length;
+    const candidate = fallbacks[candidateIndex];
+    const candidateNormalized = normalizeText(candidate);
+    const alreadyUsed = pastBotMessages.includes(candidate);
+    if (!alreadyUsed && candidateNormalized !== lastTextNormalized) {
+      fallbackText = candidate;
+      pickedIndex = candidateIndex;
       break;
     }
   }
+
+  state.fallbackIndex = (pickedIndex + 1) % fallbacks.length;
+  state.lastQuestionText = fallbackText;
 
   return {
     id: "fallback_" + Date.now(),
@@ -3203,6 +3226,7 @@ export const offlineApi = {
     saveMessages(convId, messages);
 
     const state = getState(convId);
+    state.conversationId = convId;
     if (profile) state.userProfile = profile;
 
     if (message) {
