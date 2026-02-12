@@ -9,7 +9,8 @@ export default function ChatWindow({
   showFollowUp = false,
   onFollowUp,
   disabled = false,
-  placeholder = "Nhập tin nhắn..."
+  placeholder = "Nhập tin nhắn...",
+  suggestedQuestions = []
 }) {
   const [input, setInput] = useState('');
   const listRef = useRef(null);
@@ -46,6 +47,21 @@ export default function ChatWindow({
         {messages.map(msg => (
           <MessageBubble key={msg.id} message={msg} />
         ))}
+        {Array.isArray(suggestedQuestions) && suggestedQuestions.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {suggestedQuestions.slice(0, 3).map((q, idx) => (
+              <button
+                key={`${q}-${idx}`}
+                type="button"
+                className="btn-outline rounded-xl px-3 py-1.5 text-xs"
+                onClick={() => onSend(q)}
+                disabled={loading || disabled}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
         {showFollowUp && (
           <div className="flex">
             <button

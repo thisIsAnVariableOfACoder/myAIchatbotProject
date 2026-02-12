@@ -18,12 +18,85 @@ const MIN_CONF_SCORE = 40;
 const MIN_CONF_COUNT = 5;
 const MAX_QUESTIONS = 25;
 
+const DEFAULT_SUGGESTED_QUESTIONS = {
+  high_school: [
+    'Bạn có thể chia sẻ thêm về môn học hoặc hoạt động bạn thích nhất không?',
+    'Bạn muốn mình gợi ý nhóm ngành phù hợp theo điểm mạnh của bạn không?'
+  ],
+  university: [
+    'Bạn muốn mình phân tích nghề phù hợp theo ngành học hiện tại của bạn không?',
+    'Bạn đã có định hướng thực tập hoặc vị trí mong muốn chưa?'
+  ],
+  professional: [
+    'Bạn muốn tối ưu lộ trình thăng tiến hay chuyển nghề trong 1-2 năm tới?',
+    'Bạn muốn mình so sánh 2-3 hướng nghề phù hợp nhất với kinh nghiệm hiện tại không?'
+  ]
+};
+
 function safeParse(value, fallback) {
   try {
     return JSON.parse(value);
   } catch {
     return fallback;
   }
+}
+
+function isUserAskingQuestion(message) {
+  const text = String(message || '').trim().toLowerCase();
+  if (!text) return false;
+  if (text.includes('?')) return true;
+  return /(la gi|là gì|nhu the nao|như thế nào|tai sao|tại sao|bao nhieu|bao lâu|co nen|có nên|lam sao|làm sao|nghe nao|nghề nào|nganh nao|ngành nào|tu van|tư vấn)/i.test(text);
+}
+
+function pickSuggestedQuestions(suggestions, userType) {
+  const normalized = Array.isArray(suggestions)
+    ? suggestions
+      .map((item) => String(item || '').trim())
+      .filter(Boolean)
+    : [];
+
+  const unique = Array.from(new Set(normalized)).slice(0, 3);
+  if (unique.length > 0) return unique;
+
+  const safeUserType = String(userType || 'high_school');
+  const fallbacks = DEFAULT_SUGGESTED_QUESTIONS[safeUserType] || DEFAULT_SUGGESTED_QUESTIONS.high_school;
+  return Array.from(new Set(fallbacks)).slice(0, 2);
+}
+
+function appendSuggestedQuestion(botReply, suggestedQuestion) {
+  const base = String(botReply || '').trim();
+  if (!base) return '';
+  const suggestion = String(suggestedQuestion || '').trim();
+  if (!suggestion) return base;
+  if (/suggested question\s*:/i.test(base)) return base;
+  return `${base}\n\nSuggested question: ${suggestion}`;
+}
+
+function normalizeRecommendationsWithProbability(recommendations) {
+  if (!Array.isArray(recommendations) || recommendations.length === 0) return [];
+
+  const sanitized = recommendations
+    .map((rec) => ({
+      ...rec,
+      career_name: String(rec?.career_name || '').trim(),
+      match_score: Math.max(0, Math.min(100, Number(rec?.match_score || 0))),
+      reasons: Array.isArray(rec?.reasons) ? rec.reasons : []
+    }))
+    .filter((rec) => rec.career_name && rec.match_score > 0)
+    .sort((a, b) => b.match_score - a.match_score)
+    .slice(0, 10);
+
+  if (sanitized.length === 0) return [];
+
+  const maxScore = Math.max(...sanitized.map((r) => r.match_score));
+  const temperature = 12;
+  const weights = sanitized.map((r) => Math.exp((r.match_score - maxScore) / temperature));
+  const sumWeights = weights.reduce((sum, w) => sum + w, 0);
+
+  return sanitized.map((r, idx) => ({
+    ...r,
+    probability: sumWeights > 0 ? (weights[idx] / sumWeights) : (1 / sanitized.length)
+  }));
 }
 
 function buildProfileFromState(profile, state, fallbackEducationLevel) {
@@ -131,6 +204,11 @@ router.post('/message', optionalAuth, async (req, res) => {
     const allAnswers = [...(state.answers || []), ...(state.refinementAnswers || [])];
     const totalAnswers = allAnswers.length;
 
+    const historyForAgent = allAnswers.map((a) => ({
+      q: a?.question || '',
+      a: a?.answer || ''
+    }));
+
     // Determine if we have enough information for AI recommendations
     // Minimum 5 answers for accurate scoring (more data = better results)
     const minAnswersForRecommendation = 5;
@@ -149,7 +227,7 @@ router.post('/message', optionalAuth, async (req, res) => {
         });
 
         if (aiRec && aiRec.recommendations && aiRec.recommendations.length >= 6) {
-          recommendations = aiRec.recommendations;
+          recommendations = normalizeRecommendationsWithProbability(aiRec.recommendations);
           completed = true;
         }
       } catch (error) {
@@ -168,7 +246,7 @@ router.post('/message', optionalAuth, async (req, res) => {
         });
 
         if (aiRec && aiRec.recommendations) {
-          recommendations = aiRec.recommendations;
+          recommendations = normalizeRecommendationsWithProbability(aiRec.recommendations);
           completed = true;
         }
       } catch (error) {
@@ -183,24 +261,29 @@ router.post('/message', optionalAuth, async (req, res) => {
 
     let botReply = '';
     let nextNode = null;
-    const options = [];
+    let suggestedQuestions = [];
+    const userAskedQuestion = isUserAskingQuestion(message);
 
     if (completed && Array.isArray(recommendations) && recommendations.length) {
       const top = recommendations.slice(0, 10);
       const lines = top.map((r, idx) => `${idx + 1}. ${r.career_name} (${r.match_score}/100)`);
       botReply = `Mình đã phân tích xong và tìm ra những nghề nghiệp phù hợp nhất với bạn.\n\nTop gợi ý:\n${lines.join('\n')}\n\nChi tiết phân tích đã được cập nhật trong biểu đồ bên dưới.`;
       nextNode = null;
+      suggestedQuestions = pickSuggestedQuestions([], effectiveUserType || 'high_school');
     } else {
       // Use AI to generate the next question
       if (!llmScorer.isEnabled()) {
         botReply = 'Hiện backend chưa được cấu hình LLM (thiếu GROQ_API_KEY), nên hệ thống không thể tư vấn. Bạn hãy cấu hình GROQ_API_KEY trên Render và redeploy backend để tiếp tục.';
         nextNode = 'ai_chat';
+        const fallbackSuggestions = pickSuggestedQuestions([], effectiveUserType || 'high_school');
         return res.status(503).json({
           success: false,
           error: botReply,
           data: {
-            bot_reply: botReply,
-            options: [],
+            bot_reply: appendSuggestedQuestion(botReply, fallbackSuggestions[0] || ''),
+            options: fallbackSuggestions,
+            suggested_questions: fallbackSuggestions,
+            suggested_question: fallbackSuggestions[0] || '',
             next_node: nextNode,
             conversation_id: convId,
             completed: false
@@ -208,26 +291,44 @@ router.post('/message', optionalAuth, async (req, res) => {
         });
       }
 
-      const aiQuestion = await llmScorer.generateCareerQuestion({
-        userType: effectiveUserType || 'high_school',
-        profile: state.profile || bodyProfile || null,
-        memoryAnswers: allAnswers,
-        intent: { id: 'ai_chat', type: 'free_text' }
-      });
+      if (userAskedQuestion) {
+        const aiReply = await llmScorer.generateAgentChatReply({
+          history: historyForAgent,
+          currentMessage: message
+        });
 
-      if (aiQuestion && aiQuestion.question) {
-        state.lastQuestionId = 'ai_chat';
-        state.lastQuestionText = aiQuestion.question;
-        botReply = aiQuestion.question;
-        nextNode = 'ai_chat';
-        if (Array.isArray(aiQuestion.options)) {
-          aiQuestion.options.forEach((opt) => options.push(opt));
+        if (aiReply && aiReply.bot_reply) {
+          botReply = aiReply.bot_reply;
+          nextNode = 'ai_chat';
+          suggestedQuestions = pickSuggestedQuestions(aiReply.suggested_questions, effectiveUserType || 'high_school');
         }
-      } else {
-        botReply = 'Cảm ơn bạn đã chia sẻ. Mình đang phân tích thông tin để đưa ra gợi ý phù hợp nhất. Vui lòng đợi một chút...';
-        nextNode = 'ai_chat';
+      }
+
+      if (!botReply) {
+        const aiQuestion = await llmScorer.generateCareerQuestion({
+          userType: effectiveUserType || 'high_school',
+          profile: state.profile || bodyProfile || null,
+          memoryAnswers: allAnswers,
+          intent: { id: 'ai_chat', type: 'free_text' }
+        });
+
+        if (aiQuestion && aiQuestion.question) {
+          state.lastQuestionId = 'ai_chat';
+          state.lastQuestionText = aiQuestion.question;
+          botReply = aiQuestion.question;
+          nextNode = 'ai_chat';
+          suggestedQuestions = pickSuggestedQuestions(aiQuestion.options, effectiveUserType || 'high_school');
+        } else {
+          botReply = 'Cảm ơn bạn đã chia sẻ. Mình đang phân tích thông tin để đưa ra gợi ý phù hợp nhất. Vui lòng đợi một chút...';
+          nextNode = 'ai_chat';
+          suggestedQuestions = pickSuggestedQuestions([], effectiveUserType || 'high_school');
+        }
       }
     }
+
+    suggestedQuestions = pickSuggestedQuestions(suggestedQuestions, effectiveUserType || 'high_school');
+    const suggestedQuestion = suggestedQuestions[0] || '';
+    botReply = appendSuggestedQuestion(botReply, suggestedQuestion);
 
     if (userId) {
       await saveMessage(convId, userId, 'bot', botReply, nextNode);
@@ -241,7 +342,9 @@ router.post('/message', optionalAuth, async (req, res) => {
       success: true,
       data: {
         bot_reply: botReply,
-        options,
+        options: suggestedQuestions,
+        suggested_questions: suggestedQuestions,
+        suggested_question: suggestedQuestion,
         next_node: nextNode,
         conversation_id: convId,
         recommendations: recommendations || undefined,
@@ -394,10 +497,11 @@ router.get('/recommendations/:conversationId', requireAuth, (req, res) => {
     `;
     global.db.all(recQuery, [conversationId], (err2, rows) => {
       if (err2) return res.status(500).json({ success: false, error: err2.message });
-      const data = (rows || []).map((r) => ({
+      const mapped = (rows || []).map((r) => ({
         ...r,
         reasons: safeParse(r.reasons, [])
       }));
+      const data = normalizeRecommendationsWithProbability(mapped);
       res.json({ success: true, data });
     });
   });

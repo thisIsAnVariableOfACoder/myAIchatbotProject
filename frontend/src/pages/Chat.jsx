@@ -43,6 +43,7 @@ export default function Chat() {
   const [menuId, setMenuId] = useState(null);
   const [helloSent, setHelloSent] = useState(false);
   const [chatLocked, setChatLocked] = useState(false);
+  const [suggestedQuestions, setSuggestedQuestions] = useState([]);
 
   const bestCareer = recommendations.length > 0
     ? recommendations[0]
@@ -68,20 +69,6 @@ export default function Chat() {
     setHelloSent(hasUserMessage);
   }, [messages]);
 
-  // User login trigger for history
-  useEffect(() => {
-    if (userId && token && !IS_OFFLINE) {
-      console.log('[Chat] User logged in, loading history for:', userId);
-      loadChatHistory();
-    }
-  }, [userId, token]);
-  useEffect(() => {
-    if (userId && token && !IS_OFFLINE) {
-      console.log('[Chat] User logged in, loading history for userId:', userId);
-      loadChatHistory();
-    }
-  }, [userId, token]);
-  
   useEffect(() => {
     let cancelled = false;
     async function loadProfile() {
@@ -202,6 +189,13 @@ export default function Chat() {
       const data = json?.data || {};
       console.log('[FRONTEND DEBUG] sendMessage - response data:', data);
 
+      const nextSuggestedQuestions = Array.isArray(data.suggested_questions)
+        ? data.suggested_questions
+        : Array.isArray(data.options)
+          ? data.options
+          : [];
+      setSuggestedQuestions(nextSuggestedQuestions);
+
       const botMessage = { id: `${Date.now()}-b`, sender: 'bot', text: data.bot_reply };
       const applyBotMessage = () => {
         setMessages(prev => ([...prev, botMessage]));
@@ -233,6 +227,7 @@ export default function Chat() {
       applyBotMessage();
     } catch {
       setLoading(false);
+      setSuggestedQuestions([]);
       setApiError('Không kết nối được máy chủ. Vui lòng cấu hình API backend.');
     }
   }
@@ -274,6 +269,7 @@ export default function Chat() {
       sender: m.sender,
       text: m.message
     })));
+    setSuggestedQuestions([]);
     const recJson = await api.getRecommendations(convId, token);
     const recs = normalizeRecommendations(recJson?.data || []);
     setRecommendations(recs);
@@ -298,6 +294,7 @@ export default function Chat() {
     setConversationId(null);
     setHelloSent(false);
     setCompleted(false);
+    setSuggestedQuestions([]);
     setChatLocked(false); // Reset chat lock for new chat
   }
 
@@ -464,6 +461,7 @@ export default function Chat() {
               messages={messages}
               loading={loading}
               onSend={(text) => sendMessage(text, { profile: profileInitial })}
+              suggestedQuestions={suggestedQuestions}
               showHelloHint={!helloSent}
               showFollowUp={completed && recommendations.length > 0}
               onFollowUp={requestMoreQuestions}
