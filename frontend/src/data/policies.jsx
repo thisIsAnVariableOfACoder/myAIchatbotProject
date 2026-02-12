@@ -451,8 +451,6 @@ export const privacyPolicyContent = (
         <div className="bg-[#f8fafc] dark:bg-[#1e1e30] p-4 rounded-lg border border-[#e2e8f0] dark:border-[#3a3a50]">
           <p className="text-sm">
             <strong className="text-[#1a1a2e] dark:text-[#e8e8e8]">Team LLMagik</strong><br />
-            Email: privacy@llmagik.team<br />
-            Địa chỉ: FPT University, Hoa Lac, Thach That, Hanoi, Vietnam
           </p>
         </div>
       </div>
@@ -752,8 +750,7 @@ export const cookiePolicyContent = (
         
         <div className="bg-[#f8fafc] dark:bg-[#1e1e30] p-4 rounded-lg border border-[#e2e8f0] dark:border-[#3a3a50]">
           <p className="text-sm">
-            <strong className="text-[#1a1a2e] dark:text-[#e8e8e8]">Team LLMagik</strong><br />
-            Email: privacy@llmagik.team
+            <strong className="text-[#1a1a2e] dark:text-[#e8e8e8]">Team LLMagik</strong>
           </p>
         </div>
       </div>
