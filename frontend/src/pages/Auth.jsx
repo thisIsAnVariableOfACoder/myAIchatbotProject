@@ -2,10 +2,13 @@
 import { useAuth } from '../context/AuthContext';
 import { IS_OFFLINE } from '../config';
 import { api } from '../api';
+import { useNavigate } from 'react-router-dom';
 
 export default function Auth() {
   const { login, user } = useAuth();
+  const navigate = useNavigate();
   const [mode, setMode] = useState('login');
+  const [identifier, setIdentifier] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [userType, setUserType] = useState('high_school');
@@ -20,20 +23,38 @@ export default function Auth() {
     setSubmitting(true);
 
     try {
-      const body = mode === 'login'
-        ? { email: username, password }
-        : { email: username, password, user_type: userType };
+      let body;
+      
+      if (mode === 'login') {
+        // Login: use identifier (email or username) for email field
+        body = { 
+          email: identifier, 
+          username: identifier,
+          password 
+        };
+      } else {
+        // Register: use both identifier and username
+        body = { 
+          email: identifier, 
+          username: username || identifier,
+          password, 
+          user_type: userType 
+        };
+      }
 
       const json = mode === 'login'
         ? await api.login(body)
         : await api.register(body);
 
       if (!json?.success) {
-        setError(json?.error || 'Đăng nhập thất bại');
+        setError(json?.error || (mode === 'login' ? 'Đăng nhập thất bại' : 'Đăng ký thất bại'));
         return;
       }
 
       login(json.data);
+      
+      // Redirect to chat after successful login
+      navigate('/');
     } catch {
       setError('Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {
@@ -43,9 +64,15 @@ export default function Auth() {
 
   if (user) {
     return (
-      <div className="max-w-md mx-auto card card-elevated p-6">
+      <div className="max-w-md mx-auto card card-elevated p-6 text-center">
         <div className="text-lg font-semibold">Bạn đã đăng nhập</div>
         <div className="text-sm text-[#5B5B57] mt-2">{user.username || user.email}</div>
+        <button 
+          className="btn-primary w-full rounded-lg py-2 mt-4"
+          onClick={() => navigate('/')}
+        >
+          Quay lại Chat
+        </button>
       </div>
     );
   }
@@ -63,17 +90,48 @@ export default function Auth() {
       )}
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label className="text-xs text-[#5B5B57]" htmlFor="username">Username</label>
-          <input id="username" className="input-elevated mt-1 w-full px-3 py-2 text-sm" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <label className="text-xs text-[#5B5B57]" htmlFor="identifier">
+            {mode === 'login' ? 'Email hoặc Username' : 'Email'}
+          </label>
+          <input 
+            id="identifier" 
+            className="input-elevated mt-1 w-full px-3 py-2 text-sm" 
+            value={identifier} 
+            onChange={(e) => setIdentifier(e.target.value)} 
+            placeholder={mode === 'login' ? 'Nhập email hoặc username' : 'Nhập email'}
+          />
         </div>
+        {mode === 'register' && (
+          <div>
+            <label className="text-xs text-[#5B5B57]" htmlFor="username">Username (tùy chọn)</label>
+            <input 
+              id="username" 
+              className="input-elevated mt-1 w-full px-3 py-2 text-sm" 
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Để trống sẽ dùng email làm username"
+            />
+          </div>
+        )}
         <div>
           <label className="text-xs text-[#5B5B57]" htmlFor="password">Mật khẩu</label>
-          <input id="password" type="password" className="input-elevated mt-1 w-full px-3 py-2 text-sm" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input 
+            id="password" 
+            type="password" 
+            className="input-elevated mt-1 w-full px-3 py-2 text-sm" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+          />
         </div>
         {mode === 'register' && (
           <div>
             <label className="text-xs text-[#5B5B57]" htmlFor="userType">Loại tài khoản</label>
-            <select id="userType" className="input-elevated mt-1 w-full px-3 py-2 text-sm" value={userType} onChange={(e) => setUserType(e.target.value)}>
+            <select 
+              id="userType" 
+              className="input-elevated mt-1 w-full px-3 py-2 text-sm" 
+              value={userType} 
+              onChange={(e) => setUserType(e.target.value)}
+            >
               <option value="high_school">Học sinh</option>
               <option value="university">Sinh viên</option>
               <option value="professional">Người đi làm</option>
