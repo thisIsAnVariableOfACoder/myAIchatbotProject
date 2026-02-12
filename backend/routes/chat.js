@@ -67,7 +67,7 @@ function isUserAskingQuestion(message) {
   const text = String(message || '').trim().toLowerCase();
   if (!text) return false;
   if (text.includes('?')) return true;
-  return /(la gi|là gì|nhu the nao|như thế nào|tai sao|tại sao|bao nhieu|bao lâu|co nen|có nên|lam sao|làm sao|nghe nao|nghề nào|nganh nao|ngành nào|tu van|tư vấn)/i.test(text);
+  return /(la gi|là gì|nhu the nao|như thế nào|tai sao|tại sao|bao nhieu|bao lâu|co nen|có nên|lam sao|làm sao|nghe nao|nghề nào|nganh nao|ngành nào|tu van|tư vấn|cho minh biet|cho mình biết|muon biet|muốn biết|giai thich|giải thích)/i.test(text);
 }
 
 function normalizeSuggestionText(value) {
@@ -272,7 +272,11 @@ router.post('/message', optionalAuth, async (req, res) => {
       state.profile = bodyProfile;
     }
 
-    if (message) {
+    const userAskedQuestion = isUserAskingQuestion(message);
+
+    // Chỉ ghi nhận vào bộ tính điểm khi user đang TRẢ LỜI câu hỏi của AI.
+    // Nếu user đang HỎI AI thì không cộng vào answers dùng để tính xác suất nghề nghiệp.
+    if (message && !userAskedQuestion) {
       const questionId = state.lastQuestionId || current_node || 'ai_chat';
       recordAnswer(convId, questionId, message, state.lastQuestionText);
     }
@@ -306,7 +310,7 @@ router.post('/message', optionalAuth, async (req, res) => {
     // Use AI to generate recommendations when we have enough information
     const canConcludeByRefinement = !state.refinementMode || refinementQuestionCount >= MIN_REFINEMENT_QUESTIONS;
 
-    if (totalAnswers >= minAnswersForRecommendation && totalAnswers <= maxQuestions && !request_more && canConcludeByRefinement) {
+    if (!userAskedQuestion && totalAnswers >= minAnswersForRecommendation && totalAnswers <= maxQuestions && !request_more && canConcludeByRefinement) {
       try {
         const aiRec = await llmScorer.generateCareerRecommendations({
           userType: effectiveUserType || 'high_school',
@@ -325,7 +329,7 @@ router.post('/message', optionalAuth, async (req, res) => {
     }
 
     // Force completion if we've asked too many questions
-    if (!completed && totalAnswers >= maxQuestions && canConcludeByRefinement) {
+    if (!userAskedQuestion && !completed && totalAnswers >= maxQuestions && canConcludeByRefinement) {
       try {
         const aiRec = await llmScorer.generateCareerRecommendations({
           userType: effectiveUserType || 'high_school',
@@ -351,7 +355,6 @@ router.post('/message', optionalAuth, async (req, res) => {
     let nextNode = null;
     let suggestedQuestions = [];
     let suggestionMode = 'question';
-    const userAskedQuestion = isUserAskingQuestion(message);
 
     if (completed && Array.isArray(recommendations) && recommendations.length) {
       const top = recommendations.slice(0, 10);
@@ -383,18 +386,57 @@ router.post('/message', optionalAuth, async (req, res) => {
       }
 
       if (userAskedQuestion) {
-        const aiReply = await llmScorer.generateAgentChatReply({
+        const consultationReply = await llmScorer.generateCareerConsultationReply({
+          history: historyForAgent,
+          currentMessage: message,
+          userType: effectiveUserType || 'high_school',
+          profile: state.profile || bodyProfile || null,
+          careerScores: Array.isArray(recommendations)
+            ? Object.fromEntries(recommendations.map((r) => [r.career_name, Number(r.match_score || 0)]))
+            : {}
+        });
+
+        const aiReply = consultationReply || await llmScorer.generateAgentChatReply({
           history: historyForAgent,
           currentMessage: message
         });
 
         if (aiReply && aiReply.bot_reply) {
-          botReply = aiReply.bot_reply;
-          nextNode = 'ai_answer';
-          state.lastQuestionId = 'ai_answer';
-          state.lastQuestionText = aiReply.bot_reply;
-          suggestionMode = 'question';
-          suggestedQuestions = pickSuggestedQuestions(aiReply.suggested_questions, effectiveUserType || 'high_school', suggestionMode);
+          // Nếu user hỏi: AI trả lời xong PHẢI hỏi tiếp một câu mới.
+          const aiQuestion = await llmScorer.generateCareerQuestion({
+            userType: effectiveUserType || 'high_school',
+            profile: state.profile || bodyProfile || null,
+            memoryAnswers: allAnswers,
+            intent: { id: 'ai_chat', type: 'free_text' }
+          });
+
+          const questionPrefix = state.refinementMode ? 'ai_refine_' : 'ai_question_';
+          const nextQuestionIndex = (state.refinementMode ? refinementQuestionCount : aiQuestionCount) + 1;
+
+          if (aiQuestion && aiQuestion.question) {
+            state.lastQuestionId = `${questionPrefix}${nextQuestionIndex}`;
+            state.lastQuestionText = aiQuestion.question;
+            botReply = `${aiReply.bot_reply}\n\n${aiQuestion.question}`;
+            nextNode = 'ai_chat';
+            suggestionMode = 'answer';
+            suggestedQuestions = pickSuggestedQuestions(aiQuestion.options, effectiveUserType || 'high_school', suggestionMode);
+            if (state.refinementMode) {
+              state.refinementQuestionsAsked = Number(state.refinementQuestionsAsked || 0) + 1;
+            }
+          } else {
+            // fallback: trả lời được nhưng chưa tạo được câu hỏi tiếp
+            botReply = aiReply.bot_reply;
+            nextNode = 'ai_answer';
+            state.lastQuestionId = 'ai_answer';
+            state.lastQuestionText = aiReply.bot_reply;
+            suggestionMode = 'question';
+            const suggestionPool = Array.isArray(aiReply.suggested_questions)
+              ? aiReply.suggested_questions
+              : Array.isArray(aiReply.options)
+                ? aiReply.options
+                : [];
+            suggestedQuestions = pickSuggestedQuestions(suggestionPool, effectiveUserType || 'high_school', suggestionMode);
+          }
         }
       }
 
