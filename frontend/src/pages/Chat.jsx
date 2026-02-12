@@ -68,9 +68,19 @@ export default function Chat() {
     setHelloSent(hasUserMessage);
   }, [messages]);
 
+  // User login trigger for history
   useEffect(() => {
-    let cancelled = false;
-    async function loadProfile() {
+    if (userId && token && !IS_OFFLINE) {
+      console.log('[Chat] User logged in, loading history for:', userId);
+      loadChatHistory();
+    }
+  }, [userId, token]);
+  useEffect(() => {
+    if (userId && token && !IS_OFFLINE) {
+      console.log('[Chat] User logged in, loading history for userId:', userId);
+      loadChatHistory();
+    }
+  }, [userId, token]);
       if (!IS_OFFLINE && (!token || !userId)) {
         setProfileInitial(null);
         return;
