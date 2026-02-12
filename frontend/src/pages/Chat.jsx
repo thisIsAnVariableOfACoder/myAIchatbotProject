@@ -197,7 +197,12 @@ export default function Chat() {
           ? data.options
           : [];
       setSuggestedQuestions(nextSuggestedQuestions);
-      setSuggestionType(data.next_node === 'ai_chat' ? 'answer' : 'question');
+
+      const backendSuggestionType = String(data.suggestion_type || '').toLowerCase();
+      const resolvedSuggestionType = backendSuggestionType === 'answer' || backendSuggestionType === 'question'
+        ? backendSuggestionType
+        : (data.next_node === 'ai_chat' ? 'answer' : 'question');
+      setSuggestionType(resolvedSuggestionType);
 
       const botMessage = { id: `${Date.now()}-b`, sender: 'bot', text: data.bot_reply };
       const applyBotMessage = () => {

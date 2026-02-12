@@ -40,6 +40,21 @@ const DEFAULT_SUGGESTED_ANSWERS = {
   professional: ['Có', 'Có thể', 'Không']
 };
 
+const QUESTION_TOKENS = [
+  '?',
+  'bạn có',
+  'bạn muốn',
+  'bạn thích',
+  'vì sao',
+  'tại sao',
+  'như thế nào',
+  'làm sao',
+  'khi nào',
+  'bao nhiêu',
+  'nên',
+  'hãy'
+];
+
 function safeParse(value, fallback) {
   try {
     return JSON.parse(value);
@@ -55,14 +70,61 @@ function isUserAskingQuestion(message) {
   return /(la gi|là gì|nhu the nao|như thế nào|tai sao|tại sao|bao nhieu|bao lâu|co nen|có nên|lam sao|làm sao|nghe nao|nghề nào|nganh nao|ngành nào|tu van|tư vấn)/i.test(text);
 }
 
+function normalizeSuggestionText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function isQuestionSuggestion(text) {
+  const value = normalizeSuggestionText(text).toLowerCase();
+  if (!value) return false;
+  return QUESTION_TOKENS.some((token) => value.includes(token));
+}
+
+function isAnswerSuggestion(text) {
+  const value = normalizeSuggestionText(text);
+  if (!value) return false;
+  if (isQuestionSuggestion(value)) return false;
+
+  const simpleYesNo = /^(có|không|có thể|chưa chắc|đúng|sai)$/i;
+  if (simpleYesNo.test(value)) return true;
+
+  const wordCount = value.split(' ').filter(Boolean).length;
+  return wordCount <= 6;
+}
+
+function stripInlineSuggestionText(text) {
+  const lines = String(text || '')
+    .replace(/\r\n/g, '\n')
+    .split('\n');
+
+  const filtered = lines.filter((line) => {
+    const value = String(line || '').trim();
+    if (!value) return true;
+    return !/(suggested question|suggested answer|gợi ý câu hỏi|goi y cau hoi|gợi ý câu trả lời|goi y cau tra loi)\s*:/i.test(value);
+  });
+
+  return filtered.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function isBotAskingQuestion(text) {
+  const value = normalizeSuggestionText(text).toLowerCase();
+  if (!value) return false;
+  if (value.includes('?')) return true;
+  return /(bạn có|bạn muốn|bạn thích|hãy chia sẻ|hãy cho biết|vì sao|tại sao|như thế nào|bao nhiêu|khi nào|điều gì)/i.test(value);
+}
+
 function pickSuggestedQuestions(suggestions, userType, mode = 'question') {
   const normalized = Array.isArray(suggestions)
     ? suggestions
-      .map((item) => String(item || '').trim())
+      .map((item) => normalizeSuggestionText(item))
       .filter(Boolean)
     : [];
 
-  const unique = Array.from(new Set(normalized)).slice(0, 3);
+  const filtered = mode === 'answer'
+    ? normalized.filter((item) => isAnswerSuggestion(item))
+    : normalized.filter((item) => isQuestionSuggestion(item));
+
+  const unique = Array.from(new Set(filtered)).slice(0, 3);
   if (unique.length > 0) return unique;
 
   const safeUserType = String(userType || 'high_school');
@@ -312,6 +374,7 @@ router.post('/message', optionalAuth, async (req, res) => {
             options: fallbackSuggestions,
             suggested_questions: fallbackSuggestions,
             suggested_question: fallbackSuggestions[0] || '',
+            suggestion_type: 'question',
             next_node: nextNode,
             conversation_id: convId,
             completed: false
@@ -364,6 +427,8 @@ router.post('/message', optionalAuth, async (req, res) => {
       }
     }
 
+    botReply = stripInlineSuggestionText(botReply);
+    suggestionMode = isBotAskingQuestion(botReply) ? 'answer' : 'question';
     suggestedQuestions = pickSuggestedQuestions(suggestedQuestions, effectiveUserType || 'high_school', suggestionMode);
     const suggestedQuestion = suggestedQuestions[0] || '';
 
@@ -382,6 +447,7 @@ router.post('/message', optionalAuth, async (req, res) => {
         options: suggestedQuestions,
         suggested_questions: suggestedQuestions,
         suggested_question: suggestedQuestion,
+        suggestion_type: suggestionMode,
         next_node: nextNode,
         conversation_id: convId,
         recommendations: recommendations || undefined,
