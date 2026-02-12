@@ -44,6 +44,7 @@ export default function Chat() {
   const [helloSent, setHelloSent] = useState(false);
   const [chatLocked, setChatLocked] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState([]);
+  const [suggestionType, setSuggestionType] = useState('question');
 
   const bestCareer = recommendations.length > 0
     ? recommendations[0]
@@ -113,6 +114,7 @@ export default function Chat() {
             text: m.message
           })));
           setCurrentNode(null);
+          setSuggestionType('question');
           const recJson = await api.getRecommendations(firstConv, token);
           const recs = normalizeRecommendations(recJson?.data || []);
           setRecommendations(recs);
@@ -195,6 +197,7 @@ export default function Chat() {
           ? data.options
           : [];
       setSuggestedQuestions(nextSuggestedQuestions);
+      setSuggestionType(data.next_node === 'ai_chat' ? 'answer' : 'question');
 
       const botMessage = { id: `${Date.now()}-b`, sender: 'bot', text: data.bot_reply };
       const applyBotMessage = () => {
@@ -228,6 +231,7 @@ export default function Chat() {
     } catch {
       setLoading(false);
       setSuggestedQuestions([]);
+      setSuggestionType('question');
       setApiError('Không kết nối được máy chủ. Vui lòng cấu hình API backend.');
     }
   }
@@ -270,6 +274,7 @@ export default function Chat() {
       text: m.message
     })));
     setSuggestedQuestions([]);
+    setSuggestionType('question');
     const recJson = await api.getRecommendations(convId, token);
     const recs = normalizeRecommendations(recJson?.data || []);
     setRecommendations(recs);
@@ -295,6 +300,7 @@ export default function Chat() {
     setHelloSent(false);
     setCompleted(false);
     setSuggestedQuestions([]);
+    setSuggestionType('question');
     setChatLocked(false); // Reset chat lock for new chat
   }
 
@@ -462,6 +468,7 @@ export default function Chat() {
               loading={loading}
               onSend={(text) => sendMessage(text, { profile: profileInitial })}
               suggestedQuestions={suggestedQuestions}
+              suggestionType={suggestionType}
               showHelloHint={!helloSent}
               showFollowUp={completed && recommendations.length > 0}
               onFollowUp={requestMoreQuestions}

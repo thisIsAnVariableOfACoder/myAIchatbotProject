@@ -10,7 +10,8 @@ export default function ChatWindow({
   onFollowUp,
   disabled = false,
   placeholder = "Nhập tin nhắn...",
-  suggestedQuestions = []
+  suggestedQuestions = [],
+  suggestionType = 'question'
 }) {
   const [input, setInput] = useState('');
   const listRef = useRef(null);
@@ -49,6 +50,9 @@ export default function ChatWindow({
         ))}
         {Array.isArray(suggestedQuestions) && suggestedQuestions.length > 0 && (
           <div className="flex flex-wrap gap-2">
+            <div className="w-full text-[11px] text-[#7A6D5B]">
+              {suggestionType === 'answer' ? 'Gợi ý câu trả lời:' : 'Gợi ý câu hỏi tiếp theo:'}
+            </div>
             {suggestedQuestions.slice(0, 3).map((q, idx) => (
               <button
                 key={`${q}-${idx}`}
