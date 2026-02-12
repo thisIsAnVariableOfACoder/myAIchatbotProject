@@ -3,12 +3,14 @@
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email VARCHAR(255) UNIQUE NOT NULL,
+  username VARCHAR(100) UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   user_type VARCHAR(50) NOT NULL, -- 'high_school', 'university', 'professional'
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   last_login DATETIME
 );
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 
 CREATE TABLE IF NOT EXISTS profiles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,32 +101,4 @@ CREATE TABLE IF NOT EXISTS analytics (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
-CREATE INDEX IF NOT EXISTS idx_analytics_event ON analytics(event_type, created_at);
-
-CREATE TABLE IF NOT EXISTS careers (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name VARCHAR(255) NOT NULL,
-  category VARCHAR(100),
-  required_skills TEXT, -- JSON array
-  salary_range VARCHAR(100),
-  job_outlook VARCHAR(50),
-  description TEXT,
-  question_count INTEGER DEFAULT 0, -- Số lần được hỏi về nghề này
-  answer_count INTEGER DEFAULT 0, -- Số lần xuất hiện trong câu trả lời
-  mention_frequency REAL DEFAULT 0.0, -- Tần suất nhắc đến (normalized)
-  weighted_score REAL DEFAULT 0.0 -- Điểm trọng số tích lũy
-);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_careers_name ON careers(name);
-CREATE INDEX IF NOT EXISTS idx_careers_category ON careers(category);
-CREATE INDEX IF NOT EXISTS idx_careers_frequency ON careers(mention_frequency);
-
-CREATE TABLE IF NOT EXISTS learning_paths (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  career_id INTEGER NOT NULL,
-  step_order INTEGER NOT NULL,
-  title VARCHAR(255) NOT NULL,
-  description TEXT,
-  duration_months INTEGER,
-  resources TEXT, -- JSON array of links
-  FOREIGN KEY (career_id) REFERENCES careers(id)
-);
+CREATE INDEX IF NOT EXISTS idx_analytics_user ON analytics(user_id);

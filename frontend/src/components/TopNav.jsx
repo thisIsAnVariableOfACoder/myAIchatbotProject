@@ -96,9 +96,6 @@ export default function TopNav() {
               to="/auth" 
               className="px-4 py-2 rounded-lg text-sm border border-[var(--c-primary)] text-[var(--c-primary)] font-medium hover:bg-[var(--c-primary)] hover:text-white transition flex items-center gap-2"
             >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-                <path fill="currentColor" d="M12 4a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V5a1 1 0 0 1 1-1zm6.36 2.64a1 1 0 0 1 0 1.41l-1.42 1.42a1 1 0 0 1-1.41-1.41l1.41-1.42a1 1 0 0 1 1.42 0zM20 11a1 1 0 1 1 0 2h-2a1 1 0 1 1 0-2h2zM6.64 6.64a1 1 0 0 1 1.41 0l1.42 1.42a1 1 0 1 1-1.41 1.41L6.64 8.05a1 1 0 0 1 0-1.41z" />
-              </svg>
               Đăng nhập / Tạo tài khoản
             </NavLink>
           )}

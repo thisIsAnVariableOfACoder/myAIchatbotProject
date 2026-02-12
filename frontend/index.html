@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Career Guidance Chatbot</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <script>
-      (function(l) {
-        if (l.search && l.search[1] === '/') {
-          var decoded = l.search.slice(1).split('&').map(function(s) {
-            return s.replace(/~and~/g, '&');
-          }).join('?');
-          window.history.replaceState(null, null, l.pathname.replace(/\/$/, '') + decoded + l.hash);
-        }
-      }(window.location));
-    </script>
     <script src="./runtime-config.js"></script>
+    <!-- Fix trailing slash for GitHub Pages - redirect to URL with trailing slash -->
+    <script>
+      (function() {
+        var path = window.location.pathname;
+        // If path doesn't end with / and has no extension, redirect to add trailing slash
+        if (!path.endsWith('/') && !path.includes('.') && !path.includes('?')) {
+          window.location.replace(path + '/' + window.location.search + window.location.hash);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

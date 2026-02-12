@@ -124,8 +124,8 @@ async function ensureAdminAccount(db) {
   if (!admin) {
     await new Promise((resolve, reject) => {
       db.run(
-        'INSERT INTO users (email, password_hash, user_type) VALUES (?, ?, ?)',
-        [ADMIN_EMAIL, passwordHash, 'admin'],
+        'INSERT INTO users (email, username, password_hash, user_type) VALUES (?, ?, ?, ?)',
+        [ADMIN_EMAIL, 'admin', passwordHash, 'admin'],
         (err) => (err ? reject(err) : resolve())
       );
     });
@@ -134,8 +134,8 @@ async function ensureAdminAccount(db) {
 
   await new Promise((resolve, reject) => {
     db.run(
-      'UPDATE users SET password_hash = ?, user_type = ? WHERE email = ?',
-      [passwordHash, 'admin', ADMIN_EMAIL],
+      'UPDATE users SET password_hash = ?, user_type = ?, username = ? WHERE email = ?',
+      [passwordHash, 'admin', 'admin', ADMIN_EMAIL],
       (err) => (err ? reject(err) : resolve())
     );
   });
