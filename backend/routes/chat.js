@@ -14,9 +14,10 @@ const llmScorer = require('../services/llmScorer');
 const { isEnabled: isLlmEnabled } = llmScorer;
 
 const MEMORY_MESSAGES = [];
-const MIN_CONF_SCORE = 40;
+const MIN_CONF_SCORE = 1;
 const MIN_CONF_COUNT = 5;
-const MAX_QUESTIONS = 25;
+const MAX_QUESTIONS = 50;
+const MIN_REFINEMENT_QUESTIONS = 5;
 
 const DEFAULT_SUGGESTED_QUESTIONS = {
   high_school: [
@@ -31,6 +32,12 @@ const DEFAULT_SUGGESTED_QUESTIONS = {
     'Bạn muốn tối ưu lộ trình thăng tiến hay chuyển nghề trong 1-2 năm tới?',
     'Bạn muốn mình so sánh 2-3 hướng nghề phù hợp nhất với kinh nghiệm hiện tại không?'
   ]
+};
+
+const DEFAULT_SUGGESTED_ANSWERS = {
+  high_school: ['Có', 'Có thể', 'Không'],
+  university: ['Có', 'Có thể', 'Không'],
+  professional: ['Có', 'Có thể', 'Không']
 };
 
 function safeParse(value, fallback) {
@@ -48,7 +55,7 @@ function isUserAskingQuestion(message) {
   return /(la gi|là gì|nhu the nao|như thế nào|tai sao|tại sao|bao nhieu|bao lâu|co nen|có nên|lam sao|làm sao|nghe nao|nghề nào|nganh nao|ngành nào|tu van|tư vấn)/i.test(text);
 }
 
-function pickSuggestedQuestions(suggestions, userType) {
+function pickSuggestedQuestions(suggestions, userType, mode = 'question') {
   const normalized = Array.isArray(suggestions)
     ? suggestions
       .map((item) => String(item || '').trim())
@@ -59,17 +66,9 @@ function pickSuggestedQuestions(suggestions, userType) {
   if (unique.length > 0) return unique;
 
   const safeUserType = String(userType || 'high_school');
-  const fallbacks = DEFAULT_SUGGESTED_QUESTIONS[safeUserType] || DEFAULT_SUGGESTED_QUESTIONS.high_school;
+  const fallbackMap = mode === 'answer' ? DEFAULT_SUGGESTED_ANSWERS : DEFAULT_SUGGESTED_QUESTIONS;
+  const fallbacks = fallbackMap[safeUserType] || fallbackMap.high_school;
   return Array.from(new Set(fallbacks)).slice(0, 2);
-}
-
-function appendSuggestedQuestion(botReply, suggestedQuestion) {
-  const base = String(botReply || '').trim();
-  if (!base) return '';
-  const suggestion = String(suggestedQuestion || '').trim();
-  if (!suggestion) return base;
-  if (/suggested question\s*:/i.test(base)) return base;
-  return `${base}\n\nSuggested question: ${suggestion}`;
 }
 
 function normalizeRecommendationsWithProbability(recommendations) {
@@ -97,6 +96,22 @@ function normalizeRecommendationsWithProbability(recommendations) {
     ...r,
     probability: sumWeights > 0 ? (weights[idx] / sumWeights) : (1 / sanitized.length)
   }));
+}
+
+function getQuestionCount(state) {
+  const all = [...(state?.answers || []), ...(state?.refinementAnswers || [])];
+  return all.filter((a) => String(a?.questionId || '').startsWith('ai_question_')).length;
+}
+
+function getRefinementQuestionCount(state) {
+  const all = [...(state?.answers || []), ...(state?.refinementAnswers || [])];
+  return all.filter((a) => String(a?.questionId || '').startsWith('ai_refine_')).length;
+}
+
+function isAffirmativeRefinementRequest(message) {
+  const text = String(message || '').trim().toLowerCase();
+  if (!text) return false;
+  return /(chua hai long|chưa hài lòng|hoi tiep|hỏi thêm|hoi them|muon them|muốn thêm|them cau hoi|thêm câu hỏi|tiep tuc|tiếp tục)/i.test(text);
 }
 
 function buildProfileFromState(profile, state, fallbackEducationLevel) {
@@ -200,9 +215,18 @@ router.post('/message', optionalAuth, async (req, res) => {
       recordAnswer(convId, questionId, message, state.lastQuestionText);
     }
 
+    state.refinementMode = Boolean(state.refinementMode) || Boolean(request_more);
+    state.refinementQuestionsAsked = Number(state.refinementQuestionsAsked || 0);
+
+    if (request_more || isAffirmativeRefinementRequest(message)) {
+      state.refinementMode = true;
+    }
+
     // Combine all answers for AI analysis
     const allAnswers = [...(state.answers || []), ...(state.refinementAnswers || [])];
     const totalAnswers = allAnswers.length;
+    const aiQuestionCount = getQuestionCount(state);
+    const refinementQuestionCount = getRefinementQuestionCount(state);
 
     const historyForAgent = allAnswers.map((a) => ({
       q: a?.question || '',
@@ -218,7 +242,9 @@ router.post('/message', optionalAuth, async (req, res) => {
     let completed = false;
 
     // Use AI to generate recommendations when we have enough information
-    if (totalAnswers >= minAnswersForRecommendation && totalAnswers <= maxQuestions && !request_more) {
+    const canConcludeByRefinement = !state.refinementMode || refinementQuestionCount >= MIN_REFINEMENT_QUESTIONS;
+
+    if (totalAnswers >= minAnswersForRecommendation && totalAnswers <= maxQuestions && !request_more && canConcludeByRefinement) {
       try {
         const aiRec = await llmScorer.generateCareerRecommendations({
           userType: effectiveUserType || 'high_school',
@@ -237,7 +263,7 @@ router.post('/message', optionalAuth, async (req, res) => {
     }
 
     // Force completion if we've asked too many questions
-    if (!completed && totalAnswers >= maxQuestions) {
+    if (!completed && totalAnswers >= maxQuestions && canConcludeByRefinement) {
       try {
         const aiRec = await llmScorer.generateCareerRecommendations({
           userType: effectiveUserType || 'high_school',
@@ -254,7 +280,7 @@ router.post('/message', optionalAuth, async (req, res) => {
       }
     }
 
-    if (request_more) {
+    if (state.refinementMode) {
       completed = false;
       recommendations = null;
     }
@@ -262,6 +288,7 @@ router.post('/message', optionalAuth, async (req, res) => {
     let botReply = '';
     let nextNode = null;
     let suggestedQuestions = [];
+    let suggestionMode = 'question';
     const userAskedQuestion = isUserAskingQuestion(message);
 
     if (completed && Array.isArray(recommendations) && recommendations.length) {
@@ -269,18 +296,19 @@ router.post('/message', optionalAuth, async (req, res) => {
       const lines = top.map((r, idx) => `${idx + 1}. ${r.career_name} (${r.match_score}/100)`);
       botReply = `Mình đã phân tích xong và tìm ra những nghề nghiệp phù hợp nhất với bạn.\n\nTop gợi ý:\n${lines.join('\n')}\n\nChi tiết phân tích đã được cập nhật trong biểu đồ bên dưới.`;
       nextNode = null;
-      suggestedQuestions = pickSuggestedQuestions([], effectiveUserType || 'high_school');
+      suggestionMode = 'question';
+      suggestedQuestions = pickSuggestedQuestions([], effectiveUserType || 'high_school', suggestionMode);
     } else {
       // Use AI to generate the next question
       if (!llmScorer.isEnabled()) {
         botReply = 'Hiện backend chưa được cấu hình LLM (thiếu GROQ_API_KEY), nên hệ thống không thể tư vấn. Bạn hãy cấu hình GROQ_API_KEY trên Render và redeploy backend để tiếp tục.';
         nextNode = 'ai_chat';
-        const fallbackSuggestions = pickSuggestedQuestions([], effectiveUserType || 'high_school');
+        const fallbackSuggestions = pickSuggestedQuestions([], effectiveUserType || 'high_school', 'question');
         return res.status(503).json({
           success: false,
           error: botReply,
           data: {
-            bot_reply: appendSuggestedQuestion(botReply, fallbackSuggestions[0] || ''),
+            bot_reply: botReply,
             options: fallbackSuggestions,
             suggested_questions: fallbackSuggestions,
             suggested_question: fallbackSuggestions[0] || '',
@@ -299,8 +327,11 @@ router.post('/message', optionalAuth, async (req, res) => {
 
         if (aiReply && aiReply.bot_reply) {
           botReply = aiReply.bot_reply;
-          nextNode = 'ai_chat';
-          suggestedQuestions = pickSuggestedQuestions(aiReply.suggested_questions, effectiveUserType || 'high_school');
+          nextNode = 'ai_answer';
+          state.lastQuestionId = 'ai_answer';
+          state.lastQuestionText = aiReply.bot_reply;
+          suggestionMode = 'question';
+          suggestedQuestions = pickSuggestedQuestions(aiReply.suggested_questions, effectiveUserType || 'high_school', suggestionMode);
         }
       }
 
@@ -313,22 +344,28 @@ router.post('/message', optionalAuth, async (req, res) => {
         });
 
         if (aiQuestion && aiQuestion.question) {
-          state.lastQuestionId = 'ai_chat';
+          const questionPrefix = state.refinementMode ? 'ai_refine_' : 'ai_question_';
+          const nextQuestionIndex = (state.refinementMode ? refinementQuestionCount : aiQuestionCount) + 1;
+          state.lastQuestionId = `${questionPrefix}${nextQuestionIndex}`;
           state.lastQuestionText = aiQuestion.question;
           botReply = aiQuestion.question;
           nextNode = 'ai_chat';
-          suggestedQuestions = pickSuggestedQuestions(aiQuestion.options, effectiveUserType || 'high_school');
+          suggestionMode = 'answer';
+          suggestedQuestions = pickSuggestedQuestions(aiQuestion.options, effectiveUserType || 'high_school', suggestionMode);
+          if (state.refinementMode) {
+            state.refinementQuestionsAsked = Number(state.refinementQuestionsAsked || 0) + 1;
+          }
         } else {
           botReply = 'Cảm ơn bạn đã chia sẻ. Mình đang phân tích thông tin để đưa ra gợi ý phù hợp nhất. Vui lòng đợi một chút...';
           nextNode = 'ai_chat';
-          suggestedQuestions = pickSuggestedQuestions([], effectiveUserType || 'high_school');
+          suggestionMode = 'question';
+          suggestedQuestions = pickSuggestedQuestions([], effectiveUserType || 'high_school', suggestionMode);
         }
       }
     }
 
-    suggestedQuestions = pickSuggestedQuestions(suggestedQuestions, effectiveUserType || 'high_school');
+    suggestedQuestions = pickSuggestedQuestions(suggestedQuestions, effectiveUserType || 'high_school', suggestionMode);
     const suggestedQuestion = suggestedQuestions[0] || '';
-    botReply = appendSuggestedQuestion(botReply, suggestedQuestion);
 
     if (userId) {
       await saveMessage(convId, userId, 'bot', botReply, nextNode);
@@ -348,7 +385,11 @@ router.post('/message', optionalAuth, async (req, res) => {
         next_node: nextNode,
         conversation_id: convId,
         recommendations: recommendations || undefined,
-        completed
+        completed,
+        ai_question_count: aiQuestionCount,
+        refinement_question_count: refinementQuestionCount,
+        refinement_mode: Boolean(state.refinementMode),
+        min_refinement_questions: MIN_REFINEMENT_QUESTIONS
       }
     });
 
