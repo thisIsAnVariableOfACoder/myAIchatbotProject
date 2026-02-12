@@ -81,6 +81,10 @@ export default function Chat() {
       loadChatHistory();
     }
   }, [userId, token]);
+  
+  useEffect(() => {
+    let cancelled = false;
+    async function loadProfile() {
       if (!IS_OFFLINE && (!token || !userId)) {
         setProfileInitial(null);
         return;
