@@ -3,47 +3,71 @@
  * Run this script to update existing databases
  */
 
-const db = require('../database/connection');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+
+const DB_PATH = path.join(__dirname, '..', 'database', 'career_advisor.db');
 
 async function migrate() {
   console.log('Starting migration: Add username column to users table...');
   
   return new Promise((resolve, reject) => {
-    // Check if username column exists
-    db.get("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'", (err, row) => {
+    const db = new sqlite3.Database(DB_PATH, async (err) => {
       if (err) {
-        console.error('Error checking users table:', err.message);
+        console.error('DB connect error:', err.message);
         return reject(err);
       }
       
-      console.log('Current users table schema:', row?.sql);
+      console.log('DB connected');
       
-      if (row?.sql?.includes('username')) {
-        console.log('Username column already exists. Skipping migration.');
-        return resolve(true);
-      }
-      
-      // Add username column
-      const alterQuery = `ALTER TABLE users ADD COLUMN username VARCHAR(100)`;
-      db.run(alterQuery, (err) => {
-        if (err) {
-          console.error('Error adding username column:', err.message);
-          return reject(err);
+      try {
+        // Check if username column exists
+        const columnInfo = await new Promise((resolve, reject) => {
+          db.all("PRAGMA table_info(users)", (err, rows) => {
+            if (err) return reject(err);
+            resolve(rows || []);
+          });
+        });
+        
+        const hasUsername = columnInfo.some(col => col.name === 'username');
+        const hasLastLogin = columnInfo.some(col => col.name === 'last_login');
+        
+        if (hasUsername) {
+          console.log('✅ Username column already exists');
+        } else {
+          console.log('📝 Adding username column...');
+          await new Promise((resolve, reject) => {
+            db.run('ALTER TABLE users ADD COLUMN username VARCHAR(100)', (err) => {
+              if (err) return reject(err);
+              
+              db.run('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)', (err) => {
+                if (err) console.warn('⚠️ Warning: Failed to create username index:', err.message);
+                console.log('✅ Username column added successfully');
+                resolve();
+              });
+            });
+          });
         }
         
-        console.log('Username column added successfully.');
+        if (!hasLastLogin) {
+          console.log('📝 Adding last_login column...');
+          await new Promise((resolve, reject) => {
+            db.run('ALTER TABLE users ADD COLUMN last_login DATETIME', (err) => {
+              if (err) return reject(err);
+              console.log('✅ last_login column added successfully');
+              resolve();
+            });
+          });
+        }
         
-        // Create index for username
-        const createIndex = `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`;
-        db.run(createIndex, (err) => {
-          if (err) {
-            console.error('Error creating username index:', err.message);
-            // Continue anyway, the column was added
-          }
-          console.log('Username index created.');
-          resolve(true);
-        });
-      });
+        console.log('✅ Migration completed successfully.');
+        resolve(true);
+      } catch (e) {
+        console.error('Migration error:', e.message);
+        reject(e);
+      } finally {
+        db.close();
+      }
     });
   });
 }
@@ -51,7 +75,7 @@ async function migrate() {
 // Run migration
 migrate()
   .then(() => {
-    console.log('Migration completed successfully.');
+    console.log('Done.');
     process.exit(0);
   })
   .catch((err) => {

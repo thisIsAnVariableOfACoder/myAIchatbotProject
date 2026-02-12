@@ -35,7 +35,7 @@ async function initDbIfNeeded(db) {
 
   await execSql(db, schemaSql);
   
-  // Run migrations before seeding
+  // Run migrations after schema is applied (for existing databases)
   await runMigrations(db);
 
   await seedCareerLibrary(db);
@@ -77,19 +77,22 @@ async function runMigrations(db) {
   console.log('🔧 Running migrations...');
   
   // Migration: Add username column to users table
-  await new Promise((resolve, reject) => {
-    db.get("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'", (err, row) => {
+  // Check if username column exists using PRAGMA table_info
+  const columnInfo = await new Promise((resolve, reject) => {
+    db.all("PRAGMA table_info(users)", (err, rows) => {
       if (err) return reject(err);
-      
-      const hasUsername = row && row.sql && row.sql.includes('username');
-      
-      if (hasUsername) {
-        console.log('✅ Username column already exists');
-        return resolve();
-      }
-      
-      console.log('📝 Adding username column to users table...');
-      db.run('ALTER TABLE users ADD COLUMN username VARCHAR(255)', (err) => {
+      resolve(rows || []);
+    });
+  });
+  
+  const hasUsername = columnInfo.some(col => col.name === 'username');
+  
+  if (hasUsername) {
+    console.log('✅ Username column already exists');
+  } else {
+    console.log('📝 Adding username column to users table...');
+    await new Promise((resolve, reject) => {
+      db.run('ALTER TABLE users ADD COLUMN username VARCHAR(100)', (err) => {
         if (err) return reject(err);
         
         db.run('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)', (err) => {
@@ -99,13 +102,37 @@ async function runMigrations(db) {
         });
       });
     });
-  });
+  }
+  
+  // Migration: Add last_login column if not exists
+  const hasLastLogin = columnInfo.some(col => col.name === 'last_login');
+  if (!hasLastLogin) {
+    console.log('📝 Adding last_login column to users table...');
+    await new Promise((resolve, reject) => {
+      db.run('ALTER TABLE users ADD COLUMN last_login DATETIME', (err) => {
+        if (err) return reject(err);
+        console.log('✅ last_login column added successfully');
+        resolve();
+      });
+    });
+  }
   
   console.log('✅ Migrations complete');
 }
 
 async function ensureAdminAccount(db) {
   if (!ADMIN_EMAIL || !ADMIN_PASSWORD) return;
+  
+  // Check if username column exists
+  const columnInfo = await new Promise((resolve, reject) => {
+    db.all("PRAGMA table_info(users)", (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+  
+  const hasUsername = columnInfo.some(col => col.name === 'username');
+  
   await new Promise((resolve, reject) => {
     db.run(
       "UPDATE users SET user_type = 'professional' WHERE user_type = 'admin' AND email != ?",
@@ -113,6 +140,7 @@ async function ensureAdminAccount(db) {
       (err) => (err ? reject(err) : resolve())
     );
   });
+  
   const admin = await new Promise((resolve) => {
     db.get('SELECT id FROM users WHERE email = ?', [ADMIN_EMAIL], (err, row) => {
       if (err) return resolve(null);
@@ -121,24 +149,45 @@ async function ensureAdminAccount(db) {
   });
 
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+  
   if (!admin) {
-    await new Promise((resolve, reject) => {
-      db.run(
-        'INSERT INTO users (email, username, password_hash, user_type) VALUES (?, ?, ?, ?)',
-        [ADMIN_EMAIL, 'admin', passwordHash, 'admin'],
-        (err) => (err ? reject(err) : resolve())
-      );
-    });
+    if (hasUsername) {
+      await new Promise((resolve, reject) => {
+        db.run(
+          'INSERT INTO users (email, username, password_hash, user_type) VALUES (?, ?, ?, ?)',
+          [ADMIN_EMAIL, 'admin', passwordHash, 'admin'],
+          (err) => (err ? reject(err) : resolve())
+        );
+      });
+    } else {
+      await new Promise((resolve, reject) => {
+        db.run(
+          'INSERT INTO users (email, password_hash, user_type) VALUES (?, ?, ?)',
+          [ADMIN_EMAIL, passwordHash, 'admin'],
+          (err) => (err ? reject(err) : resolve())
+        );
+      });
+    }
     return;
   }
 
-  await new Promise((resolve, reject) => {
-    db.run(
-      'UPDATE users SET password_hash = ?, user_type = ?, username = ? WHERE email = ?',
-      [passwordHash, 'admin', 'admin', ADMIN_EMAIL],
-      (err) => (err ? reject(err) : resolve())
-    );
-  });
+  if (hasUsername) {
+    await new Promise((resolve, reject) => {
+      db.run(
+        'UPDATE users SET password_hash = ?, user_type = ?, username = ? WHERE email = ?',
+        [passwordHash, 'admin', 'admin', ADMIN_EMAIL],
+        (err) => (err ? reject(err) : resolve())
+      );
+    });
+  } else {
+    await new Promise((resolve, reject) => {
+      db.run(
+        'UPDATE users SET password_hash = ?, user_type = ? WHERE email = ?',
+        [passwordHash, 'admin', ADMIN_EMAIL],
+        (err) => (err ? reject(err) : resolve())
+      );
+    });
+  }
 }
 
 module.exports = { initDbIfNeeded };
