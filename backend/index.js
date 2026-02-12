@@ -14,6 +14,7 @@ const chatRoutes = require('./routes/chat');
 const adminRoutes = require('./routes/admin');
 const analyticsRoutes = require('./routes/analytics');
 const exploreRoutes = require('./routes/explore');
+const chatbotRoutes = require('./routes/chatbot');
 
 const app = express();
 
@@ -99,6 +100,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/explore', exploreRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 /* =========================
    FRONTEND SERVE (OPTIONAL)

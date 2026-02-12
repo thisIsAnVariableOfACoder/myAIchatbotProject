@@ -95,6 +95,200 @@ function getFallbackQuestion(userType) {
 }
 
 // ============================================================================
+// CAREER CONSULTATION MODE - For answering follow-up career questions
+// ============================================================================
+
+// System prompt for detailed career consultation when users ask follow-up questions
+const CAREER_CONSULTATION_PROMPT = `Bạn là CHUYÊN GIA TƯ VẤN HƯỚNG NGHIỆP với nhiều năm kinh nghiệm.
+
+NHIỆM VỤ: Khi người dùng hỏi về nghề nghiệp, bạn phải:
+1. Trả lời CHI TIẾT, CỤ THỂ về nghề nghiệp họ quan tâm
+2. Cập nhật/điều chỉnh xác suất phù hợp dựa trên thông tin mới
+3. Đưa ra kết luận nghề nghiệp nếu đủ thông tin (không nhất thiết phải hỏi đủ 100 câu)
+4. Khuyến khích người dùng tiếp tục nếu cần thêm thông tin
+
+GIỚI HẠN PHẢN HỒI:
+- Tối thiểu: 10 câu hỏi/đáp
+- Tối đa: 100 câu hỏi/đáp
+- KẾT LUẬN: Đưa ra kết luận khi đạt độ tin cậy cao (>= 75% match score)
+
+QUY TẮC TRẢ LỜI:
+- Nếu người dùng hỏi về nghề cụ thể: Mô tả chi tiết công việc, yêu cầu, cơ hội, lương, định hướng phát triển
+- Nếu người dùng hỏi ngược lại chatbot: Phân tích và tư vấn dựa trên thông tin đã có
+- Nếu người dùng cung cấp thêm thông tin: Cập nhật xác suất và điều chỉnh gợi ý
+- Nếu đủ thông tin: Đưa ra kết luận nghề nghiệp với danh sách top 5-7 nghề phù hợp nhất
+
+BẮT BUỘC: Trả về JSON đúng cấu trúc:
+{
+  "bot_reply": "Nội dung tư vấn chi tiết",
+  "suggested_questions": ["Câu hỏi gợi ý 1", "Câu hỏi gợi ý 2"],
+  "career_conclusion": true/false,
+  "updated_careers": [{"name": "Tên nghề", "score": 85, "change": "+5"}]
+}`;
+
+/**
+ * Detect if user message is a follow-up career question
+ */
+function isFollowUpCareerQuestion(message) {
+  if (!message) return false;
+  const lowerMessage = String(message).toLowerCase();
+  
+  // Patterns that indicate follow-up questions about careers
+  const followUpPatterns = [
+    /còn (.*nghề|nào|khi nào|bao lâu|bao nhiêu)/i,
+    /về (.*nghề|công việc|ngành)/i,
+    /tôi nên|lựa chọn|phù hợp/i,
+    /lương|thu nhập|định hướng/i,
+    /cơ hội|tương lai|phát triển/i,
+    /yêu cầu|kỹ năng|kinh nghiệm/i,
+    /nên học|làm gì|điểm mạnh/i,
+    /(?<!không )hỏi|lại|hỏi tiếp/i,
+    /tư vấn|khuyên|góp ý/i,
+    /làm sao|như thế nào/i
+  ];
+  
+  return followUpPatterns.some(pattern => pattern.test(lowerMessage));
+}
+
+/**
+ * Generate detailed career consultation reply for follow-up questions
+ */
+async function generateCareerConsultationReply({ history, currentMessage, userType, profile, careerScores }) {
+  if (!isEnabled()) {
+    console.error('[LLM] Disabled - No GROQ_API_KEY');
+    return null;
+  }
+  
+  const safeUserType = String(userType || 'high_school');
+  
+  // Build career scores text
+  let careerScoresText = '';
+  if (careerScores && Object.keys(careerScores).length > 0) {
+    const sortedScores = Object.entries(careerScores)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+    careerScoresText = sortedScores
+      .map(([career, score]) => `${career}: ${Math.round(score)}%`)
+      .join('\n');
+  }
+  
+  const historyMessages = (history || []).map(h => ({
+    role: 'assistant',
+    content: JSON.stringify({ bot_reply: h.q, suggested_questions: [] })
+  }, {
+    role: 'user',
+    content: h.a
+  })).flat();
+  
+  const messages = [
+    { role: 'system', content: CAREER_CONSULTATION_PROMPT },
+    ...historyMessages,
+    { role: 'user', content: `${currentMessage || 'Xin chào'}\n\nThông tin bổ sung:\n- User type: ${safeUserType}\n- Career scores hiện tại:\n${careerScoresText || 'Chưa có dữ liệu'}\n\n(BẮT BUỘC: Trả lời bằng tiếng Việt và giữ định dạng JSON)` }
+  ];
+  
+  const payload = {
+    model: GROQ_MODEL,
+    messages: messages,
+    temperature: 0.7,
+    top_p: 0.9,
+    max_tokens: 1536,
+    stream: false
+  };
+  
+  console.log('[LLM] Career Consultation Request:', JSON.stringify(payload, null, 2));
+  
+  const data = await postJson(LLM_CHAT_URL, payload, LLM_TIMEOUT_MS);
+  if (!data) {
+    console.error('[LLM] No response from career consultation');
+    return null;
+  }
+  
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) {
+    console.error('[LLM] No content in career consultation response');
+    return null;
+  }
+  
+  const parsed = safeParseConsultationReply(content);
+  console.log('[LLM] Career Consultation Result:', JSON.stringify(parsed, null, 2));
+  return parsed;
+}
+
+/**
+ * Parse AI response for career consultation
+ */
+function safeParseConsultationReply(content) {
+  if (!content) return null;
+  
+  const text = String(content).replace(/\uFEFF/g, '').trim();
+  
+  const tryParseJson = (value) => {
+    if (!value) return null;
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed === 'string') {
+        try {
+          return JSON.parse(parsed);
+        } catch {
+          return parsed;
+        }
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+  
+  // Try to extract JSON from code fence
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  let parsed = null;
+  if (fenceMatch) {
+    parsed = tryParseJson(fenceMatch[1].trim());
+  }
+  
+  // Try to parse the whole text as JSON
+  if (!parsed) {
+    parsed = tryParseJson(text);
+  }
+  
+  // Try to extract first JSON object
+  if (!parsed) {
+    let start = -1;
+    let depth = 0;
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === '{') {
+        if (depth === 0) start = i;
+        depth++;
+      } else if (text[i] === '}') {
+        depth--;
+        if (depth === 0 && start !== -1) {
+          const slice = text.slice(start, i + 1);
+          parsed = tryParseJson(slice);
+          if (parsed) break;
+        }
+      }
+    }
+  }
+  
+  if (!parsed) {
+    // Fallback: return the text as bot_reply
+    return {
+      bot_reply: text,
+      suggested_questions: [],
+      career_conclusion: false,
+      updated_careers: []
+    };
+  }
+  
+  return {
+    bot_reply: normalizeReplyText(parsed.bot_reply) || text,
+    suggested_questions: normalizeSuggestedQuestions(parsed.suggested_questions),
+    career_conclusion: Boolean(parsed.career_conclusion),
+    updated_careers: Array.isArray(parsed.updated_careers) ? parsed.updated_careers : []
+  };
+}
+
+// ============================================================================
 // LLM CONFIGURATION
 // ============================================================================
 
@@ -730,5 +924,8 @@ module.exports = {
   generateAgentRecommendations,
   generateAgentChatReply,
   generateCareerQuestion,
-  generateCareerRecommendations
+  generateCareerRecommendations,
+  // New functions for career consultation mode
+  generateCareerConsultationReply,
+  isFollowUpCareerQuestion
 };

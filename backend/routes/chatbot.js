@@ -7,10 +7,16 @@ const {
     startRefinementMode,
     getCareerRecommendations,
     canStartRefinement,
-    getRefinementProgress
+    getRefinementProgress,
+    calculateCareerScoresFromAnswers
 } = require('../services/questionEngine');
 const { matchCareerAsync } = require('../services/matcher');
 const llmScorer = require('../services/llmScorer');
+
+// Minimum and maximum number of questions before allowing career conclusion
+const MIN_QUESTIONS = 10;
+const MAX_QUESTIONS = 100;
+const CONFIDENCE_THRESHOLD = 75; // 75% match score to allow early conclusion
 
 /**
  * Start a new conversation
@@ -47,7 +53,10 @@ router.post('/start', async (req, res) => {
                 options: aiReply?.suggested_questions || []
             },
             canRefine: false,
-            isAiAgent: true
+            isAiAgent: true,
+            minQuestions: MIN_QUESTIONS,
+            maxQuestions: MAX_QUESTIONS,
+            confidenceThreshold: CONFIDENCE_THRESHOLD
         });
     } catch (error) {
         console.error('Error starting conversation:', error);
@@ -56,7 +65,7 @@ router.post('/start', async (req, res) => {
 });
 
 /**
- * Answer a question
+ * Answer a question - Enhanced with career consultation mode
  */
 router.post('/answer', async (req, res) => {
     try {
@@ -74,13 +83,52 @@ router.post('/answer', async (req, res) => {
             a: a.answer
         }));
 
-        const aiReply = await llmScorer.generateAgentChatReply({
-            history,
-            currentMessage: answer
-        });
+        const totalAnswers = state.answers.length + state.refinementAnswers.length;
+        
+        // Calculate current career scores
+        const careerScores = calculateCareerScoresFromAnswers(state.answers);
+        
+        // Check if user message is a follow-up career question
+        const isFollowUpQuestion = llmScorer.isFollowUpCareerQuestion(answer);
+        
+        // Determine if we should provide career conclusion
+        const shouldCheckConclusion = totalAnswers >= MIN_QUESTIONS;
+        
+        let aiReply;
+        let careerConclusion = false;
+        let updatedCareers = [];
+        
+        if (isFollowUpQuestion || shouldCheckConclusion) {
+            // Use career consultation mode for follow-up questions
+            aiReply = await llmScorer.generateCareerConsultationReply({
+                history,
+                currentMessage: answer,
+                userType: state.userType,
+                profile: state.profile,
+                careerScores
+            });
+            
+            if (aiReply) {
+                careerConclusion = aiReply.career_conclusion || false;
+                updatedCareers = aiReply.updated_careers || [];
+            }
+        } else {
+            // Use regular chat mode for regular questions
+            aiReply = await llmScorer.generateAgentChatReply({
+                history,
+                currentMessage: answer
+            });
+        }
 
         if (aiReply) {
             state.lastQuestionText = aiReply.bot_reply;
+            
+            // Check if we should provide career recommendations
+            const shouldProvideRecommendations = 
+                careerConclusion || 
+                (totalAnswers >= MAX_QUESTIONS) ||
+                (shouldCheckConclusion && Object.keys(careerScores).length > 0);
+            
             return res.json({
                 success: true,
                 conversationId,
@@ -92,8 +140,21 @@ router.post('/answer', async (req, res) => {
                     is_ai: true,
                     options: aiReply.suggested_questions || []
                 },
-                completed: false,
-                isAiAgent: true
+                completed: careerConclusion,
+                isAiAgent: true,
+                careerInfo: {
+                    totalAnswers,
+                    minQuestions: MIN_QUESTIONS,
+                    maxQuestions: MAX_QUESTIONS,
+                    careerConclusion,
+                    updatedCareers,
+                    careerScores: Object.fromEntries(
+                        Object.entries(careerScores)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 10)
+                    )
+                },
+                shouldProvideRecommendations
             });
         }
 
@@ -105,7 +166,12 @@ router.post('/answer', async (req, res) => {
             message: fallback,
             question: null,
             completed: true,
-            isAiAgent: true
+            isAiAgent: true,
+            careerInfo: {
+                totalAnswers,
+                minQuestions: MIN_QUESTIONS,
+                maxQuestions: MAX_QUESTIONS
+            }
         });
     } catch (error) {
         console.error('Error recording answer:', error);

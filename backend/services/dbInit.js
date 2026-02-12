@@ -34,6 +34,9 @@ async function initDbIfNeeded(db) {
   const seedSql = fs.readFileSync(seedPath, 'utf8');
 
   await execSql(db, schemaSql);
+  
+  // Run migrations before seeding
+  await runMigrations(db);
 
   await seedCareerLibrary(db);
 
@@ -68,6 +71,37 @@ async function seedCareerLibrary(db) {
       stmt.finalize((err) => (err ? reject(err) : resolve()));
     });
   });
+}
+
+async function runMigrations(db) {
+  console.log('🔧 Running migrations...');
+  
+  // Migration: Add username column to users table
+  await new Promise((resolve, reject) => {
+    db.get("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'", (err, row) => {
+      if (err) return reject(err);
+      
+      const hasUsername = row && row.sql && row.sql.includes('username');
+      
+      if (hasUsername) {
+        console.log('✅ Username column already exists');
+        return resolve();
+      }
+      
+      console.log('📝 Adding username column to users table...');
+      db.run('ALTER TABLE users ADD COLUMN username VARCHAR(255)', (err) => {
+        if (err) return reject(err);
+        
+        db.run('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)', (err) => {
+          if (err) console.warn('⚠️ Warning: Failed to create username index:', err.message);
+          console.log('✅ Username column added successfully');
+          resolve();
+        });
+      });
+    });
+  });
+  
+  console.log('✅ Migrations complete');
 }
 
 async function ensureAdminAccount(db) {
