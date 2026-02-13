@@ -1,7 +1,7 @@
 -- FILE: backend/database/seed.sql
 
 -- Sample users (with username for login)
-INSERT INTO users (email, username, password_hash, user_type) VALUES
+INSERT OR IGNORE INTO users (email, username, password_hash, user_type) VALUES
 ('student1@test.com', 'student1', '$2b$10$hashedpassword1', 'high_school'),
 ('student2@test.com', 'student2', '$2b$10$hashedpassword2', 'university'),
 ('worker1@test.com', 'worker1', '$2b$10$hashedpassword3', 'professional'),
@@ -19,7 +19,7 @@ INSERT INTO users (email, username, password_hash, user_type) VALUES
 ('student9@test.com', 'student9', '$2b$10$hashedpassword15', 'high_school');
 
 -- Sample profiles
-INSERT INTO profiles (user_id, skills, interests, education_level, current_grade, work_experience_years, preferred_work_style) VALUES
+INSERT OR IGNORE INTO profiles (user_id, skills, interests, education_level, current_grade, work_experience_years, preferred_work_style) VALUES
 (1, '["coding","math","problem_solving"]', '["technology","gaming"]', 'high_school', 11, NULL, 'hybrid'),
 (2, '["writing","research","public_speaking"]', '["business","marketing"]', 'university', NULL, NULL, 'hybrid'),
 (3, '["excel","project_management"]', '["data","analytics"]', 'bachelor', NULL, 4, 'office'),
@@ -37,7 +37,7 @@ INSERT INTO profiles (user_id, skills, interests, education_level, current_grade
 (15, '["english","communication"]', '["education","languages"]', 'high_school', 11, NULL, 'office');
 
 -- Sample careers
-INSERT INTO careers (name, category, required_skills, salary_range, job_outlook, description) VALUES
+INSERT OR IGNORE INTO careers (name, category, required_skills, salary_range, job_outlook, description) VALUES
 ('Software Engineer', 'Technology', '["coding","algorithms","teamwork"]', '800-3000 USD', 'excellent', 'Software development, applications'),
 ('Data Analyst', 'Technology', '["statistics","excel","sql"]', '600-2000 USD', 'very_good', 'Data analysis and reporting'),
 ('UI/UX Designer', 'Design', '["design","user_research","prototyping"]', '500-1800 USD', 'good', 'User interface and experience design'),

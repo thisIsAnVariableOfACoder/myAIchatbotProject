@@ -3,7 +3,11 @@ const path = require('path');
 const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
+const {
+  createDatabaseAdapter,
+  resolveSqliteCloudConnectionString,
+  sanitizeConnectionString
+} = require('./services/dbAdapter');
 
 const { initDbIfNeeded } = require('./services/dbInit');
 const { initCatalogSchema } = require('./services/careerCatalog');
@@ -47,26 +51,24 @@ app.use(express.json());
    DATABASE SETUP
 ========================= */
 
-// Đảm bảo thư mục database tồn tại
-const dbFolder = path.join(__dirname, 'database');
-if (!fs.existsSync(dbFolder)) {
-  fs.mkdirSync(dbFolder, { recursive: true });
-  console.log("📁 Created database folder");
+let maskedConnection = '';
+try {
+  const connection = resolveSqliteCloudConnectionString();
+  maskedConnection = sanitizeConnectionString(connection);
+  console.log('🌐 Using ONLINE database (SQLiteCloud)');
+  console.log('🌐 SQLITECLOUD_URL:', maskedConnection);
+} catch (error) {
+  console.error('❌ SQLiteCloud configuration missing/invalid:', error.message);
+  process.exit(1);
 }
 
-const DB_PATH = process.env.DB_PATH || path.join(dbFolder, 'career_advisor.db');
+initializeMainDb();
 
-console.log("📦 Using DB at:", DB_PATH);
-
-global.db = new sqlite3.Database(DB_PATH, async (err) => {
-  if (err) {
-    console.error('❌ DB connect error:', err.message);
-    process.exit(1);
-  }
-
-  console.log('✅ DB connected');
-
+async function initializeMainDb() {
   try {
+    global.db = await createDatabaseAdapter();
+    console.log('✅ DB connected');
+
     const result = await initDbIfNeeded(global.db);
     if (result?.seeded) {
       console.log('🌱 DB seeded with sample data');
@@ -74,13 +76,12 @@ global.db = new sqlite3.Database(DB_PATH, async (err) => {
 
     await initCatalogSchema();
     console.log('📚 Catalog schema ready');
-
+    startServer();
   } catch (e) {
     console.error('❌ DB init failed:', e.message);
-  } finally {
-    startServer();
+    process.exit(1);
   }
-});
+}
 
 /* =========================
    ROUTES

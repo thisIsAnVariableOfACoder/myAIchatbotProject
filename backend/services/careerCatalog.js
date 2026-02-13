@@ -1,19 +1,15 @@
-const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
-
-const DB_PATH = process.env.CAREER_CATALOG_DB_PATH
-  || path.join(__dirname, '..', 'database', 'career_catalog.db');
+const { createDatabaseAdapter } = require('./dbAdapter');
 
 let catalogDb = null;
 
-function getCatalogDb() {
+async function getCatalogDb() {
   if (catalogDb) return catalogDb;
-  catalogDb = new sqlite3.Database(DB_PATH);
+  catalogDb = await createDatabaseAdapter();
   return catalogDb;
 }
 
-function initCatalogSchema() {
-  const db = getCatalogDb();
+async function initCatalogSchema() {
+  const db = await getCatalogDb();
   const schema = `
     CREATE TABLE IF NOT EXISTS jobs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,72 +29,74 @@ function initCatalogSchema() {
 }
 
 function listJobs({ q, category, tag, limit = 24, offset = 0 }) {
-  const db = getCatalogDb();
-  const where = [];
-  const params = [];
+  return getCatalogDb().then((db) => {
+    const where = [];
+    const params = [];
 
-  if (q) {
-    const normalized = normalizeQuery(q);
-    const tokens = normalized.split(/\s+/).filter(Boolean);
-    const terms = Array.from(new Set([normalized, ...tokens])).filter(Boolean);
-    if (terms.length > 0) {
-      const clauses = terms.map(() => 'title LIKE ?').join(' OR ');
-      where.push(`(${clauses})`);
-      for (const term of terms) {
-        params.push(`%${term}%`);
+    if (q) {
+      const normalized = normalizeQuery(q);
+      const tokens = normalized.split(/\s+/).filter(Boolean);
+      const terms = Array.from(new Set([normalized, ...tokens])).filter(Boolean);
+      if (terms.length > 0) {
+        const clauses = terms.map(() => 'title LIKE ?').join(' OR ');
+        where.push(`(${clauses})`);
+        for (const term of terms) {
+          params.push(`%${term}%`);
+        }
       }
     }
-  }
-  if (category) {
-    where.push('category = ?');
-    params.push(category);
-  }
-  if (tag) {
-    where.push('tags LIKE ?');
-    params.push(`%${tag}%`);
-  }
+    if (category) {
+      where.push('category = ?');
+      params.push(category);
+    }
+    if (tag) {
+      where.push('tags LIKE ?');
+      params.push(`%${tag}%`);
+    }
 
-  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  const query = `
-    SELECT id, title, category, tags, image_url
-    FROM jobs
-    ${whereSql}
-    ORDER BY title ASC
-    LIMIT ? OFFSET ?
-  `;
-  const countQuery = `SELECT COUNT(*) as total FROM jobs ${whereSql}`;
-  const safeLimit = Math.min(100, Math.max(1, Number(limit) || 24));
-  const safeOffset = Math.max(0, Number(offset) || 0);
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const query = `
+      SELECT id, title, category, tags, image_url
+      FROM jobs
+      ${whereSql}
+      ORDER BY title ASC
+      LIMIT ? OFFSET ?
+    `;
+    const countQuery = `SELECT COUNT(*) as total FROM jobs ${whereSql}`;
+    const safeLimit = Math.min(100, Math.max(1, Number(limit) || 24));
+    const safeOffset = Math.max(0, Number(offset) || 0);
 
-  return new Promise((resolve, reject) => {
-    db.get(countQuery, params, (countErr, countRow) => {
-      if (countErr) return reject(countErr);
-      db.all(query, [...params, safeLimit, safeOffset], (err, rows) => {
-        if (err) return reject(err);
-        resolve({ total: countRow?.total || 0, rows: rows || [] });
+    return new Promise((resolve, reject) => {
+      db.get(countQuery, params, (countErr, countRow) => {
+        if (countErr) return reject(countErr);
+        db.all(query, [...params, safeLimit, safeOffset], (err, rows) => {
+          if (err) return reject(err);
+          resolve({ total: countRow?.total || 0, rows: rows || [] });
+        });
       });
     });
   });
 }
 
 function listJobsFuzzy({ q, limit = 24, offset = 0 }) {
-  const db = getCatalogDb();
-  const query = normalizeQuery(q);
-  if (!query) return Promise.resolve({ total: 0, rows: [] });
-  const safeLimit = Math.min(100, Math.max(1, Number(limit) || 24));
-  const safeOffset = Math.max(0, Number(offset) || 0);
+  return getCatalogDb().then((db) => {
+    const query = normalizeQuery(q);
+    if (!query) return { total: 0, rows: [] };
+    const safeLimit = Math.min(100, Math.max(1, Number(limit) || 24));
+    const safeOffset = Math.max(0, Number(offset) || 0);
 
-  return new Promise((resolve, reject) => {
-    db.all('SELECT id, title, category, tags, image_url FROM jobs LIMIT 3000', (err, rows) => {
-      if (err) return reject(err);
-      const scored = (rows || []).map((row) => {
-        const score = fuzzyScore(query, normalizeQuery(row.title));
-        return { ...row, _score: score };
-      }).filter((r) => r._score >= 0.45);
-      scored.sort((a, b) => b._score - a._score);
-      const total = scored.length;
-      const slice = scored.slice(safeOffset, safeOffset + safeLimit);
-      resolve({ total, rows: slice });
+    return new Promise((resolve, reject) => {
+      db.all('SELECT id, title, category, tags, image_url FROM jobs LIMIT 3000', (err, rows) => {
+        if (err) return reject(err);
+        const scored = (rows || []).map((row) => {
+          const score = fuzzyScore(query, normalizeQuery(row.title));
+          return { ...row, _score: score };
+        }).filter((r) => r._score >= 0.45);
+        scored.sort((a, b) => b._score - a._score);
+        const total = scored.length;
+        const slice = scored.slice(safeOffset, safeOffset + safeLimit);
+        resolve({ total, rows: slice });
+      });
     });
   });
 }
@@ -141,8 +139,7 @@ function levenshtein(a, b) {
 }
 
 function listFilters() {
-  const db = getCatalogDb();
-  return new Promise((resolve, reject) => {
+  return getCatalogDb().then((db) => new Promise((resolve, reject) => {
     db.get('SELECT COUNT(*) as total FROM jobs', (err, row) => {
       if (err) return reject(err);
       const total = row?.total || 0;
@@ -198,7 +195,7 @@ function listFilters() {
 
       resolve({ categories: [], tags: [] });
     });
-  });
+  }));
 }
 
 module.exports = { getCatalogDb, initCatalogSchema, listJobs, listJobsFuzzy, listFilters };

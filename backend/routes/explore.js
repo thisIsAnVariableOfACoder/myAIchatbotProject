@@ -20,9 +20,7 @@ router.get('/jobs', async (req, res) => {
     const { q, category, tag, limit, offset } = req.query;
     console.log(`[Explore] Request: limit=${limit}, offset=${offset}`);
 
-    // FORCE DEBUG: Check DB path
-    const dbPath = process.env.CAREER_CATALOG_DB_PATH || 'default';
-    console.log(`[Explore] DB Path env: ${dbPath}`);
+    console.log('[Explore] Provider: SQLiteCloud');
 
     // Force default limit to 120 if not specified
     const effectiveLimit = limit ? Number(limit) : 120;

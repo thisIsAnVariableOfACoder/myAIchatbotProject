@@ -53,24 +53,23 @@ async function initDbIfNeeded(db) {
 
 async function seedCareerLibrary(db) {
   const careers = buildCareerRecords();
-  const stmt = db.prepare(
-    'INSERT OR IGNORE INTO careers (name, category, required_skills, salary_range, job_outlook, description) VALUES (?, ?, ?, ?, ?, ?)'
-  );
-  await new Promise((resolve, reject) => {
-    db.serialize(() => {
-      for (const c of careers) {
-        stmt.run([
+  const query = 'INSERT OR IGNORE INTO careers (name, category, required_skills, salary_range, job_outlook, description) VALUES (?, ?, ?, ?, ?, ?)';
+  for (const c of careers) {
+    await new Promise((resolve, reject) => {
+      db.run(
+        query,
+        [
           c.name,
           c.category,
           JSON.stringify(c.required_skills || []),
           c.salary_range,
           c.job_outlook,
           c.description
-        ]);
-      }
-      stmt.finalize((err) => (err ? reject(err) : resolve()));
+        ],
+        (err) => (err ? reject(err) : resolve())
+      );
     });
-  });
+  }
 }
 
 async function runMigrations(db) {
@@ -122,6 +121,20 @@ async function runMigrations(db) {
 
 async function ensureAdminAccount(db) {
   if (!ADMIN_EMAIL || !ADMIN_PASSWORD) return;
+
+  const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) return reject(err);
+      resolve(row || null);
+    });
+  });
+
+  const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) return reject(err);
+      resolve(this);
+    });
+  });
   
   // Check if username column exists
   const columnInfo = await new Promise((resolve, reject) => {
@@ -133,60 +146,57 @@ async function ensureAdminAccount(db) {
   
   const hasUsername = columnInfo.some(col => col.name === 'username');
   
-  await new Promise((resolve, reject) => {
-    db.run(
-      "UPDATE users SET user_type = 'professional' WHERE user_type = 'admin' AND email != ?",
-      [ADMIN_EMAIL],
-      (err) => (err ? reject(err) : resolve())
-    );
-  });
+  await dbRun(
+    "UPDATE users SET user_type = 'professional' WHERE user_type = 'admin' AND email != ?",
+    [ADMIN_EMAIL]
+  );
   
-  const admin = await new Promise((resolve) => {
-    db.get('SELECT id FROM users WHERE email = ?', [ADMIN_EMAIL], (err, row) => {
-      if (err) return resolve(null);
-      resolve(row || null);
-    });
-  });
+  let admin = null;
+  try {
+    admin = await dbGet('SELECT id FROM users WHERE email = ?', [ADMIN_EMAIL]);
+  } catch {
+    admin = null;
+  }
+
+  // If target admin email not found but username "admin" exists (e.g. seeded data), reuse that row.
+  if (!admin && hasUsername) {
+    try {
+      const byUsername = await dbGet('SELECT id FROM users WHERE username = ?', ['admin']);
+      if (byUsername?.id) {
+        admin = { id: byUsername.id };
+      }
+    } catch {
+      // ignore and continue with insert path
+    }
+  }
 
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
   
   if (!admin) {
     if (hasUsername) {
-      await new Promise((resolve, reject) => {
-        db.run(
-          'INSERT INTO users (email, username, password_hash, user_type) VALUES (?, ?, ?, ?)',
-          [ADMIN_EMAIL, 'admin', passwordHash, 'admin'],
-          (err) => (err ? reject(err) : resolve())
-        );
-      });
+      await dbRun(
+        'INSERT INTO users (email, username, password_hash, user_type) VALUES (?, ?, ?, ?)',
+        [ADMIN_EMAIL, 'admin', passwordHash, 'admin']
+      );
     } else {
-      await new Promise((resolve, reject) => {
-        db.run(
-          'INSERT INTO users (email, password_hash, user_type) VALUES (?, ?, ?)',
-          [ADMIN_EMAIL, passwordHash, 'admin'],
-          (err) => (err ? reject(err) : resolve())
-        );
-      });
+      await dbRun(
+        'INSERT INTO users (email, password_hash, user_type) VALUES (?, ?, ?)',
+        [ADMIN_EMAIL, passwordHash, 'admin']
+      );
     }
     return;
   }
 
   if (hasUsername) {
-    await new Promise((resolve, reject) => {
-      db.run(
-        'UPDATE users SET password_hash = ?, user_type = ?, username = ? WHERE email = ?',
-        [passwordHash, 'admin', 'admin', ADMIN_EMAIL],
-        (err) => (err ? reject(err) : resolve())
-      );
-    });
+    await dbRun(
+      'UPDATE users SET email = ?, password_hash = ?, user_type = ?, username = ? WHERE id = ?',
+      [ADMIN_EMAIL, passwordHash, 'admin', 'admin', admin.id]
+    );
   } else {
-    await new Promise((resolve, reject) => {
-      db.run(
-        'UPDATE users SET password_hash = ?, user_type = ? WHERE email = ?',
-        [passwordHash, 'admin', ADMIN_EMAIL],
-        (err) => (err ? reject(err) : resolve())
-      );
-    });
+    await dbRun(
+      'UPDATE users SET email = ?, password_hash = ?, user_type = ? WHERE id = ?',
+      [ADMIN_EMAIL, passwordHash, 'admin', admin.id]
+    );
   }
 }
 

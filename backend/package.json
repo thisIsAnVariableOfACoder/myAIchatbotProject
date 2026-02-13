@@ -15,6 +15,7 @@
     "reset-esco": "node scripts/importEscoJobs.js --reset"
   },
   "dependencies": {
+    "@sqlitecloud/drivers": "^1.0.739",
     "adm-zip": "^0.5.12",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.2",

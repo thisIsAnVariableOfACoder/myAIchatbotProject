@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const AdmZip = require('adm-zip');
-const sqlite3 = require('sqlite3').verbose();
 const { initCatalogSchema, getCatalogDb } = require('../services/careerCatalog');
 
 const ZIP_URL = process.env.ONET_ZIP_URL || 'https://www.onetcenter.org/dl_files/database/db_30_1_text.zip';
@@ -61,7 +60,7 @@ const CATEGORY_ICON = {
 async function main() {
   const reset = process.argv.includes('--reset');
   await initCatalogSchema();
-  const db = getCatalogDb();
+  const db = await getCatalogDb();
   if (reset) {
     await run(db, 'DELETE FROM jobs');
   }
@@ -78,7 +77,7 @@ async function main() {
   const lines = content.split(/\r?\n/);
   lines.shift(); // header
 
-  const insert = db.prepare('INSERT OR IGNORE INTO jobs (title, category, tags, image_url, source) VALUES (?, ?, ?, ?, ?)');
+  const query = 'INSERT OR IGNORE INTO jobs (title, category, tags, image_url, source) VALUES (?, ?, ?, ?, ?)';
   let count = 0;
 
   for (const line of lines) {
@@ -89,11 +88,10 @@ async function main() {
     const category = SOC_MAJOR_GROUPS[major] || 'Other';
     const tags = buildTags(title, description);
     const imageUrl = CATEGORY_ICON[category] || '/career-icons/default.svg';
-    insert.run([title.trim(), category, JSON.stringify(tags), imageUrl, 'O*NET 30.1']);
+    await run(db, query, [title.trim(), category, JSON.stringify(tags), imageUrl, 'O*NET 30.1']);
     count += 1;
   }
 
-  insert.finalize();
   console.log(`Imported ${count} jobs into career_catalog.db`);
 }
 
@@ -107,9 +105,9 @@ function buildTags(title, description) {
   return unique.slice(0, 6);
 }
 
-function run(db, sql) {
+function run(db, sql, params = []) {
   return new Promise((resolve, reject) => {
-    db.run(sql, (err) => (err ? reject(err) : resolve()));
+    db.run(sql, params, (err) => (err ? reject(err) : resolve()));
   });
 }
 

@@ -103,23 +103,89 @@ https://api-myaichatbotproject.onrender.com
 
 ### Main Database
 
-- Uses **SQLite**
-- Automatically initializes on first run
-- Custom database path configurable via `DB_PATH` environment variable
+- Uses **SQLiteCloud (ONLINE)**
+- User/profile/chat/recommendation/job catalog data are stored online
+- Backend is configured in ONLINE-only mode (no local SQLite fallback)
+
+### ✅ Online Database Mode (Recommended for production)
+
+Backend now uses **ONLINE database** via **SQLiteCloud**.
+
+When configured, user/chat/profile data is stored online and shared across all backend instances.
+
+#### Environment variables
+
+- `DB_PROVIDER=sqlitecloud`
+- `SQLITECLOUD_URL=sqlitecloud://<host>:<port>/<database>?apikey=<api-key>`
+
+`SQLITECLOUD_URL` must be a real connection string, not the dashboard URL.
+
+Optional (instead of `SQLITECLOUD_URL`):
+
+- `SQLITECLOUD_HOST=<host>`
+- `SQLITECLOUD_PORT=8860` (default)
+- `SQLITECLOUD_DATABASE=<database-name>`
+- One auth mode only:
+  - `SQLITECLOUD_API_KEY=<api-key>` **or**
+  - `SQLITECLOUD_TOKEN=<token>` **or**
+  - `SQLITECLOUD_USERNAME=<username>` + `SQLITECLOUD_PASSWORD=<password>`
+
+Optional TLS/debug option:
+
+- `SQLITECLOUD_INSECURE=1` (only for troubleshooting; do not use in production)
+
+#### Setup steps (SQLiteCloud)
+
+1. Create/identify your SQLiteCloud database in dashboard.
+
+2. Generate API key for backend access.
+
+3. Build connection string:
+   - `sqlitecloud://<host>:8860/<database>?apikey=<api-key>`
+
+4. Set backend environment variables (local `.env` or Render env):
+   - `DB_PROVIDER=sqlitecloud`
+   - `SQLITECLOUD_URL=<connection-string-from-step-3>`
+
+5. Initialize schema/migrations on online DB:
+   - `npm --prefix backend run setup-db`
+
+6. Start backend:
+   - `npm --prefix backend run start`
+
+7. Verify health:
+   - `GET /health`
+   - Test register/login/chat and confirm data persists after backend restart/redeploy.
+
+#### Render deployment notes
+
+Add these env vars in Render Service → Environment:
+
+- `DB_PROVIDER`
+- `SQLITECLOUD_URL`
+- plus existing vars: `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `GROQ_API_KEY`, ...
+
+After deploy, run one-time DB init command using Render Shell:
+
+- `npm run setup-db`
+
+Then normal runtime command remains:
+
+- `npm run start`
 
 ### Database Commands
 
 | Command | Description |
 |---------|------------|
-| `npm run setup-db` | Initialize database (skips if already exists) |
-| `npm run reset-db` | Delete and recreate database |
+| `npm run setup-db` | Initialize ONLINE SQLiteCloud database (idempotent) |
+| `npm run reset-db` | In ONLINE mode, warns and does not delete cloud DB |
 | Auto-init | Server initializes DB automatically if empty |
 
 ---
 
 ## 📚 Career Catalog (Job Explorer)
 
-The job catalog is stored in a separate SQLite database.
+The job catalog is also stored in SQLiteCloud (online), alongside app data.
 
 ### 📥 Import 1000+ Jobs from O*NET
 
@@ -157,7 +223,7 @@ Used for conversational intelligence, contextual understanding, and personalized
 
 ## ⚙️ Architecture Notes
 
-- 🪶 SQLite for lightweight local deployment  
+- ☁️ SQLiteCloud for centralized ONLINE data  
 - 🧠 Rule-based matching engine (optimized for rapid prototyping)  
 - 🤖 LLM integration for advanced conversational support  
 - 🔮 Designed for future ML-based recommendation system expansion  

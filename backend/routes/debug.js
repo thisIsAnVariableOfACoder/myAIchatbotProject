@@ -1,40 +1,65 @@
 const express = require('express');
 const router = express.Router();
-const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
+const {
+    resolveSqliteCloudConnectionString,
+    sanitizeConnectionString
+} = require('../services/dbAdapter');
 
 // ... existing imports ...
 
 // New debug endpoint
 router.get('/db-info', (req, res) => {
-    const dbPath = process.env.CAREER_CATALOG_DB_PATH
-        || path.join(__dirname, '..', 'database', 'career_catalog.db');
+    try {
+        const connectionString = resolveSqliteCloudConnectionString();
+        const safeConnection = sanitizeConnectionString(connectionString);
 
-    const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
-        if (err) {
-            return res.json({
+        if (!global.db) {
+            return res.status(500).json({
                 status: 'error',
-                path: dbPath,
-                error: err.message
+                provider: 'sqlitecloud',
+                connection: safeConnection,
+                error: 'Database is not initialized'
             });
         }
 
-        db.get('SELECT COUNT(*) as count FROM jobs', (err, row) => {
-            db.get('SELECT * FROM jobs WHERE title LIKE "%Toán STEM%"', (err2, STEMRow) => {
-                db.close();
+        global.db.get('SELECT COUNT(*) as count FROM jobs', (err, row) => {
+            if (err) {
+                return res.status(500).json({
+                    status: 'error',
+                    provider: 'sqlitecloud',
+                    connection: safeConnection,
+                    error: err.message
+                });
+            }
+
+            global.db.get('SELECT * FROM jobs WHERE title LIKE "%Toán STEM%"', (err2, STEMRow) => {
+                if (err2) {
+                    return res.status(500).json({
+                        status: 'error',
+                        provider: 'sqlitecloud',
+                        connection: safeConnection,
+                        error: err2.message
+                    });
+                }
+
                 res.json({
                     status: 'ok',
-                    path: dbPath,
-                    resolvedPath: path.resolve(dbPath),
+                    provider: 'sqlitecloud',
+                    connection: safeConnection,
                     jobCount: row?.count,
                     hasSTEM: !!STEMRow,
                     stemExample: STEMRow,
-                    cwd: process.cwd(),
-                    envVar: process.env.CAREER_CATALOG_DB_PATH
+                    cwd: process.cwd()
                 });
             });
         });
-    });
+    } catch (error) {
+        return res.status(500).json({
+            status: 'error',
+            provider: 'sqlitecloud',
+            error: error.message
+        });
+    }
 });
 
 module.exports = router;

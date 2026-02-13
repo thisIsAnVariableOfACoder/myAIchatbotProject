@@ -80,6 +80,24 @@ CREATE TABLE IF NOT EXISTS scenario_nodes (
 );
 CREATE INDEX IF NOT EXISTS idx_nodes_scenario ON scenario_nodes(scenario_id);
 
+CREATE TABLE IF NOT EXISTS careers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name VARCHAR(255) UNIQUE NOT NULL,
+  category VARCHAR(100),
+  required_skills TEXT,
+  salary_range VARCHAR(100),
+  job_outlook VARCHAR(100),
+  description TEXT,
+  question_count INTEGER DEFAULT 0,
+  answer_count INTEGER DEFAULT 0,
+  mention_frequency REAL DEFAULT 0,
+  weighted_score REAL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_careers_name ON careers(name);
+CREATE INDEX IF NOT EXISTS idx_careers_category ON careers(category);
+CREATE INDEX IF NOT EXISTS idx_careers_frequency ON careers(mention_frequency);
+
 CREATE TABLE IF NOT EXISTS recommendations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   conversation_id VARCHAR(100) NOT NULL,

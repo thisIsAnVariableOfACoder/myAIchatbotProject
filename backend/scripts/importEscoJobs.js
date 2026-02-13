@@ -137,15 +137,9 @@ function buildTags(title, groupTitle) {
   return Array.from(new Set(tokens)).slice(0, 8);
 }
 
-function run(db, sql) {
+function run(db, sql, params = []) {
   return new Promise((resolve, reject) => {
-    db.run(sql, (err) => (err ? reject(err) : resolve()));
-  });
-}
-
-function finalize(stmt) {
-  return new Promise((resolve, reject) => {
-    stmt.finalize((err) => (err ? reject(err) : resolve()));
+    db.run(sql, params, (err) => (err ? reject(err) : resolve()));
   });
 }
 
@@ -189,7 +183,7 @@ function ensureRealCsv(csvPath) {
 async function main() {
   const reset = process.argv.includes('--reset');
   await initCatalogSchema();
-  const db = getCatalogDb();
+  const db = await getCatalogDb();
   if (reset) {
     await run(db, 'DELETE FROM jobs');
   }
@@ -207,7 +201,7 @@ async function main() {
   let header = null;
   let idx = {};
   let count = 0;
-  const insert = db.prepare('INSERT OR IGNORE INTO jobs (title, category, tags, image_url, source) VALUES (?, ?, ?, ?, ?)');
+  const insertSql = 'INSERT OR IGNORE INTO jobs (title, category, tags, image_url, source) VALUES (?, ?, ?, ?, ?)';
 
   await run(db, 'BEGIN TRANSACTION');
   for await (const line of rl) {
@@ -230,14 +224,13 @@ async function main() {
     const groupTitle = idx.group >= 0 ? (row[idx.group] || '').trim() : '';
     const { category, icon } = pickCategory(title, groupTitle);
     const tags = buildTags(title, groupTitle);
-    insert.run([title, category, JSON.stringify(tags), icon, 'ESCO v1.1.1 (Tabiya)']);
+    await run(db, insertSql, [title, category, JSON.stringify(tags), icon, 'ESCO v1.1.1 (Tabiya)']);
     count += 1;
     if (count % 2000 === 0) {
       console.log(`Imported ${count} occupations...`);
     }
   }
 
-  await finalize(insert);
   await run(db, 'COMMIT');
   console.log(`Imported ${count} ESCO occupations into career_catalog.db`);
 }
