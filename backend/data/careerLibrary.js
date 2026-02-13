@@ -1,3 +1,11 @@
+let GENERATED_CAREER_RECORDS = [];
+try {
+  // Auto-generated from open occupation sources (can be thousands of entries).
+  ({ GENERATED_CAREER_RECORDS } = require('./generatedCareerDataset'));
+} catch {
+  GENERATED_CAREER_RECORDS = [];
+}
+
 const CATEGORY_SKILLS = {
   Technology: ['coding', 'problem_solving', 'sql'],
   Data: ['statistics', 'sql', 'python'],
@@ -28,7 +36,17 @@ const CATEGORY_SKILLS = {
   PublicService: ['policy', 'community', 'administration'],
   Manufacturing: ['operations', 'quality', 'safety'],
   Environment: ['sustainability', 'analysis', 'field_work'],
-  SecurityDefense: ['discipline', 'safety', 'operations']
+  SecurityDefense: ['discipline', 'safety', 'operations'],
+  ECommerce: ['analytics', 'sales', 'operations'],
+  Insurance: ['risk_assessment', 'communication', 'analysis'],
+  HumanResources: ['communication', 'evaluation', 'organization'],
+  CustomerService: ['service', 'communication', 'problem_solving'],
+  Banking: ['finance', 'compliance', 'analysis'],
+  Procurement: ['negotiation', 'analysis', 'operations'],
+  Product: ['analysis', 'roadmapping', 'communication'],
+  Consulting: ['analysis', 'communication', 'problem_solving'],
+  InternationalBusiness: ['communication', 'trade', 'negotiation'],
+  CivilService: ['administration', 'policy', 'community']
 };
 
 const CAREER_LIBRARY = {
@@ -67,14 +85,28 @@ const CAREER_LIBRARY = {
     'CEO', 'CFO', 'CMO', 'CHRO', 'Sales Manager', 'Project Manager', 'HR Manager', 'Marketing Manager',
     'Market Development Specialist', 'Business Data Analyst', 'Supply Chain Specialist', 'Risk Manager',
     'Quality Manager', 'Customer Manager', 'Product Manager', 'Finance Manager', 'Operations Manager',
-    'Strategy Manager', 'Brand Manager', 'Sales Specialist', 'Contract Manager', 'Purchasing Manager', 'Office Manager'
+    'Strategy Manager', 'Brand Manager', 'Sales Specialist', 'Contract Manager', 'Purchasing Manager', 'Office Manager',
+    'Nhân viên Kinh doanh', 'Chuyên viên Kinh doanh', 'Nhân viên Phát triển Thị trường',
+    'Giám sát Kinh doanh', 'Trưởng nhóm Kinh doanh', 'Quản lý Kinh doanh Khu vực',
+    'Nhân viên Sales B2B', 'Nhân viên Sales B2C', 'Inside Sales', 'Telesales',
+    'Sales Operation Specialist', 'Sales Trainer', 'Sales Enablement Specialist',
+    'Trade Marketing Executive', 'Merchandiser', 'Key Account Executive', 'Key Account Manager',
+    'Customer Relationship Manager', 'Channel Sales Executive', 'Channel Development Manager',
+    'Partnership Manager', 'Strategic Partnership Specialist', 'Franchise Development Specialist',
+    'Commercial Executive', 'Commercial Manager'
   ],
   Marketing: [
     'Marketing Specialist', 'SEO Specialist', 'Social Media Manager', 'Content Creator',
     'Copywriter', 'Performance Marketer', 'Brand Manager', 'PR Specialist',
     'Community Manager', 'Event Planner', 'Growth Marketer', 'CRM Specialist',
     'Email Marketing Specialist', 'Marketing Analyst', 'Influencer Manager',
-    'Brand Strategist'
+    'Brand Strategist', 'Digital Marketing Executive', 'Performance Marketing Specialist',
+    'SEO/SEM Specialist', 'Paid Ads Specialist', 'Media Planner', 'Media Buyer',
+    'Content Strategist', 'Content Marketing Specialist', 'Marketing Automation Specialist',
+    'Affiliate Marketing Specialist', 'E-commerce Marketing Specialist', 'Trade Marketing Specialist',
+    'Brand Communications Executive', 'Corporate Communications Specialist', 'PR Executive',
+    'Event Marketing Specialist', 'Product Marketing Manager', 'Lifecycle Marketing Specialist',
+    'Retention Marketing Specialist', 'Market Research Analyst', 'Consumer Insight Specialist'
   ],
   Finance: [
     'Financial Analyst', 'Accountant', 'Auditor', 'Tax Specialist',
@@ -141,7 +173,10 @@ const CAREER_LIBRARY = {
   ],
   RealEstate: [
     'Môi giới Bất động sản', 'Quản lý Tài sản',
-    'Chuyên viên Phân tích Bất động sản', 'Tư vấn Cho thuê'
+    'Chuyên viên Phân tích Bất động sản', 'Tư vấn Cho thuê',
+    'Sales Bất động sản', 'Nhân viên Kinh doanh Bất động sản', 'Chuyên viên Tư vấn Bất động sản',
+    'Chuyên viên Phát triển Dự án Bất động sản', 'Chuyên viên Quan hệ Khách hàng Bất động sản',
+    'Quản lý Sàn Giao dịch Bất động sản', 'Property Sales Consultant', 'Leasing Executive'
   ],
   Retail: [
     'Quản lý Bán lẻ', 'Chuyên viên Hàng hóa',
@@ -167,7 +202,10 @@ const CAREER_LIBRARY = {
   Administration: [
     'Nhân viên Hành chính văn phòng', 'Trợ lý Hành chính', 'Thư ký', 'Lễ tân',
     'Nhân viên Nhập liệu', 'Nhân viên Văn thư lưu trữ', 'Điều phối viên văn phòng',
-    'Nhân viên CSKH', 'Nhân viên Tổng đài', 'Nhân viên xử lý hồ sơ'
+    'Nhân viên CSKH', 'Nhân viên Tổng đài', 'Nhân viên xử lý hồ sơ',
+    'Trợ lý Kinh doanh', 'Trợ lý Dự án', 'Chuyên viên Hành chính Nhân sự',
+    'Chuyên viên Hỗ trợ Vận hành', 'Chuyên viên Quản trị Văn phòng',
+    'Executive Assistant', 'Personal Assistant'
   ],
   PublicService: [
     'Công chức Hành chính', 'Viên chức Giáo dục', 'Viên chức Y tế', 'Chuyên viên UBND',
@@ -186,6 +224,49 @@ const CAREER_LIBRARY = {
   SecurityDefense: [
     'Cảnh sát', 'Sĩ quan Quân đội', 'Bảo vệ Chuyên nghiệp', 'Chuyên viên An ninh',
     'Điều tra viên', 'Cán bộ Phòng cháy chữa cháy', 'Nhân viên An ninh sân bay'
+  ],
+  ECommerce: [
+    'Chuyên viên Vận hành Sàn Thương mại điện tử', 'E-commerce Executive', 'E-commerce Manager',
+    'E-commerce Analyst', 'Marketplace Specialist', 'Category Manager', 'Online Merchandiser',
+    'Livestream Sales Specialist', 'Social Commerce Specialist', 'Customer Experience Executive'
+  ],
+  Insurance: [
+    'Tư vấn Bảo hiểm', 'Chuyên viên Thẩm định Bảo hiểm', 'Chuyên viên Bồi thường',
+    'Underwriter', 'Insurance Sales Specialist', 'Bancassurance Specialist'
+  ],
+  HumanResources: [
+    'HR Generalist', 'Talent Acquisition Specialist', 'Compensation & Benefits Specialist',
+    'Learning & Development Specialist', 'HR Business Partner', 'Employee Relations Specialist',
+    'Payroll Specialist', 'HR Operations Specialist'
+  ],
+  CustomerService: [
+    'Chuyên viên Chăm sóc Khách hàng', 'Customer Support Specialist', 'Call Center Agent',
+    'Customer Success Specialist', 'Customer Experience Specialist', 'Technical Support Specialist'
+  ],
+  Banking: [
+    'Giao dịch viên Ngân hàng', 'Chuyên viên Quan hệ Khách hàng Doanh nghiệp',
+    'Chuyên viên Quan hệ Khách hàng Cá nhân', 'Chuyên viên Tín dụng',
+    'Chuyên viên Thanh toán Quốc tế', 'Chuyên viên Quản trị Rủi ro Ngân hàng'
+  ],
+  Procurement: [
+    'Chuyên viên Mua hàng', 'Purchasing Executive', 'Procurement Analyst',
+    'Strategic Sourcing Specialist', 'Vendor Management Specialist'
+  ],
+  Product: [
+    'Product Owner', 'Associate Product Manager', 'Product Operations Specialist',
+    'Product Marketing Specialist', 'Product Strategy Analyst'
+  ],
+  Consulting: [
+    'Tư vấn Chiến lược', 'Tư vấn Quản trị', 'Tư vấn Chuyển đổi số',
+    'Tư vấn Vận hành', 'Business Transformation Analyst'
+  ],
+  InternationalBusiness: [
+    'Chuyên viên Xuất nhập khẩu', 'International Sales Executive', 'Trade Compliance Specialist',
+    'Logistics Import-Export Coordinator', 'Global Sourcing Specialist'
+  ],
+  CivilService: [
+    'Chuyên viên Văn phòng UBND', 'Cán bộ Tư pháp - Hộ tịch', 'Chuyên viên Nội vụ',
+    'Chuyên viên Kế hoạch - Đầu tư', 'Cán bộ Văn hóa - Xã hội', 'Công chức Địa chính'
   ]
 };
 
@@ -197,7 +278,7 @@ function buildCareerRecords() {
   const records = [];
   const seen = new Set();
 
-  function pushRecord(name, category) {
+  function pushRecord(name, category, sourceRecord = null) {
     // Explicitly exclude specific roles requested by user
     if (name.includes('Giáo viên Toán STEM') || name.includes('Giảng viên Toán đội tuyển')) {
       return;
@@ -206,13 +287,21 @@ function buildCareerRecords() {
     const key = `${name}`.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
+
+    const sourceSkills = Array.isArray(sourceRecord?.required_skills)
+      ? sourceRecord.required_skills.filter(Boolean)
+      : null;
+    const resolvedSkills = sourceSkills && sourceSkills.length > 0
+      ? sourceSkills
+      : (CATEGORY_SKILLS[category] || ['communication', 'analysis']);
+
     records.push({
       name,
       category,
-      required_skills: CATEGORY_SKILLS[category] || ['communication', 'analysis'],
-      salary_range: "Thỏa thuận",
-      job_outlook: "good",
-      description: `${name} thuộc nhóm ${category}`
+      required_skills: resolvedSkills,
+      salary_range: String(sourceRecord?.salary_range || 'Thỏa thuận'),
+      job_outlook: String(sourceRecord?.job_outlook || 'good'),
+      description: String(sourceRecord?.description || `${name} thuộc nhóm ${category}`)
     });
   }
 
@@ -221,6 +310,14 @@ function buildCareerRecords() {
     for (const name of names) {
       pushRecord(name, category);
     }
+  }
+
+  // Merge large generated catalog (if present) to dramatically expand coverage.
+  for (const rec of GENERATED_CAREER_RECORDS) {
+    const name = String(rec?.name || '').trim();
+    const category = String(rec?.category || '').trim() || 'Business';
+    if (!name) continue;
+    pushRecord(name, category, rec);
   }
 
   return records;

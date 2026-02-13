@@ -23,7 +23,15 @@ const MEMORY_MESSAGES = [];
 const MIN_CONF_SCORE = 1;
 const MIN_CONF_COUNT = 5;
 const MAX_QUESTIONS = 50;
-const MIN_REFINEMENT_QUESTIONS = 5;
+const MIN_REFINEMENT_QUESTIONS = 8;
+const EXTRA_REFINEMENT_QUESTIONS_ON_REQUEST = 6;
+
+function getRequiredRefinementQuestions(state, requestedMore) {
+  const explicitlyRequested = Boolean(requestedMore || state?.forceDeeperRefinement);
+  return explicitlyRequested
+    ? MIN_REFINEMENT_QUESTIONS + EXTRA_REFINEMENT_QUESTIONS_ON_REQUEST
+    : MIN_REFINEMENT_QUESTIONS;
+}
 
 function isPotentialQuestionText(message) {
   const text = String(message || '').trim();
@@ -336,9 +344,11 @@ router.post('/message', requireAuth, async (req, res) => {
 
     state.refinementMode = Boolean(state.refinementMode) || Boolean(request_more);
     state.refinementQuestionsAsked = Number(state.refinementQuestionsAsked || 0);
+    state.forceDeeperRefinement = Boolean(state.forceDeeperRefinement) || Boolean(request_more);
 
     if (request_more || isAffirmativeRefinementRequest(message)) {
       state.refinementMode = true;
+      state.forceDeeperRefinement = true;
     }
 
     // Combine all answers for AI analysis
@@ -354,14 +364,19 @@ router.post('/message', requireAuth, async (req, res) => {
 
     // Determine if we have enough information for AI recommendations
     // Minimum 5 answers for accurate scoring (more data = better results)
-    const minAnswersForRecommendation = 9;
-    const maxQuestions = 18; // AI keeps asking longer to improve confidence
+    const minAnswersForRecommendation = state.refinementMode
+      ? Math.max(12, 9 + (state.forceDeeperRefinement ? 4 : 0))
+      : 9;
+    const maxQuestions = state.refinementMode
+      ? (state.forceDeeperRefinement ? 28 : 22)
+      : 18; // AI keeps asking longer to improve confidence
 
     let recommendations = null;
     let completed = false;
 
     // Use AI to generate recommendations when we have enough information
-    const canConcludeByRefinement = !state.refinementMode || refinementQuestionCount >= MIN_REFINEMENT_QUESTIONS;
+    const requiredRefinementQuestions = getRequiredRefinementQuestions(state, request_more);
+    const canConcludeByRefinement = !state.refinementMode || refinementQuestionCount >= requiredRefinementQuestions;
 
     if (userAnsweredPending && totalAnswers >= minAnswersForRecommendation && totalAnswers <= maxQuestions && !request_more && canConcludeByRefinement) {
       try {
@@ -399,7 +414,7 @@ router.post('/message', requireAuth, async (req, res) => {
       }
     }
 
-    if (state.refinementMode) {
+    if (state.refinementMode && !canConcludeByRefinement) {
       completed = false;
       recommendations = null;
     }
@@ -572,7 +587,8 @@ router.post('/message', requireAuth, async (req, res) => {
         ai_question_count: aiQuestionCount,
         refinement_question_count: refinementQuestionCount,
         refinement_mode: Boolean(state.refinementMode),
-        min_refinement_questions: MIN_REFINEMENT_QUESTIONS
+        min_refinement_questions: requiredRefinementQuestions,
+        force_deeper_refinement: Boolean(state.forceDeeperRefinement)
       }
     });
 

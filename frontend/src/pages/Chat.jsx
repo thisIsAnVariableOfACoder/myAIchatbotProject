@@ -38,6 +38,26 @@ function resolveRecommendationPercent(item) {
   return 0;
 }
 
+function hasProfileField(value) {
+  if (value === null || value === undefined) return false;
+  return String(value).trim() !== '';
+}
+
+function isProfileComplete(profile) {
+  const level = String(profile?.education_level || '').trim();
+  if (!level) return false;
+
+  if (level === 'professional') {
+    return hasProfileField(profile?.work_experience_years);
+  }
+
+  if (level === 'high_school' || level === 'university') {
+    return hasProfileField(profile?.current_grade);
+  }
+
+  return false;
+}
+
 export default function Chat() {
   const { user, token } = useAuth();
   const userId = user?.user_id || null;
@@ -73,9 +93,12 @@ export default function Chat() {
   }, [userType]);
 
   const displayName = useMemo(() => {
+    if (user?.username) return String(user.username).trim();
     if (user?.email) return user.email.split('@')[0];
     return 'bạn';
   }, [user]);
+
+  const profileComplete = useMemo(() => isProfileComplete(profileInitial), [profileInitial]);
 
   useEffect(() => {
     if (user?.user_type) setUserType(user.user_type);
@@ -106,6 +129,12 @@ export default function Chat() {
     loadProfile();
     return () => { cancelled = true; };
   }, [userId, token]);
+
+  useEffect(() => {
+    if (profileComplete && chatLocked) {
+      setChatLocked(false);
+    }
+  }, [profileComplete, chatLocked]);
 
   useEffect(() => {
     let cancelled = false;
@@ -253,10 +282,8 @@ export default function Chat() {
       if (data.recommendations) {
         const recs = normalizeRecommendations(data.recommendations);
         setRecommendations(recs);
-        // Lock chat when recommendations are shown
-        if (recs.length > 0) {
-          setChatLocked(true);
-        }
+        // Keep chat usable when profile is already complete.
+        setChatLocked(recs.length > 0 && !profileComplete);
       }
       setCompleted(Boolean(data.completed));
 
@@ -283,7 +310,10 @@ export default function Chat() {
     }
     const profileId = userId || 'guest';
     try {
-      await api.updateProfile(profileId, token, payload);
+      const json = await api.updateProfile(profileId, token, payload);
+      if (!json?.success) {
+        throw new Error(json?.error || 'Không thể lưu hồ sơ.');
+      }
       console.log("Profile updated successfully in API");
 
       if (payload?.education_level) {
@@ -308,8 +338,17 @@ export default function Chat() {
       }
 
       // Reactively update local state
-      setProfileInitial(payload);
-      console.log("profileInitial state updated to:", payload);
+      const nextProfile = {
+        ...payload,
+        current_grade: payload?.current_grade ?? null,
+        work_experience_years: payload?.work_experience_years ?? null
+      };
+      setProfileInitial(nextProfile);
+      console.log("profileInitial state updated to:", nextProfile);
+
+      if (isProfileComplete(nextProfile)) {
+        setChatLocked(false);
+      }
 
       // If clearing profile (education_level is empty), lock chat and clear messages
       if (!payload.education_level) {
@@ -322,6 +361,7 @@ export default function Chat() {
       }
     } catch (err) {
       console.error("Error in saveProfile:", err);
+      setApiError(String(err?.message || 'Không thể lưu hồ sơ.'));
     }
   }
 
@@ -342,7 +382,7 @@ export default function Chat() {
     const recs = normalizeRecommendations(recJson?.data || []);
     setRecommendations(recs);
     setCompleted(recs.length > 0);
-    setChatLocked(recs.length > 0); // Lock chat if there are recommendations
+    setChatLocked(recs.length > 0 && !profileComplete);
     setCurrentNode(null);
   }
 
@@ -350,7 +390,7 @@ export default function Chat() {
     setRecommendations([]);
     setCompleted(false);
     setChatLocked(false); // Unlock chat when user wants more questions
-    await sendMessage('Tôi chưa hài lòng, hãy hỏi thêm.', { requestMore: true });
+    await sendMessage('Mình chưa hài lòng, hãy tiếp tục hỏi thêm nhiều câu để tăng độ chính xác.', { requestMore: true });
   }
 
   function startNewChat() {
@@ -542,11 +582,11 @@ export default function Chat() {
               showHelloHint={!helloSent}
               showFollowUp={completed && recommendations.length > 0}
               onFollowUp={requestMoreQuestions}
-              disabled={!isLoggedIn || !profileInitial?.education_level || chatLocked}
+              disabled={!isLoggedIn || !profileComplete || chatLocked}
               placeholder={
                 !isLoggedIn
                   ? "Vui lòng đăng nhập để bắt đầu chat..."
-                  : !profileInitial?.education_level
+                  : !profileComplete
                     ? "Vui lòng điền hồ sơ bên trái để bắt đầu..."
                     : chatLocked
                       ? "Chat đã khóa. Nhấn 'Chưa hài lòng? Hỏi tiếp' để mở lại."

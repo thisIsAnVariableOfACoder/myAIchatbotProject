@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
 
+function toNullableNumber(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export default function ProfileForm({
   onSave,
   onUserTypeChange,
@@ -58,8 +65,16 @@ export default function ProfileForm({
   useEffect(() => {
     if (!initialValues || hasDraft) return;
     setEducationLevel(initialValues.education_level || '');
-    setCurrentGrade(initialValues.current_grade ? String(initialValues.current_grade) : '');
-    setWorkYears(initialValues.work_experience_years ? String(initialValues.work_experience_years) : '');
+    setCurrentGrade(
+      initialValues.current_grade !== null && initialValues.current_grade !== undefined
+        ? String(initialValues.current_grade)
+        : ''
+    );
+    setWorkYears(
+      initialValues.work_experience_years !== null && initialValues.work_experience_years !== undefined
+        ? String(initialValues.work_experience_years)
+        : ''
+    );
     setWorkStyle(initialValues.preferred_work_style || 'hybrid');
     setDirty(false);
   }, [initialValues, hasDraft]);
@@ -95,12 +110,15 @@ export default function ProfileForm({
   function handleSubmit(e) {
     e.preventDefault();
     if (!canSave) return;
+    const parsedCurrentGrade = toNullableNumber(currentGrade);
+    const parsedWorkYears = toNullableNumber(workYears);
+
     onSave({
       skills: [],
       interests: [],
       education_level: educationLevel,
-      current_grade: Number(currentGrade) || null,
-      work_experience_years: Number(workYears) || null,
+      current_grade: parsedCurrentGrade,
+      work_experience_years: parsedWorkYears,
       preferred_work_style: workStyle
     });
     if (onUserTypeChange && educationLevel) {

@@ -781,6 +781,18 @@ function buildRecommendationEvidence({ userType, profile, memoryAnswers }) {
     teaching: has(/\b(giao vien|teacher|giang day|su pham|giao duc|day hoc|hoc sinh|lop hoc)\b/),
     biology: has(/\b(sinh hoc|biology|te bao|gene|di truyen|phong thi nghiem|lab|khoa hoc su song)\b/),
     business: has(/\b(kinh doanh|sales|doanh nghiep|hr|quan tri|startup|thuong mai)\b/),
+    sales: has(/\b(sales|ban hang|kinh doanh|chot deal|cham soc khach hang|tu van khach hang)\b/),
+    realEstate: has(/\b(bat dong san|real estate|moi gioi|property|leasing)\b/),
+    administration: has(/\b(hanh chinh|van phong|thu ky|tro ly|nhap lieu|ho so|van thu|office admin)\b/),
+    publicService: has(/\b(cong chuc|vien chuc|ubnd|nha nuoc|hanh chinh cong|cong vu|phuc vu cong dong)\b/),
+    ecommerce: has(/\b(e commerce|ecommerce|thuong mai dien tu|san thuong mai|marketplace|livestream|social commerce)\b/),
+    hr: has(/\b(nhan su|hr|recruit|tuyen dung|talent|c&b|compensation|payroll|dao tao noi bo)\b/),
+    customerService: has(/\b(cskh|customer service|customer success|hotline|call center|support)\b/),
+    banking: has(/\b(ngan hang|banking|tin dung|giao dich vien|quan he khach hang|thanh toan quoc te)\b/),
+    insurance: has(/\b(bao hiem|insurance|underwriter|tham dinh|boi thuong|bancassurance)\b/),
+    manufacturing: has(/\b(san xuat|qa|qc|day chuyen|nha may|xuong|quy trinh san xuat|van hanh may)\b/),
+    environment: has(/\b(moi truong|esg|phat thai|giam phat thai|sustainability|quan trac|chat thai)\b/),
+    security: has(/\b(an ninh|quoc phong|canh sat|quan doi|phong chay|bao ve|dieu tra)\b/),
     marketing: has(/\b(marketing|digital marketing|seo|sem|social media|noi dung|content|thuong hieu|brand|pr|quang cao|truyen thong|growth)\b/),
     finance: has(/\b(tai chinh|ke toan|kiem toan|ngan hang|dau tu|bao hiem|chung khoan)\b/),
     media: has(/\b(truyen thong|content|noi dung|bao chi|media|video|podcast|influencer|pr)\b/),
@@ -793,6 +805,19 @@ function buildRecommendationEvidence({ userType, profile, memoryAnswers }) {
 function getPriorityCategories(evidence) {
   const prioritized = [];
 
+  if (evidence.realEstate) prioritized.push('RealEstate', 'Business', 'Marketing', 'Finance');
+  if (evidence.sales) prioritized.push('Business', 'RealEstate', 'Retail', 'CustomerService', 'Marketing');
+  if (evidence.administration) prioritized.push('Administration', 'PublicService', 'CivilService', 'Business');
+  if (evidence.publicService) prioritized.push('PublicService', 'CivilService', 'Government', 'Administration', 'SecurityDefense');
+  if (evidence.ecommerce) prioritized.push('ECommerce', 'Marketing', 'Business', 'Retail', 'Data');
+  if (evidence.hr) prioritized.push('HumanResources', 'Business');
+  if (evidence.customerService) prioritized.push('CustomerService', 'Business', 'Retail', 'Hospitality');
+  if (evidence.banking) prioritized.push('Banking', 'Finance', 'Insurance');
+  if (evidence.insurance) prioritized.push('Insurance', 'Finance', 'Banking');
+  if (evidence.manufacturing) prioritized.push('Manufacturing', 'Engineering', 'Logistics');
+  if (evidence.environment) prioritized.push('Environment', 'Science', 'Engineering', 'Agriculture');
+  if (evidence.security) prioritized.push('SecurityDefense', 'PublicService', 'Government');
+
   if (evidence.marketing) prioritized.push('Marketing', 'Media', 'Business', 'Design');
   if (evidence.finance) prioritized.push('Finance', 'Business');
   if (evidence.teaching) prioritized.push('Education');
@@ -804,18 +829,103 @@ function getPriorityCategories(evidence) {
   if (evidence.userType === 'high_school') {
     prioritized.push('Education', 'Science', 'Technology', 'Design');
   } else if (evidence.userType === 'university') {
-    prioritized.push('Technology', 'Data', 'Science', 'Business');
+    prioritized.push('Technology', 'Data', 'Science', 'Business', 'Marketing', 'RealEstate');
   } else {
-    prioritized.push('Business', 'Technology', 'Education', 'Finance');
+    prioritized.push('Business', 'Marketing', 'RealEstate', 'Administration', 'PublicService', 'Finance', 'Technology');
   }
 
-  prioritized.push('Education', 'Technology', 'Data', 'Business', 'Design', 'Science');
+  prioritized.push(
+    'Business', 'Marketing', 'RealEstate', 'Administration', 'PublicService', 'CivilService',
+    'CustomerService', 'HumanResources', 'ECommerce', 'Finance', 'Banking', 'Insurance',
+    'Technology', 'Data', 'Product', 'Consulting', 'InternationalBusiness',
+    'Education', 'Design', 'Media', 'Science', 'Healthcare', 'Engineering',
+    'Manufacturing', 'Logistics', 'Environment', 'SecurityDefense', 'Government',
+    'Agriculture', 'Retail', 'Hospitality', 'Transportation', 'Construction'
+  );
   return Array.from(new Set(prioritized));
 }
 
 function computeRelevanceAdjustment(careerName, category, evidence) {
   const normalizedCareer = normalizeEvidenceText(careerName);
   let adjustment = 0;
+
+  if (evidence.realEstate) {
+    if (category === 'RealEstate') adjustment += 24;
+    if (category === 'Business') adjustment += 10;
+    if (category === 'Marketing') adjustment += 6;
+    if (category === 'Finance') adjustment += 4;
+  }
+
+  if (evidence.sales) {
+    if (category === 'Business') adjustment += 16;
+    if (category === 'RealEstate' || category === 'Retail') adjustment += 12;
+    if (category === 'CustomerService') adjustment += 10;
+    if (category === 'Marketing') adjustment += 6;
+  }
+
+  if (evidence.administration) {
+    if (category === 'Administration') adjustment += 18;
+    if (category === 'PublicService') adjustment += 12;
+    if (category === 'CivilService') adjustment += 10;
+    if (category === 'Business') adjustment += 4;
+  }
+
+  if (evidence.publicService) {
+    if (category === 'PublicService') adjustment += 20;
+    if (category === 'CivilService') adjustment += 16;
+    if (category === 'Government') adjustment += 12;
+    if (category === 'Administration') adjustment += 8;
+    if (category === 'SecurityDefense') adjustment += 6;
+  }
+
+  if (evidence.ecommerce) {
+    if (category === 'ECommerce') adjustment += 18;
+    if (category === 'Marketing') adjustment += 10;
+    if (category === 'Business' || category === 'Retail') adjustment += 8;
+    if (category === 'Data') adjustment += 4;
+  }
+
+  if (evidence.hr) {
+    if (category === 'HumanResources') adjustment += 18;
+    if (category === 'Business') adjustment += 6;
+  }
+
+  if (evidence.customerService) {
+    if (category === 'CustomerService') adjustment += 16;
+    if (category === 'Business' || category === 'Retail') adjustment += 6;
+    if (category === 'Hospitality') adjustment += 4;
+  }
+
+  if (evidence.banking) {
+    if (category === 'Banking') adjustment += 18;
+    if (category === 'Finance') adjustment += 14;
+    if (category === 'Insurance') adjustment += 8;
+  }
+
+  if (evidence.insurance) {
+    if (category === 'Insurance') adjustment += 18;
+    if (category === 'Finance') adjustment += 12;
+    if (category === 'Banking') adjustment += 8;
+  }
+
+  if (evidence.manufacturing) {
+    if (category === 'Manufacturing') adjustment += 16;
+    if (category === 'Engineering') adjustment += 10;
+    if (category === 'Logistics') adjustment += 8;
+  }
+
+  if (evidence.environment) {
+    if (category === 'Environment') adjustment += 16;
+    if (category === 'Science') adjustment += 10;
+    if (category === 'Engineering') adjustment += 6;
+    if (category === 'Agriculture') adjustment += 4;
+  }
+
+  if (evidence.security) {
+    if (category === 'SecurityDefense') adjustment += 16;
+    if (category === 'PublicService') adjustment += 8;
+    if (category === 'Government') adjustment += 6;
+  }
 
   if (evidence.marketing) {
     if (category === 'Marketing') adjustment += 24;
@@ -875,8 +985,22 @@ function shouldDropRecommendationByContext(category, evidence, adjustedScore) {
   if (!category) return false;
 
   if (evidence.marketing && !evidence.tech && !evidence.engineering) {
-    const allowed = new Set(['Marketing', 'Media', 'Business', 'Design', 'Finance']);
+    const allowed = new Set(['Marketing', 'Media', 'Business', 'Design', 'Finance', 'RealEstate', 'ECommerce', 'Retail', 'CustomerService']);
     if (!allowed.has(category) && adjustedScore < 88) {
+      return true;
+    }
+  }
+
+  if (evidence.realEstate && !evidence.tech && !evidence.engineering) {
+    const allowed = new Set(['RealEstate', 'Business', 'Marketing', 'Finance', 'CustomerService', 'Retail']);
+    if (!allowed.has(category) && adjustedScore < 86) {
+      return true;
+    }
+  }
+
+  if (evidence.publicService && !evidence.business && !evidence.marketing) {
+    const allowed = new Set(['PublicService', 'CivilService', 'Government', 'Administration', 'SecurityDefense']);
+    if (!allowed.has(category) && adjustedScore < 84) {
       return true;
     }
   }
@@ -897,6 +1021,23 @@ function shouldDropRecommendationByContext(category, evidence, adjustedScore) {
   }
 
   return false;
+}
+
+function buildCareerCatalogHint(evidence, options = {}) {
+  const maxCategories = Number(options.maxCategories || 10);
+  const maxCareersPerCategory = Number(options.maxCareersPerCategory || 14);
+  const categories = getPriorityCategories(evidence).slice(0, maxCategories);
+
+  const lines = categories.map((category) => {
+    const careers = CAREER_CATALOG.records
+      .filter((r) => r.category === category)
+      .slice(0, maxCareersPerCategory)
+      .map((r) => r.name);
+    if (!careers.length) return null;
+    return `- ${category}: ${careers.join(', ')}`;
+  }).filter(Boolean);
+
+  return lines.join('\n');
 }
 
 function buildContextFallbackRecommendations(evidence, existingNames = []) {
@@ -1175,6 +1316,8 @@ async function generateCareerRecommendations({ userType, profile, memoryAnswers 
   const memoryText = Array.isArray(memoryAnswers)
     ? memoryAnswers.map((a) => ({ q: a?.question || a?.q, a: a?.answer || a?.a })).filter((x) => x.q || x.a)
     : [];
+  const evidence = buildRecommendationEvidence({ userType: safeUserType, profile, memoryAnswers });
+  const catalogHint = buildCareerCatalogHint(evidence, { maxCategories: 12, maxCareersPerCategory: 16 });
 
   const systemPrompt = `Bạn là chuyên gia tư vấn hướng nghiệp với 30 năm kinh nghiệm.
 Nhiệm vụ: Phân tích thông tin người dùng và đưa ra gợi ý nghề nghiệp phù hợp nhất.
@@ -1210,6 +1353,10 @@ NGUYÊN TẮC CÔNG BẰNG:
 
 7. KHÔNG BỊA nghề lạ. Chỉ dùng nghề phổ biến, rõ ràng, có thật và bám sát dữ liệu người dùng.
 
+8. KHÔNG được bó hẹp danh sách vào vài nghề quen thuộc. Nếu dữ liệu người dùng thiên về kinh doanh/sales/marketing/bất động sản/hành chính thì phải phản ánh rõ các nhóm nghề này.
+
+9. Ưu tiên sử dụng tên nghề từ danh mục nghề được cung cấp trong user message; không tự tạo tên nghề ngoài danh mục.
+
 BẮT BUỘC: Trả về JSON đúng cấu trúc:
 {
   "recommendations": [
@@ -1232,6 +1379,9 @@ Lưu ý:
 profile: ${profileText}
 conversation_history: ${JSON.stringify(memoryText)}
 
+danh_muc_nghe_tham_chieu:
+${catalogHint || 'Không có danh mục tham chiếu'}
+
 Hãy phân tích và đưa ra gợi ý nghề nghiệp phù hợp nhất.
 
 Lưu ý về userType:
@@ -1247,7 +1397,7 @@ Hãy phân tích và đưa ra gợi ý nghề nghiệp phù hợp nhất.`;
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userContent }
     ],
-    temperature: 0.5,
+    temperature: 0.6,
     top_p: 0.9,
     max_tokens: 2048,
     stream: false

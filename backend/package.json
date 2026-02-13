@@ -12,7 +12,8 @@
     "import-jobs": "node scripts/importOnetJobs.js",
     "reset-jobs": "node scripts/importOnetJobs.js --reset",
     "import-esco": "node scripts/importEscoJobs.js",
-    "reset-esco": "node scripts/importEscoJobs.js --reset"
+    "reset-esco": "node scripts/importEscoJobs.js --reset",
+    "generate-large-careers": "node scripts/generateLargeCareerDataset.js"
   },
   "dependencies": {
     "@sqlitecloud/drivers": "^1.0.739",
