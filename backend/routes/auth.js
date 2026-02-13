@@ -151,6 +151,20 @@ router.post('/register', async (req, res) => {
 
     const result = await dbRun(insertQuery, insertParams);
 
+    if (!result || !result.lastID) {
+      throw new Error('Đăng ký thất bại: không nhận được user_id từ database');
+    }
+
+    // Verify persistence to online DB immediately (defensive for cloud drivers)
+    const insertedUser = await dbGet('SELECT id, email, username, user_type FROM users WHERE id = ? LIMIT 1', [result.lastID]);
+    if (!insertedUser) {
+      throw new Error('Đăng ký thất bại: user chưa được lưu vào database');
+    }
+
+    if (String(insertedUser.email || '').toLowerCase() !== normalizedEmail) {
+      throw new Error('Đăng ký thất bại: dữ liệu email lưu không khớp');
+    }
+
     const token = jwt.sign({
       user_id: result.lastID,
       username: loginName,

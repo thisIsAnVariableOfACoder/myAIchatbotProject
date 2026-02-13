@@ -780,8 +780,12 @@ function buildRecommendationEvidence({ userType, profile, memoryAnswers }) {
     text,
     teaching: has(/\b(giao vien|teacher|giang day|su pham|giao duc|day hoc|hoc sinh|lop hoc)\b/),
     biology: has(/\b(sinh hoc|biology|te bao|gene|di truyen|phong thi nghiem|lab|khoa hoc su song)\b/),
-    business: has(/\b(kinh doanh|marketing|sales|doanh nghiep|hr|tai chinh|ke toan|quan tri|e learning|elearning)\b/),
+    business: has(/\b(kinh doanh|sales|doanh nghiep|hr|quan tri|startup|thuong mai)\b/),
+    marketing: has(/\b(marketing|digital marketing|seo|sem|social media|noi dung|content|thuong hieu|brand|pr|quang cao|truyen thong|growth)\b/),
+    finance: has(/\b(tai chinh|ke toan|kiem toan|ngan hang|dau tu|bao hiem|chung khoan)\b/),
+    media: has(/\b(truyen thong|content|noi dung|bao chi|media|video|podcast|influencer|pr)\b/),
     tech: has(/\b(cong nghe|lap trinh|coding|software|data|ai|machine learning)\b/),
+    engineering: has(/\b(ky su|engineering|co khi|xay dung|dien|tu dong hoa|cong nghiep)\b/),
     upskill: has(/\b(phat trien|nang cao|trau doi|bo sung|hoan thien|improve|upskill)\b/)
   };
 }
@@ -789,9 +793,12 @@ function buildRecommendationEvidence({ userType, profile, memoryAnswers }) {
 function getPriorityCategories(evidence) {
   const prioritized = [];
 
+  if (evidence.marketing) prioritized.push('Marketing', 'Media', 'Business', 'Design');
+  if (evidence.finance) prioritized.push('Finance', 'Business');
   if (evidence.teaching) prioritized.push('Education');
   if (evidence.biology) prioritized.push('Science', 'Education', 'Healthcare', 'Agriculture');
-  if (evidence.tech) prioritized.push('Technology', 'Data');
+  if (evidence.tech) prioritized.push('Technology', 'Data', 'Engineering');
+  if (evidence.media) prioritized.push('Media', 'Marketing');
   if (evidence.business) prioritized.push('Business', 'Marketing', 'Finance');
 
   if (evidence.userType === 'high_school') {
@@ -810,6 +817,25 @@ function computeRelevanceAdjustment(careerName, category, evidence) {
   const normalizedCareer = normalizeEvidenceText(careerName);
   let adjustment = 0;
 
+  if (evidence.marketing) {
+    if (category === 'Marketing') adjustment += 24;
+    if (category === 'Media') adjustment += 12;
+    if (category === 'Business' || category === 'Design') adjustment += 8;
+
+    if ((category === 'Technology' || category === 'Data' || category === 'Engineering') && !evidence.tech) {
+      adjustment -= 24;
+    }
+    if (['Science', 'Healthcare', 'Trades', 'Construction', 'Agriculture'].includes(category)) {
+      adjustment -= 14;
+    }
+  }
+
+  if (evidence.finance) {
+    if (category === 'Finance') adjustment += 16;
+    if (category === 'Business') adjustment += 8;
+    if (category === 'Marketing' && !evidence.marketing) adjustment -= 6;
+  }
+
   if (evidence.teaching) {
     if (category === 'Education') adjustment += 18;
     if (category === 'Science') adjustment += 10;
@@ -825,8 +851,14 @@ function computeRelevanceAdjustment(careerName, category, evidence) {
     if (category === 'Business' || category === 'Marketing') adjustment -= 14;
   }
 
-  if (evidence.tech && (category === 'Technology' || category === 'Data')) adjustment += 8;
+  if (evidence.tech && (category === 'Technology' || category === 'Data')) adjustment += 10;
+  if (evidence.tech && category === 'Engineering') adjustment += 6;
+  if (evidence.media && category === 'Media') adjustment += 6;
   if (evidence.business && (category === 'Business' || category === 'Marketing' || category === 'Finance')) adjustment += 8;
+
+  if (evidence.business && !evidence.tech && (category === 'Technology' || category === 'Engineering')) {
+    adjustment -= 10;
+  }
 
   if (evidence.upskill && evidence.teaching && /\b(giao vien|giang vien|gia su|teacher)\b/.test(normalizedCareer)) {
     adjustment += 8;
@@ -841,6 +873,20 @@ function computeRelevanceAdjustment(careerName, category, evidence) {
 
 function shouldDropRecommendationByContext(category, evidence, adjustedScore) {
   if (!category) return false;
+
+  if (evidence.marketing && !evidence.tech && !evidence.engineering) {
+    const allowed = new Set(['Marketing', 'Media', 'Business', 'Design', 'Finance']);
+    if (!allowed.has(category) && adjustedScore < 88) {
+      return true;
+    }
+  }
+
+  if (evidence.tech && !evidence.business && !evidence.marketing) {
+    const allowed = new Set(['Technology', 'Data', 'Engineering']);
+    if (!allowed.has(category) && adjustedScore < 84) {
+      return true;
+    }
+  }
 
   // Trường hợp có tín hiệu rất mạnh: giáo viên + sinh học + không có business signal.
   // Loại bỏ các nghề Business/Marketing/Finance yếu liên quan để tránh gợi ý lệch.

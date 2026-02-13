@@ -24,6 +24,20 @@ function normalizeRecommendations(list) {
     .slice(0, 10);
 }
 
+function resolveRecommendationPercent(item) {
+  const rawScore = Number(item?.match_score);
+  if (Number.isFinite(rawScore)) {
+    return Math.min(100, Math.max(0, rawScore));
+  }
+
+  const rawProbability = Number(item?.probability);
+  if (Number.isFinite(rawProbability)) {
+    return Math.min(100, Math.max(0, rawProbability * 100));
+  }
+
+  return 0;
+}
+
 export default function Chat() {
   const { user, token } = useAuth();
   const userId = user?.user_id || null;
@@ -548,11 +562,7 @@ export default function Chat() {
             {recommendations.length > 0 && (
               <div className="space-y-3">
                 {recommendations.map((r) => {
-                  // Ưu tiên dùng probability từ backend (0-1), fallback sang match_score nếu không có
-                  const rawProb = typeof r.probability === 'number'
-                    ? r.probability * 100
-                    : Number(r.match_score || 0);
-                  const percent = Math.min(100, Math.max(0, rawProb));
+                  const percent = resolveRecommendationPercent(r);
                   return (
                     <div key={r.career_name} className="flex items-center gap-3">
                       <div className="w-32 text-xs font-medium truncate">{r.career_name}</div>
@@ -573,10 +583,7 @@ export default function Chat() {
             {bestCareer && (
               <div className="mb-3 rounded-lg border border-[#E8E2D8] bg-[#FFF8F0] px-3 py-2 text-sm font-semibold">
                 {(() => {
-                  const rawProb = typeof bestCareer.probability === 'number'
-                    ? bestCareer.probability * 100
-                    : Number(bestCareer.match_score || 0);
-                  const percent = Math.min(100, Math.max(0, rawProb));
+                  const percent = resolveRecommendationPercent(bestCareer);
                   return (
                     <>Nghề phù hợp nhất: {bestCareer.career_name} ({percent.toFixed(1)}%)</>
                   );
@@ -591,7 +598,7 @@ export default function Chat() {
                 <ResultCard
                   key={`${r.career_name}-${idx}`}
                   career={r.career_name}
-                  score={r.match_score}
+                  score={resolveRecommendationPercent(r)}
                   reasons={r.reasons}
                 />
               ))}
