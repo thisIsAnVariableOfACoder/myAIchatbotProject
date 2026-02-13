@@ -11,8 +11,11 @@ import { applyTheme, getStoredTheme } from './theme';
 import Explore from './pages/Explore';
 import PolicyModal from './components/PolicyModal';
 import { privacyPolicyContent, termsOfServiceContent, cookiePolicyContent } from './data/policies.jsx';
+import { useAuth } from './context/AuthContext';
 
 export default function App() {
+  const { token, user } = useAuth();
+  const isLoggedIn = Boolean(token && user?.user_id);
   // Detect GitHub Pages subdirectory
   const isGitHubPages = window.location.hostname.includes('github.io');
   const routerBase = isGitHubPages ? '/myAIchatbotProject' : '/';
@@ -70,6 +73,11 @@ export default function App() {
         </a>
         <TopNav />
         <main id="main" className="mx-auto max-w-screen-2xl px-4 py-6">
+          {!isLoggedIn && (
+            <div className="mb-4 rounded-lg border border-[#E8E2D8] bg-[#FFF8F0] px-4 py-3 text-sm text-[#5B5B57]">
+              Bạn cần đăng nhập để bắt đầu chat và lưu hồ sơ/lịch sử hội thoại. Vào mục <span className="font-semibold">Auth</span> để đăng nhập.
+            </div>
+          )}
           <Routes>
             <Route path="/" element={<Chat />} />
             <Route path="/explore" element={<Explore />} />

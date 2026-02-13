@@ -4,6 +4,14 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 
+function normalizeUserType(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'high_school' || normalized === 'university' || normalized === 'professional') {
+    return normalized;
+  }
+  return null;
+}
+
 router.get('/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   if (req.user.user_type !== 'admin' && String(req.user.user_id) !== String(id)) {
@@ -22,6 +30,7 @@ router.put('/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   const targetId = req.user.user_type === 'admin' ? id : req.user.user_id;
   const { skills, interests, education_level, current_grade, work_experience_years, preferred_work_style } = req.body;
+  const normalizedEducationLevel = normalizeUserType(education_level);
   
   const query = `
     INSERT INTO profiles (user_id, skills, interests, education_level, current_grade, work_experience_years, preferred_work_style, updated_at) 
@@ -36,13 +45,28 @@ router.put('/:id', requireAuth, (req, res) => {
   global.db.run(
     query,
     [
-      targetId, skillsJson, interestsJson, education_level, current_grade || null, work_experience_years || null, preferred_work_style || null,
-      skillsJson, interestsJson, education_level, current_grade || null, work_experience_years || null, preferred_work_style || null
+      targetId, skillsJson, interestsJson, normalizedEducationLevel, current_grade || null, work_experience_years || null, preferred_work_style || null,
+      skillsJson, interestsJson, normalizedEducationLevel, current_grade || null, work_experience_years || null, preferred_work_style || null
     ],
     function(err) {
       if (err) {
         return res.status(500).json({ success: false, error: err.message });
       }
+
+      if (normalizedEducationLevel) {
+        global.db.run(
+          'UPDATE users SET user_type = ? WHERE id = ?',
+          [normalizedEducationLevel, targetId],
+          (userErr) => {
+            if (userErr) {
+              return res.status(500).json({ success: false, error: userErr.message });
+            }
+            res.json({ success: true, data: { updated: true, user_type: normalizedEducationLevel } });
+          }
+        );
+        return;
+      }
+
       res.json({ success: true, data: { updated: true } });
     }
   );

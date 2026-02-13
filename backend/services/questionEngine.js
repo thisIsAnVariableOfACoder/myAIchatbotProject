@@ -47,6 +47,7 @@ function serializeConversationState(state) {
     createdAt: state.createdAt || Date.now(),
     lastQuestionText: state.lastQuestionText || null,
     lastQuestionId: state.lastQuestionId || null,
+    lastQuestionOptions: Array.isArray(state.lastQuestionOptions) ? state.lastQuestionOptions : [],
     profile: state.profile || null
   };
 }
@@ -63,6 +64,7 @@ function hydrateConversationState(conversationId, data, userTypeFallback) {
     createdAt: data.createdAt || Date.now(),
     lastQuestionText: data.lastQuestionText || null,
     lastQuestionId: data.lastQuestionId || null,
+    lastQuestionOptions: Array.isArray(data.lastQuestionOptions) ? data.lastQuestionOptions : [],
     profile: data.profile || null
   };
   CONVERSATIONS.set(conversationId, state);

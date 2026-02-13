@@ -16,7 +16,24 @@ export default function ProfileForm({
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
+    if (canSave) return;
+    setEducationLevel('');
+    setCurrentGrade('');
+    setWorkYears('');
+    setWorkStyle('hybrid');
+    setDirty(false);
+  }, [canSave]);
+
+  useEffect(() => {
     setHydrated(false);
+
+    if (!canSave) {
+      setHasDraft(false);
+      setHydrated(true);
+      setDirty(false);
+      return;
+    }
+
     const saved = localStorage.getItem(storageKey);
     if (!saved) {
       setHasDraft(false);
@@ -36,7 +53,7 @@ export default function ProfileForm({
     }
     setHydrated(true);
     setDirty(false);
-  }, [storageKey]);
+  }, [storageKey, canSave]);
 
   useEffect(() => {
     if (!initialValues || hasDraft) return;
@@ -49,6 +66,7 @@ export default function ProfileForm({
 
   useEffect(() => {
     if (!hydrated) return;
+    if (!canSave) return;
     const payload = {
       educationLevel,
       currentGrade,
@@ -56,7 +74,7 @@ export default function ProfileForm({
       workStyle
     };
     localStorage.setItem(storageKey, JSON.stringify(payload));
-  }, [educationLevel, currentGrade, workYears, workStyle, storageKey, hydrated]);
+  }, [educationLevel, currentGrade, workYears, workStyle, storageKey, hydrated, canSave]);
 
   function markDirty(setter) {
     return (e) => {
@@ -169,8 +187,11 @@ export default function ProfileForm({
         type="submit"
         disabled={!canSave || !isFormValid}
       >
-        {educationLevel ? "Lưu hồ sơ" : "Xóa hồ sơ & Chat"}
+        {canSave ? (educationLevel ? "Lưu hồ sơ" : "Xóa hồ sơ & Chat") : "Đăng nhập để lưu hồ sơ"}
       </button>
+      {!canSave && (
+        <div className="text-xs text-[#5B5B57]">Vui lòng đăng nhập trước khi lưu hồ sơ để bắt đầu chat.</div>
+      )}
       {dirty && isFormValid && (
         <div className="text-xs text-[#D64545] whitespace-nowrap">Hãy lưu hồ sơ để áp dụng thay đổi</div>
       )}

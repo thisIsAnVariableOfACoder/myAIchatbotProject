@@ -1,4 +1,5 @@
 const https = require('https');
+const { buildCareerRecords } = require('../data/careerLibrary');
 
 // ============================================================================
 // VALIDATION LAYER - Prevent inappropriate questions for each user type
@@ -27,46 +28,6 @@ const FORBIDDEN_KEYWORDS = {
   ]
 };
 
-// Safe fallback questions for each user type (used when LLM generates invalid question)
-const FALLBACK_QUESTIONS = {
-  professional: [
-    "Bạn đang làm việc ở vị trí nào và trong lĩnh vực gì?",
-    "Bạn có bao nhiêu năm kinh nghiệm làm việc?",
-    "Bạn có muốn chuyển sang lĩnh vực khác không?",
-    "Điều gì khiến bạn muốn thay đổi công việc hiện tại?",
-    "Bạn có kỹ năng chuyên môn nào muốn phát triển thêm không?",
-    "Bạn thích làm việc trong môi trường như thế nào (remote, văn phòng, hybrid)?",
-    "Mức lương mong muốn của bạn là bao nhiêu?",
-    "Bạn có quan tâm đến các ngành nghề nào không?",
-    "Bạn cảm thấy mình có điểm mạnh nào trong công việc hiện tại?",
-    "Bạn có muốn thăng tiến lên vị trí cao hơn không?"
-  ],
-  high_school: [
-    "Bạn thích môn học nào nhất tại trường?",
-    "Bạn có tham gia CLB hay hoạt động nào không?",
-    "Bạn cảm thấy mình có điểm mạnh nào trong học tập?",
-    "Bạn có quan tâm đến ngành nghề nào không?",
-    "Bạn muốn học trường đại học nào?",
-    "Bạn có sở thích cá nhân nào không?",
-    "Bạn cảm thấy mình có năng lực đặc biệt nào không?",
-    "Bạn thích làm việc nhóm hay làm việc độc lập?",
-    "Bạn có quan tâm đến công nghệ không?",
-    "Bạn muốn làm việc trong lĩnh vực nào?"
-  ],
-  university: [
-    "Bạn đang học ngành gì và năm học mấy?",
-    "Bạn có làm dự án nào liên quan đến ngành học không?",
-    "Bạn có tham gia thực tập hay làm thêm không?",
-    "Bạn có kỹ năng nào đang phát triển không?",
-    "Bạn có chứng chỉ nào không?",
-    "Bạn muốn làm việc trong lĩnh vực nào sau khi ra trường?",
-    "Bạn có quan tâm đến các công ty nào không?",
-    "Bạn thích làm việc trong môi trường như thế nào?",
-    "Bạn có muốn học thêm không?",
-    "Bạn có quan tâm đến nghiên cứu không?"
-  ]
-};
-
 // Validate if a question is appropriate for the user type
 function validateQuestion(userType, question) {
   const safeUserType = String(userType || 'high_school');
@@ -85,13 +46,63 @@ function validateQuestion(userType, question) {
   return true;
 }
 
-// Get a safe fallback question for the user type
-function getFallbackQuestion(userType) {
+async function regenerateQuestionForUserType({ userType, profileText, memoryText, intent, invalidQuestion }) {
   const safeUserType = String(userType || 'high_school');
-  const fallbacks = FALLBACK_QUESTIONS[safeUserType] || FALLBACK_QUESTIONS.high_school;
-  // Pick a random fallback question
-  const randomIndex = Math.floor(Math.random() * fallbacks.length);
-  return fallbacks[randomIndex];
+  const repairPrompt = `Bạn là chuyên gia tư vấn hướng nghiệp.
+Nhiệm vụ: VIẾT LẠI 1 câu hỏi hướng nghiệp phù hợp userType.
+
+Yêu cầu:
+1) Chỉ hỏi 1 câu ngắn gọn, rõ ràng.
+2) Bám sát bối cảnh profile + memory.
+3) KHÔNG dùng câu hỏi mẫu chung chung.
+4) suggested_questions phải là 2-3 gợi ý trả lời CỤ THỂ cho câu hỏi đó.
+5) KHÔNG dùng placeholder kiểu "Câu hỏi gợi ý 1", "<option 1>".
+
+Ràng buộc userType:
+- professional: KHÔNG hỏi môn học/trường học/CLB học sinh.
+- high_school: KHÔNG hỏi KPI/lương/kinh nghiệm làm việc chuyên sâu.
+- university: KHÔNG hỏi kinh nghiệm quản lý nhân sự dài hạn.
+
+BẮT BUỘC trả về JSON:
+{
+  "bot_reply": "<câu hỏi phù hợp>",
+  "suggested_questions": ["<gợi ý trả lời 1>", "<gợi ý trả lời 2>"]
+}`;
+
+  const repairUser = `userType: ${safeUserType}
+profile: ${profileText}
+memory: ${JSON.stringify(memoryText || [])}
+intent: ${JSON.stringify(intent || {})}
+invalid_question: ${invalidQuestion}`;
+
+  const payload = {
+    model: GROQ_MODEL,
+    messages: [
+      { role: 'system', content: repairPrompt },
+      { role: 'user', content: repairUser }
+    ],
+    temperature: 0.2,
+    top_p: 0.8,
+    max_tokens: 512,
+    stream: false
+  };
+
+  const data = await postJson(LLM_CHAT_URL, payload, LLM_TIMEOUT_MS);
+  const content = data?.choices?.[0]?.message?.content;
+  const parsed = safeParseChatReply(content);
+  if (!parsed) return null;
+
+  const repairedQuestion = normalizeReplyText(parsed.bot_reply);
+  if (!repairedQuestion) return null;
+  if (!validateQuestion(safeUserType, repairedQuestion)) return null;
+
+  const repairedOptions = normalizeSuggestedQuestions(parsed.suggested_questions)
+    .filter((opt) => validateQuestion(safeUserType, opt));
+
+  return {
+    question: repairedQuestion,
+    options: repairedOptions
+  };
 }
 
 // ============================================================================
@@ -117,6 +128,8 @@ QUY TẮC TRẢ LỜI:
 - Nếu người dùng hỏi ngược lại chatbot: Phân tích và tư vấn dựa trên thông tin đã có
 - Nếu người dùng cung cấp thêm thông tin: Cập nhật xác suất và điều chỉnh gợi ý
 - Nếu đủ thông tin: Đưa ra kết luận nghề nghiệp với danh sách top 5-7 nghề phù hợp nhất
+- suggested_questions phải CỤ THỂ theo ngữ cảnh hiện tại, KHÔNG dùng placeholder mặc định
+- KHÔNG trả về các gợi ý kiểu mẫu như: "Câu hỏi gợi ý 1", "<option 1>", "Có/Có thể/Không" khi không thật sự phù hợp
 
 BẮT BUỘC: Trả về JSON đúng cấu trúc:
 {
@@ -172,13 +185,16 @@ async function generateCareerConsultationReply({ history, currentMessage, userTy
       .join('\n');
   }
   
-  const historyMessages = (history || []).map(h => ({
-    role: 'assistant',
-    content: JSON.stringify({ bot_reply: h.q, suggested_questions: [] })
-  }, {
-    role: 'user',
-    content: h.a
-  })).flat();
+  const historyMessages = (history || []).map(h => ([
+    {
+      role: 'assistant',
+      content: JSON.stringify({ bot_reply: h.q, suggested_questions: [] })
+    },
+    {
+      role: 'user',
+      content: h.a
+    }
+  ])).flat();
   
   const messages = [
     { role: 'system', content: CAREER_CONSULTATION_PROMPT },
@@ -212,6 +228,132 @@ async function generateCareerConsultationReply({ history, currentMessage, userTy
   const parsed = safeParseConsultationReply(content);
   console.log('[LLM] Career Consultation Result:', JSON.stringify(parsed, null, 2));
   return parsed;
+}
+
+function isFollowUpToQuestion(message, pendingQuestion) {
+  const userText = normalizeReplyText(message);
+  const questionText = normalizeReplyText(pendingQuestion);
+  if (!userText || !questionText) return false;
+
+  // Short replies are likely direct answers to pending question.
+  const tokenCount = userText.split(/\s+/).filter(Boolean).length;
+  if (tokenCount <= 10 && !userText.includes('?')) return true;
+
+  // Direct lexical overlap between pending question and user message.
+  const normalizedUser = normalizeEvidenceText(userText);
+  const normalizedQuestion = normalizeEvidenceText(questionText);
+  if (!normalizedUser || !normalizedQuestion) return false;
+  const qTokens = new Set(normalizedQuestion.split(' ').filter((t) => t.length >= 3));
+  const uTokens = new Set(normalizedUser.split(' ').filter((t) => t.length >= 3));
+  let overlap = 0;
+  for (const t of uTokens) {
+    if (qTokens.has(t)) overlap += 1;
+  }
+  const overlapRatio = qTokens.size > 0 ? overlap / qTokens.size : 0;
+  return overlapRatio >= 0.2;
+}
+
+async function classifyUserTurnIntent({ pendingQuestion, history, currentMessage }) {
+  const userText = normalizeReplyText(currentMessage);
+  if (!userText) {
+    return {
+      intent: 'answer',
+      confidence: 0.55,
+      reason: 'empty_message_default_answer'
+    };
+  }
+
+  if (!isEnabled()) {
+    // Lightweight fallback without static keyword list.
+    const mixed = userText.includes('?');
+    return {
+      intent: mixed ? 'question' : 'answer',
+      confidence: 0.6,
+      reason: 'llm_disabled_fallback'
+    };
+  }
+
+  const historyTail = Array.isArray(history) ? history.slice(-6) : [];
+  const prompt = `Bạn là bộ phân loại ý định hội thoại cho chatbot hướng nghiệp.
+Phân loại tin nhắn người dùng hiện tại thành 1 trong 3 nhãn:
+- "answer": chủ yếu đang trả lời câu hỏi AI đang chờ.
+- "question": chủ yếu đang hỏi AI.
+- "both": vừa có nội dung trả lời, vừa có nội dung hỏi thêm.
+
+Nguyên tắc:
+1) Dựa vào NGỮ CẢNH, không dựa từ khóa cứng.
+2) Nếu có pending_question và user trả lời đúng trọng tâm câu đó thì ưu tiên "answer" hoặc "both".
+3) Nếu user hỏi thêm trong khi vẫn trả lời pending_question, chọn "both".
+4) Trả về JSON DUY NHẤT:
+{
+  "intent": "answer|question|both",
+  "confidence": 0.0,
+  "reason": "ngắn gọn"
+}`;
+
+  const userPayload = {
+    pending_question: pendingQuestion || '',
+    history: historyTail,
+    current_message: userText
+  };
+
+  const payload = {
+    model: GROQ_MODEL,
+    messages: [
+      { role: 'system', content: prompt },
+      { role: 'user', content: JSON.stringify(userPayload) }
+    ],
+    temperature: 0.0,
+    top_p: 0.2,
+    max_tokens: 220,
+    stream: false
+  };
+
+  const data = await postJson(LLM_CHAT_URL, payload, LLM_TIMEOUT_MS);
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) {
+    return {
+      intent: 'question',
+      confidence: 0.5,
+      reason: 'no_llm_content'
+    };
+  }
+
+  const tryParse = (value) => {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  };
+
+  let parsed = tryParse(content);
+  if (!parsed) {
+    const fence = String(content).match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fence) parsed = tryParse(fence[1].trim());
+  }
+  if (!parsed) {
+    const objMatch = String(content).match(/\{[\s\S]*\}/);
+    if (objMatch) parsed = tryParse(objMatch[0]);
+  }
+
+  const intentRaw = String(parsed?.intent || '').toLowerCase();
+  const intent = (intentRaw === 'answer' || intentRaw === 'question' || intentRaw === 'both')
+    ? intentRaw
+    : 'question';
+  const confidence = clamp(Number(parsed?.confidence || 0.5), 0, 1);
+  const reason = normalizeReplyText(parsed?.reason || 'classified_by_llm');
+
+  // Context correction: if overlap shows direct answering, bias away from pure question.
+  if (pendingQuestion && intent === 'question' && isFollowUpToQuestion(userText, pendingQuestion)) {
+    return {
+      intent: userText.includes('?') ? 'both' : 'answer',
+      confidence: Math.max(confidence, 0.65),
+      reason: 'context_overlap_correction'
+    };
+  }
+
+  return { intent, confidence, reason };
 }
 
 /**
@@ -304,6 +446,10 @@ Mục tiêu DUY NHẤT: thu thập thông tin cần thiết và tư vấn nghề
 Bạn phải chủ động đặt câu hỏi tiếp theo để hiểu người dùng.
 KHÔNG làm các việc ngoài hướng nghiệp (không giải toán, không viết code, không tư vấn ngoài lề). Nếu người dùng hỏi ngoài phạm vi, hãy lịch sự kéo về mục tiêu hướng nghiệp.
 PHONG CÁCH: Ngắn gọn, súc tích, đi thẳng vào vấn đề.
+
+QUY TẮC GỢI Ý:
+- suggested_questions phải được tạo theo đúng nội dung hội thoại hiện tại
+- KHÔNG dùng text mẫu/placeholder như "Câu hỏi gợi ý 1", "Câu hỏi gợi ý 2", "<option 1>"
 
 BẮT BUỘC: Bạn phải luôn trả lời bằng định dạng JSON sau:
 {
@@ -439,7 +585,12 @@ BẮT BUỘC: trả về JSON đúng cấu trúc:
   "bot_reply": "<câu hỏi tiếp theo>",
   "suggested_questions": ["<option 1>", "<option 2>"]
 }
-Nếu câu hỏi dạng tự do thì suggested_questions = [].`;
+Nếu câu hỏi dạng tự do thì suggested_questions = [].
+
+RÀNG BUỘC CHO suggested_questions:
+- Phải là gợi ý trả lời CỤ THỂ cho đúng câu hỏi vừa tạo
+- KHÔNG được dùng placeholder: "Câu hỏi gợi ý 1", "Câu hỏi gợi ý 2", "<option 1>", "<option 2>"
+- Tránh bộ mặc định chung chung "Có", "Có thể", "Không" nếu không thật sự cần thiết`;
 
   const userContent = `userType: ${safeUserType}
 profile: ${profileText}
@@ -490,9 +641,15 @@ Hãy tạo câu hỏi tiếp theo bằng tiếng Việt, xưng hô lịch sự, 
   // VALIDATION LAYER: Check if the question is appropriate for the user type
   // ============================================================================
   if (!validateQuestion(safeUserType, question)) {
-    console.log(`[FALLBACK] Using fallback question for userType: ${safeUserType}`);
-    const fallbackQuestion = getFallbackQuestion(safeUserType);
-    return { question: fallbackQuestion, options: [] };
+    console.log(`[RETRY] Regenerating invalid question for userType: ${safeUserType}`);
+    const repaired = await regenerateQuestionForUserType({
+      userType: safeUserType,
+      profileText,
+      memoryText,
+      intent,
+      invalidQuestion: question
+    });
+    return repaired;
   }
 
   // Also validate suggested questions - filter out inappropriate ones
@@ -551,8 +708,238 @@ function normalizeSuggestedQuestions(value) {
   if (!Array.isArray(value)) return [];
   return value
     .map((item) => normalizeReplyText(item))
+    .filter((item) => {
+      const normalized = String(item || '').trim().toLowerCase();
+      if (!normalized) return false;
+      if (/^câu hỏi gợi ý\s*\d*$/i.test(normalized)) return false;
+      if (/^câu trả lời gợi ý\s*\d*$/i.test(normalized)) return false;
+      if (/^option\s*\d+$/i.test(normalized)) return false;
+      if (/^<\s*option\s*\d+\s*>$/i.test(normalized)) return false;
+      if (/^<\s*câu hỏi.*>$/.test(normalized)) return false;
+      return true;
+    })
     .filter(Boolean)
     .slice(0, 5);
+}
+
+function normalizeCareerKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s/]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const CAREER_CATALOG = (() => {
+  const records = buildCareerRecords();
+  const map = new Map();
+  for (const rec of records) {
+    const name = String(rec?.name || '').trim();
+    const category = String(rec?.category || '').trim() || 'Other';
+    const key = normalizeCareerKey(name);
+    if (!key || map.has(key)) continue;
+    map.set(key, { name, category });
+  }
+  return {
+    map,
+    records: records.map((r) => ({
+      name: String(r?.name || '').trim(),
+      category: String(r?.category || '').trim() || 'Other'
+    })).filter((r) => r.name)
+  };
+})();
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function normalizeEvidenceText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildRecommendationEvidence({ userType, profile, memoryAnswers }) {
+  const profileText = profile ? JSON.stringify(profile) : '';
+  const memoryText = Array.isArray(memoryAnswers)
+    ? memoryAnswers
+      .map((a) => `${a?.question || a?.q || ''} ${a?.answer || a?.a || ''}`)
+      .join(' ')
+    : '';
+  const text = normalizeEvidenceText(`${profileText} ${memoryText}`);
+  const has = (pattern) => pattern.test(text);
+
+  return {
+    userType: String(userType || 'high_school'),
+    text,
+    teaching: has(/\b(giao vien|teacher|giang day|su pham|giao duc|day hoc|hoc sinh|lop hoc)\b/),
+    biology: has(/\b(sinh hoc|biology|te bao|gene|di truyen|phong thi nghiem|lab|khoa hoc su song)\b/),
+    business: has(/\b(kinh doanh|marketing|sales|doanh nghiep|hr|tai chinh|ke toan|quan tri|e learning|elearning)\b/),
+    tech: has(/\b(cong nghe|lap trinh|coding|software|data|ai|machine learning)\b/),
+    upskill: has(/\b(phat trien|nang cao|trau doi|bo sung|hoan thien|improve|upskill)\b/)
+  };
+}
+
+function getPriorityCategories(evidence) {
+  const prioritized = [];
+
+  if (evidence.teaching) prioritized.push('Education');
+  if (evidence.biology) prioritized.push('Science', 'Education', 'Healthcare', 'Agriculture');
+  if (evidence.tech) prioritized.push('Technology', 'Data');
+  if (evidence.business) prioritized.push('Business', 'Marketing', 'Finance');
+
+  if (evidence.userType === 'high_school') {
+    prioritized.push('Education', 'Science', 'Technology', 'Design');
+  } else if (evidence.userType === 'university') {
+    prioritized.push('Technology', 'Data', 'Science', 'Business');
+  } else {
+    prioritized.push('Business', 'Technology', 'Education', 'Finance');
+  }
+
+  prioritized.push('Education', 'Technology', 'Data', 'Business', 'Design', 'Science');
+  return Array.from(new Set(prioritized));
+}
+
+function computeRelevanceAdjustment(careerName, category, evidence) {
+  const normalizedCareer = normalizeEvidenceText(careerName);
+  let adjustment = 0;
+
+  if (evidence.teaching) {
+    if (category === 'Education') adjustment += 18;
+    if (category === 'Science') adjustment += 10;
+    if (category === 'Healthcare' || category === 'Agriculture') adjustment += 6;
+    if ((category === 'Business' || category === 'Marketing' || category === 'Finance') && !evidence.business) {
+      adjustment -= 18;
+    }
+  }
+
+  if (evidence.biology) {
+    if (category === 'Science' || category === 'Education') adjustment += 14;
+    if (category === 'Healthcare' || category === 'Agriculture') adjustment += 10;
+    if (category === 'Business' || category === 'Marketing') adjustment -= 14;
+  }
+
+  if (evidence.tech && (category === 'Technology' || category === 'Data')) adjustment += 8;
+  if (evidence.business && (category === 'Business' || category === 'Marketing' || category === 'Finance')) adjustment += 8;
+
+  if (evidence.upskill && evidence.teaching && /\b(giao vien|giang vien|gia su|teacher)\b/.test(normalizedCareer)) {
+    adjustment += 8;
+  }
+
+  if (/\b(dao tao doanh nghiep|e learning|elearning|corporate trainer)\b/.test(normalizedCareer) && !evidence.business) {
+    adjustment -= 22;
+  }
+
+  return adjustment;
+}
+
+function shouldDropRecommendationByContext(category, evidence, adjustedScore) {
+  if (!category) return false;
+
+  // Trường hợp có tín hiệu rất mạnh: giáo viên + sinh học + không có business signal.
+  // Loại bỏ các nghề Business/Marketing/Finance yếu liên quan để tránh gợi ý lệch.
+  if (evidence.teaching && evidence.biology && !evidence.business) {
+    if (['Business', 'Marketing', 'Finance'].includes(category) && adjustedScore < 72) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function buildContextFallbackRecommendations(evidence, existingNames = []) {
+  const existing = new Set(existingNames.map((name) => normalizeCareerKey(name)));
+  const categories = getPriorityCategories(evidence);
+  const fallbacks = [];
+  let score = 62;
+
+  for (const category of categories) {
+    const categoryCareers = CAREER_CATALOG.records.filter((r) => r.category === category);
+    for (const c of categoryCareers) {
+      const key = normalizeCareerKey(c.name);
+      if (!key || existing.has(key)) continue;
+      existing.add(key);
+      fallbacks.push({
+        career_name: c.name,
+        match_score: clamp(Math.round(score), 35, 85),
+        probability: 0,
+        confidence: score >= 75 ? 'high' : score >= 60 ? 'medium' : 'low',
+        reasons: ['Phù hợp với bối cảnh và định hướng bạn đã chia sẻ']
+      });
+      score = Math.max(40, score - 2);
+      if (fallbacks.length >= 10) return fallbacks;
+    }
+  }
+
+  return fallbacks;
+}
+
+function postProcessRecommendations(rawRecommendations, context) {
+  if (!Array.isArray(rawRecommendations) || rawRecommendations.length === 0) return [];
+
+  const evidence = buildRecommendationEvidence(context || {});
+  const dedup = new Map();
+
+  for (const rec of rawRecommendations) {
+    const rawName = normalizeReplyText(rec?.career_name);
+    if (!rawName) continue;
+
+    const key = normalizeCareerKey(rawName);
+    const mappedCareer = CAREER_CATALOG.map.get(key);
+    if (!mappedCareer) {
+      // Loại bỏ các nghề do model tự bịa hoặc không nằm trong catalog chuẩn.
+      continue;
+    }
+
+    const baseScore = clamp(Number(rec?.match_score || 0), 0, 100);
+    const adjustedScore = clamp(
+      baseScore + computeRelevanceAdjustment(mappedCareer.name, mappedCareer.category, evidence),
+      0,
+      100
+    );
+
+    if (shouldDropRecommendationByContext(mappedCareer.category, evidence, adjustedScore)) {
+      continue;
+    }
+
+    const reasons = Array.isArray(rec?.reasons)
+      ? rec.reasons.map((r) => normalizeReplyText(r)).filter(Boolean).slice(0, 3)
+      : [];
+
+    const existing = dedup.get(mappedCareer.name);
+    if (!existing || adjustedScore > existing.match_score) {
+      dedup.set(mappedCareer.name, {
+        career_name: mappedCareer.name,
+        match_score: adjustedScore,
+        probability: clamp(adjustedScore / 100, 0, 1),
+        confidence: adjustedScore >= 75 ? 'high' : adjustedScore >= 60 ? 'medium' : 'low',
+        reasons
+      });
+    }
+  }
+
+  let ranked = Array.from(dedup.values())
+    .sort((a, b) => b.match_score - a.match_score)
+    .slice(0, 10);
+
+  if (ranked.length < 6) {
+    const fallback = buildContextFallbackRecommendations(evidence, ranked.map((r) => r.career_name));
+    for (const rec of fallback) {
+      ranked.push(rec);
+      if (ranked.length >= 10) break;
+    }
+    ranked = ranked
+      .sort((a, b) => b.match_score - a.match_score)
+      .slice(0, 10);
+  }
+
+  return ranked;
 }
 
 function isEnabled() {
@@ -770,6 +1157,13 @@ NGUYÊN TẮC CÔNG BẰNG:
 4. Nếu người dùng nói "tôi làm ngành nào cũng được" hoặc tương tự, KHÔNG được cho điểm cao cho bất kỳ ngành nào
 5. Điểm số phải phản ánh ĐỘ CHẮC CHẮN dựa trên thông tin CÓ, không phải sự phỏng đoán
 
+6. ƯU TIÊN TÍNH LIÊN QUAN THEO BỐI CẢNH:
+   - Nếu người dùng đang ở một nghề hiện tại và muốn nâng cấp kỹ năng, hãy ưu tiên các nghề cùng miền chuyên môn hoặc lân cận hợp lý.
+   - KHÔNG nhảy sang nhóm nghề xa ngữ cảnh nếu không có bằng chứng rõ ràng.
+   - Ví dụ: người dùng là giáo viên và muốn phát triển kỹ năng sinh học -> ưu tiên nhóm Education/Science trước, không ưu tiên các nghề Business/Marketing không liên quan.
+
+7. KHÔNG BỊA nghề lạ. Chỉ dùng nghề phổ biến, rõ ràng, có thật và bám sát dữ liệu người dùng.
+
 BẮT BUỘC: Trả về JSON đúng cấu trúc:
 {
   "recommendations": [
@@ -820,7 +1214,11 @@ Hãy phân tích và đưa ra gợi ý nghề nghiệp phù hợp nhất.`;
     return null;
   }
 
-  const parsed = safeParseRecommendations(content);
+  const parsed = safeParseRecommendations(content, {
+    userType: safeUserType,
+    profile,
+    memoryAnswers
+  });
   console.log('[LLM] Career Recommendations:', JSON.stringify(parsed, null, 2));
   return parsed;
 }
@@ -828,7 +1226,7 @@ Hãy phân tích và đưa ra gợi ý nghề nghiệp phù hợp nhất.`;
 /**
  * Parse AI response for career recommendations
  */
-function safeParseRecommendations(content) {
+function safeParseRecommendations(content, context = null) {
   if (!content) return null;
   const text = String(content).replace(/\uFEFF/g, '').trim();
 
@@ -887,7 +1285,7 @@ function safeParseRecommendations(content) {
   }
 
   // Validate and sanitize recommendations
-  const recommendations = parsed.recommendations
+  const normalizedRecommendations = parsed.recommendations
     .filter(r => r.career_name && typeof r.match_score === 'number')
     .map(r => ({
       career_name: normalizeReplyText(r.career_name),
@@ -898,6 +1296,13 @@ function safeParseRecommendations(content) {
     }))
     .sort((a, b) => b.match_score - a.match_score)
     .slice(0, 10);
+
+  const recommendations = postProcessRecommendations(normalizedRecommendations, context || {});
+
+  if (!recommendations.length) {
+    console.error('[LLM] No valid recommendations after post-process filtering');
+    return null;
+  }
 
   // Ensure at least 6 recommendations
   if (recommendations.length < 6) {
@@ -925,6 +1330,8 @@ module.exports = {
   generateAgentChatReply,
   generateCareerQuestion,
   generateCareerRecommendations,
+  classifyUserTurnIntent,
+  isFollowUpToQuestion,
   // New functions for career consultation mode
   generateCareerConsultationReply,
   isFollowUpCareerQuestion

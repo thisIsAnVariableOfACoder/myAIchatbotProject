@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ChatWindow from '../components/ChatWindow';
 import ProfileForm from '../components/ProfileForm';
@@ -27,6 +27,7 @@ function normalizeRecommendations(list) {
 export default function Chat() {
   const { user, token } = useAuth();
   const userId = user?.user_id || null;
+  const isLoggedIn = Boolean(token && userId);
   const [userType, setUserType] = useState('high_school');
   const [conversationId, setConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -45,6 +46,7 @@ export default function Chat() {
   const [chatLocked, setChatLocked] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState([]);
   const [suggestionType, setSuggestionType] = useState('question');
+  const lastProfileTypeRef = useRef(null);
 
   const bestCareer = recommendations.length > 0
     ? recommendations[0]
@@ -170,6 +172,12 @@ export default function Chat() {
 
   async function sendMessage(text, options = {}) {
     if (!text) return;
+
+    if (!IS_OFFLINE && !isLoggedIn) {
+      setApiError('Bạn cần đăng nhập để bắt đầu chat và lưu lịch sử/hồ sơ.');
+      return;
+    }
+
     setApiError('');
     setMessages(prev => ([
       ...prev,
@@ -188,8 +196,15 @@ export default function Chat() {
       };
       console.log('[FRONTEND DEBUG] sendMessage - userType:', userType, 'userId:', userId, 'conversationId:', conversationId);
       const json = await api.sendMessage(body, token);
+      if (!json?.success) {
+        throw new Error(json?.error || 'Chat request failed');
+      }
       const data = json?.data || {};
       console.log('[FRONTEND DEBUG] sendMessage - response data:', data);
+
+      if (data?.user_type && typeof data.user_type === 'string') {
+        setUserType(data.user_type);
+      }
 
       const nextSuggestedQuestions = Array.isArray(data.suggested_questions)
         ? data.suggested_questions
@@ -233,21 +248,50 @@ export default function Chat() {
 
       // Bỏ delay 2s để phản hồi nhanh hơn
       applyBotMessage();
-    } catch {
+    } catch (error) {
       setLoading(false);
       setSuggestedQuestions([]);
       setSuggestionType('question');
-      setApiError('Không kết nối được máy chủ. Vui lòng cấu hình API backend.');
+      const msg = String(error?.message || '').trim();
+      if (msg) {
+        setApiError(msg);
+      } else {
+        setApiError('Không kết nối được máy chủ. Vui lòng cấu hình API backend.');
+      }
     }
   }
 
   async function saveProfile(payload) {
     console.log("Saving profile with payload:", payload);
-    if (!IS_OFFLINE && (!token || !userId)) return;
+    if (!IS_OFFLINE && !isLoggedIn) {
+      setApiError('Bạn cần đăng nhập để lưu hồ sơ.');
+      return;
+    }
     const profileId = userId || 'guest';
     try {
       await api.updateProfile(profileId, token, payload);
       console.log("Profile updated successfully in API");
+
+      if (payload?.education_level) {
+        setUserType(payload.education_level);
+
+        const prevType = lastProfileTypeRef.current;
+        const changedType = prevType && prevType !== payload.education_level;
+
+        if (changedType) {
+          // Reset conversation context when profile type changed to avoid stale question flow.
+          setConversationId(null);
+          setMessages([]);
+          setCurrentNode(null);
+          setRecommendations([]);
+          setCompleted(false);
+          setSuggestedQuestions([]);
+          setSuggestionType('question');
+          setChatLocked(false);
+        }
+
+        lastProfileTypeRef.current = payload.education_level;
+      }
 
       // Reactively update local state
       setProfileInitial(payload);
@@ -309,6 +353,13 @@ export default function Chat() {
     setChatLocked(false); // Reset chat lock for new chat
   }
 
+  useEffect(() => {
+    const level = String(profileInitial?.education_level || '').trim();
+    if (level) {
+      lastProfileTypeRef.current = level;
+    }
+  }, [profileInitial?.education_level]);
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
@@ -339,13 +390,13 @@ export default function Chat() {
               key={profileInitial ? 'loaded' : 'empty'}
               onSave={saveProfile}
               onUserTypeChange={setUserType}
-              canSave={!!token || IS_OFFLINE}
+              canSave={isLoggedIn || IS_OFFLINE}
               storageKey={userId ? `profileDraft:${userId}` : 'profileDraft:guest'}
               initialValues={profileInitial}
             />
-            {!token && !IS_OFFLINE && (
+            {!isLoggedIn && !IS_OFFLINE && (
               <div className="text-xs text-[#5B5B57] mt-2">
-                Đăng nhập để lưu hồ sơ và lịch sử chat.
+                Bạn cần đăng nhập để lưu hồ sơ, bắt đầu chat và lưu lịch sử hội thoại.
               </div>
             )}
           </div>
@@ -376,7 +427,7 @@ export default function Chat() {
               {/* Login Prompt for Guest Users */}
               {(!token && !userId && IS_OFFLINE) || (!token && !IS_OFFLINE) ? (
                 <div className="text-center py-4 bg-[#F7F5F2] rounded-lg">
-                  <div className="mb-2">Đăng ký/đăng nhập để lưu lịch sử chat</div>
+                  <div className="mb-2">Đăng ký/đăng nhập để bắt đầu chat và lưu lịch sử</div>
                   <Link to="/auth" className="btn-primary inline-block px-3 py-1 rounded">
                     Đăng nhập ngay
                   </Link>
@@ -477,8 +528,16 @@ export default function Chat() {
               showHelloHint={!helloSent}
               showFollowUp={completed && recommendations.length > 0}
               onFollowUp={requestMoreQuestions}
-              disabled={!profileInitial?.education_level || chatLocked}
-              placeholder={!profileInitial?.education_level ? "Vui lòng điền hồ sơ bên trái để bắt đầu..." : chatLocked ? "Chat đã khóa. Nhấn 'Chưa hài lòng? Hỏi tiếp' để mở lại." : "Nhập tin nhắn..."}
+              disabled={!isLoggedIn || !profileInitial?.education_level || chatLocked}
+              placeholder={
+                !isLoggedIn
+                  ? "Vui lòng đăng nhập để bắt đầu chat..."
+                  : !profileInitial?.education_level
+                    ? "Vui lòng điền hồ sơ bên trái để bắt đầu..."
+                    : chatLocked
+                      ? "Chat đã khóa. Nhấn 'Chưa hài lòng? Hỏi tiếp' để mở lại."
+                      : "Nhập tin nhắn..."
+              }
             />
           </div>
           <div className="mt-4 card p-4 animate-rise" style={{ animationDelay: '100ms' }}>

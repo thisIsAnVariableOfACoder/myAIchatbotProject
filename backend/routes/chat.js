@@ -1,7 +1,7 @@
 const express = require('express');
 const https = require('https');
 const router = express.Router();
-const { optionalAuth, requireAuth } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
 const {
   getConversationState,
   recordAnswer,
@@ -19,41 +19,11 @@ const MIN_CONF_COUNT = 5;
 const MAX_QUESTIONS = 50;
 const MIN_REFINEMENT_QUESTIONS = 5;
 
-const DEFAULT_SUGGESTED_QUESTIONS = {
-  high_school: [
-    'Bạn có thể chia sẻ thêm về môn học hoặc hoạt động bạn thích nhất không?',
-    'Bạn muốn mình gợi ý nhóm ngành phù hợp theo điểm mạnh của bạn không?'
-  ],
-  university: [
-    'Bạn muốn mình phân tích nghề phù hợp theo ngành học hiện tại của bạn không?',
-    'Bạn đã có định hướng thực tập hoặc vị trí mong muốn chưa?'
-  ],
-  professional: [
-    'Bạn muốn tối ưu lộ trình thăng tiến hay chuyển nghề trong 1-2 năm tới?',
-    'Bạn muốn mình so sánh 2-3 hướng nghề phù hợp nhất với kinh nghiệm hiện tại không?'
-  ]
-};
-
-const DEFAULT_SUGGESTED_ANSWERS = {
-  high_school: ['Có', 'Có thể', 'Không'],
-  university: ['Có', 'Có thể', 'Không'],
-  professional: ['Có', 'Có thể', 'Không']
-};
-
-const QUESTION_TOKENS = [
-  '?',
-  'bạn có',
-  'bạn muốn',
-  'bạn thích',
-  'vì sao',
-  'tại sao',
-  'như thế nào',
-  'làm sao',
-  'khi nào',
-  'bao nhiêu',
-  'nên',
-  'hãy'
-];
+function isPotentialQuestionText(message) {
+  const text = String(message || '').trim();
+  if (!text) return false;
+  return text.includes('?');
+}
 
 function safeParse(value, fallback) {
   try {
@@ -63,11 +33,43 @@ function safeParse(value, fallback) {
   }
 }
 
-function isUserAskingQuestion(message) {
-  const text = String(message || '').trim().toLowerCase();
-  if (!text) return false;
-  if (text.includes('?')) return true;
-  return /(la gi|là gì|nhu the nao|như thế nào|tai sao|tại sao|bao nhieu|bao lâu|co nen|có nên|lam sao|làm sao|nghe nao|nghề nào|nganh nao|ngành nào|tu van|tư vấn|cho minh biet|cho mình biết|muon biet|muốn biết|giai thich|giải thích)/i.test(text);
+function normalizeUserType(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'high_school' || normalized === 'university' || normalized === 'professional') {
+    return normalized;
+  }
+  return null;
+}
+
+async function loadProfileUserTypeFromDb(userId) {
+  if (!global.db || !userId) return null;
+  const row = await new Promise((resolve) => {
+    global.db.get(
+      'SELECT education_level FROM profiles WHERE user_id = ? LIMIT 1',
+      [userId],
+      (err, r) => {
+        if (err) return resolve(null);
+        resolve(r || null);
+      }
+    );
+  });
+  return normalizeUserType(row?.education_level);
+}
+
+function makeConversationalQuestion(question, turnIndex = 0) {
+  const text = String(question || '').trim();
+  if (!text) return '';
+  if (/^(cảm ơn|mình hiểu|mình ghi nhận|rất tốt|tuyệt vời|điều đó rất hữu ích)/i.test(text)) {
+    return text;
+  }
+
+  const openers = [
+    'Cảm ơn bạn đã chia sẻ.',
+    'Mình hiểu hơn về bạn rồi.',
+    'Thông tin này rất hữu ích cho tư vấn.'
+  ];
+  const idx = Math.abs(Number(turnIndex || 0)) % openers.length;
+  return `${openers[idx]} ${text}`;
 }
 
 function normalizeSuggestionText(value) {
@@ -77,7 +79,7 @@ function normalizeSuggestionText(value) {
 function isQuestionSuggestion(text) {
   const value = normalizeSuggestionText(text).toLowerCase();
   if (!value) return false;
-  return QUESTION_TOKENS.some((token) => value.includes(token));
+  return value.includes('?');
 }
 
 function isAnswerSuggestion(text) {
@@ -106,31 +108,31 @@ function stripInlineSuggestionText(text) {
   return filtered.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-function isBotAskingQuestion(text) {
-  const value = normalizeSuggestionText(text).toLowerCase();
-  if (!value) return false;
-  if (value.includes('?')) return true;
-  return /(bạn có|bạn muốn|bạn thích|hãy chia sẻ|hãy cho biết|vì sao|tại sao|như thế nào|bao nhiêu|khi nào|điều gì)/i.test(value);
-}
-
-function pickSuggestedQuestions(suggestions, userType, mode = 'question') {
+function pickSuggestedQuestions(suggestions, mode = 'question') {
   const normalized = Array.isArray(suggestions)
     ? suggestions
       .map((item) => normalizeSuggestionText(item))
       .filter(Boolean)
     : [];
 
-  const filtered = mode === 'answer'
-    ? normalized.filter((item) => isAnswerSuggestion(item))
-    : normalized.filter((item) => isQuestionSuggestion(item));
+  if (normalized.length === 0) return [];
+
+  let filtered = [];
+  if (mode === 'answer') {
+    filtered = normalized.filter((item) => isAnswerSuggestion(item));
+    if (filtered.length === 0) {
+      filtered = normalized.filter((item) => !item.includes('?'));
+    }
+  } else {
+    filtered = normalized.filter((item) => isQuestionSuggestion(item));
+  }
+
+  if (filtered.length === 0) {
+    filtered = normalized;
+  }
 
   const unique = Array.from(new Set(filtered)).slice(0, 3);
-  if (unique.length > 0) return unique;
-
-  const safeUserType = String(userType || 'high_school');
-  const fallbackMap = mode === 'answer' ? DEFAULT_SUGGESTED_ANSWERS : DEFAULT_SUGGESTED_QUESTIONS;
-  const fallbacks = fallbackMap[safeUserType] || fallbackMap.high_school;
-  return Array.from(new Set(fallbacks)).slice(0, 2);
+  return unique;
 }
 
 function normalizeRecommendationsWithProbability(recommendations) {
@@ -243,17 +245,24 @@ async function saveConversationState(convId, userId, state) {
 }
 
 
-router.post('/message', optionalAuth, async (req, res) => {
+router.post('/message', requireAuth, async (req, res) => {
   try {
     const { conversation_id, message, current_node, user_type, request_more, profile: bodyProfile } = req.body;
     const authUser = req.user;
     const userId = authUser?.user_id || null;
-    const effectiveUserType = authUser?.user_type || user_type || null;
+    const tokenUserType = normalizeUserType(authUser?.user_type);
+    const bodyUserType = normalizeUserType(user_type);
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Bạn cần đăng nhập để sử dụng chatbot và lưu lịch sử.'
+      });
+    }
 
     // DEBUG: Log userType flow
     console.log('[CHAT DEBUG] /message - authUser.user_type:', authUser?.user_type);
     console.log('[CHAT DEBUG] /message - req.body.user_type:', user_type);
-    console.log('[CHAT DEBUG] /message - effectiveUserType:', effectiveUserType);
     console.log('[CHAT DEBUG] /message - userId:', userId);
 
     const convId = conversation_id || `conv_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
@@ -263,20 +272,58 @@ router.post('/message', optionalAuth, async (req, res) => {
       await saveMessage(convId, userId, 'user', message || '', current_node || null);
     }
 
-    let state = getConversationState(convId, effectiveUserType);
+    let state = getConversationState(convId, tokenUserType || bodyUserType || 'high_school');
     if (userId) {
-      const hydrated = await loadConversationState(convId, userId, effectiveUserType);
+      const hydrated = await loadConversationState(convId, userId, tokenUserType || bodyUserType || 'high_school');
       if (hydrated) state = hydrated;
     }
     if (bodyProfile) {
       state.profile = bodyProfile;
     }
 
-    const userAskedQuestion = isUserAskingQuestion(message);
+    const profileUserType = normalizeUserType(bodyProfile?.education_level || state?.profile?.education_level);
+    const dbProfileUserType = profileUserType ? null : await loadProfileUserTypeFromDb(userId);
+    const effectiveUserType = profileUserType || dbProfileUserType || bodyUserType || tokenUserType || 'high_school';
+
+    if (!state.profile || typeof state.profile !== 'object') {
+      state.profile = {};
+    }
+
+    if (state.userType && state.userType !== effectiveUserType) {
+      // Khi đổi loại hồ sơ, reset câu hỏi đang chờ để bot chuyển ngữ cảnh đúng ngay lập tức.
+      state.lastQuestionId = null;
+      state.lastQuestionText = null;
+      state.lastQuestionOptions = [];
+    }
+
+    state.userType = effectiveUserType;
+    state.profile.education_level = effectiveUserType;
+
+    console.log('[CHAT DEBUG] /message - resolved effectiveUserType:', effectiveUserType);
+
+    const hasPendingQuestion =
+      String(state.lastQuestionId || '').startsWith('ai_question_') ||
+      String(state.lastQuestionId || '').startsWith('ai_refine_');
+
+    const preAnswers = [...(state.answers || []), ...(state.refinementAnswers || [])];
+    const historyForClassifier = preAnswers.map((a) => ({
+      q: a?.question || '',
+      a: a?.answer || ''
+    }));
+
+    const turnIntent = await llmScorer.classifyUserTurnIntent({
+      pendingQuestion: state.lastQuestionText || '',
+      history: historyForClassifier,
+      currentMessage: message
+    });
+
+    const resolvedIntent = turnIntent?.intent || (isPotentialQuestionText(message) ? 'question' : 'answer');
+    const userAskedQuestion = resolvedIntent === 'question' || resolvedIntent === 'both';
+    const userAnsweredPending = resolvedIntent === 'answer' || resolvedIntent === 'both';
 
     // Chỉ ghi nhận vào bộ tính điểm khi user đang TRẢ LỜI câu hỏi của AI.
     // Nếu user đang HỎI AI thì không cộng vào answers dùng để tính xác suất nghề nghiệp.
-    if (message && !userAskedQuestion) {
+    if (message && userAnsweredPending && hasPendingQuestion) {
       const questionId = state.lastQuestionId || current_node || 'ai_chat';
       recordAnswer(convId, questionId, message, state.lastQuestionText);
     }
@@ -310,7 +357,7 @@ router.post('/message', optionalAuth, async (req, res) => {
     // Use AI to generate recommendations when we have enough information
     const canConcludeByRefinement = !state.refinementMode || refinementQuestionCount >= MIN_REFINEMENT_QUESTIONS;
 
-    if (!userAskedQuestion && totalAnswers >= minAnswersForRecommendation && totalAnswers <= maxQuestions && !request_more && canConcludeByRefinement) {
+    if (userAnsweredPending && totalAnswers >= minAnswersForRecommendation && totalAnswers <= maxQuestions && !request_more && canConcludeByRefinement) {
       try {
         const aiRec = await llmScorer.generateCareerRecommendations({
           userType: effectiveUserType || 'high_school',
@@ -329,7 +376,7 @@ router.post('/message', optionalAuth, async (req, res) => {
     }
 
     // Force completion if we've asked too many questions
-    if (!userAskedQuestion && !completed && totalAnswers >= maxQuestions && canConcludeByRefinement) {
+    if (userAnsweredPending && !completed && totalAnswers >= maxQuestions && canConcludeByRefinement) {
       try {
         const aiRec = await llmScorer.generateCareerRecommendations({
           userType: effectiveUserType || 'high_school',
@@ -362,13 +409,13 @@ router.post('/message', optionalAuth, async (req, res) => {
       botReply = `Mình đã phân tích xong và tìm ra những nghề nghiệp phù hợp nhất với bạn.\n\nTop gợi ý:\n${lines.join('\n')}\n\nChi tiết phân tích đã được cập nhật trong biểu đồ bên dưới.`;
       nextNode = null;
       suggestionMode = 'question';
-      suggestedQuestions = pickSuggestedQuestions([], effectiveUserType || 'high_school', suggestionMode);
+      suggestedQuestions = pickSuggestedQuestions([], suggestionMode);
     } else {
       // Use AI to generate the next question
       if (!llmScorer.isEnabled()) {
         botReply = 'Hiện backend chưa được cấu hình LLM (thiếu GROQ_API_KEY), nên hệ thống không thể tư vấn. Bạn hãy cấu hình GROQ_API_KEY trên Render và redeploy backend để tiếp tục.';
         nextNode = 'ai_chat';
-        const fallbackSuggestions = pickSuggestedQuestions([], effectiveUserType || 'high_school', 'question');
+        const fallbackSuggestions = pickSuggestedQuestions([], 'question');
         return res.status(503).json({
           success: false,
           error: botReply,
@@ -402,40 +449,55 @@ router.post('/message', optionalAuth, async (req, res) => {
         });
 
         if (aiReply && aiReply.bot_reply) {
-          // Nếu user hỏi: AI trả lời xong PHẢI hỏi tiếp một câu mới.
-          const aiQuestion = await llmScorer.generateCareerQuestion({
-            userType: effectiveUserType || 'high_school',
-            profile: state.profile || bodyProfile || null,
-            memoryAnswers: allAnswers,
-            intent: { id: 'ai_chat', type: 'free_text' }
-          });
-
-          const questionPrefix = state.refinementMode ? 'ai_refine_' : 'ai_question_';
-          const nextQuestionIndex = (state.refinementMode ? refinementQuestionCount : aiQuestionCount) + 1;
-
-          if (aiQuestion && aiQuestion.question) {
-            state.lastQuestionId = `${questionPrefix}${nextQuestionIndex}`;
-            state.lastQuestionText = aiQuestion.question;
-            botReply = `${aiReply.bot_reply}\n\n${aiQuestion.question}`;
-            nextNode = 'ai_chat';
+          // Nếu user hỏi trong khi vẫn còn câu hỏi AI đang chờ trả lời,
+          // AI phải trả lời xong rồi hỏi lại CHÍNH câu hỏi đang chờ đó.
+          if (hasPendingQuestion && state.lastQuestionText && !userAnsweredPending) {
+            botReply = `${aiReply.bot_reply}\n\nĐể tiếp tục tư vấn, mình nhắc lại câu hỏi trước đó: ${state.lastQuestionText}`;
+            nextNode = state.lastQuestionId || 'ai_chat';
             suggestionMode = 'answer';
-            suggestedQuestions = pickSuggestedQuestions(aiQuestion.options, effectiveUserType || 'high_school', suggestionMode);
-            if (state.refinementMode) {
-              state.refinementQuestionsAsked = Number(state.refinementQuestionsAsked || 0) + 1;
-            }
+            suggestedQuestions = pickSuggestedQuestions(state.lastQuestionOptions, suggestionMode);
           } else {
-            // fallback: trả lời được nhưng chưa tạo được câu hỏi tiếp
-            botReply = aiReply.bot_reply;
-            nextNode = 'ai_answer';
-            state.lastQuestionId = 'ai_answer';
-            state.lastQuestionText = aiReply.bot_reply;
-            suggestionMode = 'question';
-            const suggestionPool = Array.isArray(aiReply.suggested_questions)
-              ? aiReply.suggested_questions
-              : Array.isArray(aiReply.options)
-                ? aiReply.options
-                : [];
-            suggestedQuestions = pickSuggestedQuestions(suggestionPool, effectiveUserType || 'high_school', suggestionMode);
+            // Nếu chưa có câu hỏi nào đang chờ, AI trả lời và đặt câu hỏi tiếp theo.
+            const aiQuestion = await llmScorer.generateCareerQuestion({
+              userType: effectiveUserType || 'high_school',
+              profile: state.profile || bodyProfile || null,
+              memoryAnswers: allAnswers,
+              intent: { id: 'ai_chat', type: 'free_text' }
+            });
+
+            const questionPrefix = state.refinementMode ? 'ai_refine_' : 'ai_question_';
+            const nextQuestionIndex = (state.refinementMode ? refinementQuestionCount : aiQuestionCount) + 1;
+
+            if (aiQuestion && aiQuestion.question) {
+              const conversationalQuestion = makeConversationalQuestion(
+                aiQuestion.question,
+                aiQuestionCount + refinementQuestionCount
+              );
+              state.lastQuestionId = `${questionPrefix}${nextQuestionIndex}`;
+              state.lastQuestionText = conversationalQuestion;
+              state.lastQuestionOptions = Array.isArray(aiQuestion.options) ? aiQuestion.options : [];
+              botReply = `${aiReply.bot_reply}\n\n${conversationalQuestion}`;
+              nextNode = 'ai_chat';
+              suggestionMode = 'answer';
+              suggestedQuestions = pickSuggestedQuestions(aiQuestion.options, suggestionMode);
+              if (state.refinementMode) {
+                state.refinementQuestionsAsked = Number(state.refinementQuestionsAsked || 0) + 1;
+              }
+            } else {
+              // fallback: trả lời được nhưng chưa tạo được câu hỏi tiếp
+              botReply = aiReply.bot_reply;
+              nextNode = 'ai_answer';
+              state.lastQuestionId = 'ai_answer';
+              state.lastQuestionText = aiReply.bot_reply;
+              state.lastQuestionOptions = [];
+              suggestionMode = 'question';
+              const suggestionPool = Array.isArray(aiReply.suggested_questions)
+                ? aiReply.suggested_questions
+                : Array.isArray(aiReply.options)
+                  ? aiReply.options
+                  : [];
+              suggestedQuestions = pickSuggestedQuestions(suggestionPool, suggestionMode);
+            }
           }
         }
       }
@@ -449,14 +511,19 @@ router.post('/message', optionalAuth, async (req, res) => {
         });
 
         if (aiQuestion && aiQuestion.question) {
+          const conversationalQuestion = makeConversationalQuestion(
+            aiQuestion.question,
+            aiQuestionCount + refinementQuestionCount
+          );
           const questionPrefix = state.refinementMode ? 'ai_refine_' : 'ai_question_';
           const nextQuestionIndex = (state.refinementMode ? refinementQuestionCount : aiQuestionCount) + 1;
           state.lastQuestionId = `${questionPrefix}${nextQuestionIndex}`;
-          state.lastQuestionText = aiQuestion.question;
-          botReply = aiQuestion.question;
+          state.lastQuestionText = conversationalQuestion;
+          state.lastQuestionOptions = Array.isArray(aiQuestion.options) ? aiQuestion.options : [];
+          botReply = conversationalQuestion;
           nextNode = 'ai_chat';
           suggestionMode = 'answer';
-          suggestedQuestions = pickSuggestedQuestions(aiQuestion.options, effectiveUserType || 'high_school', suggestionMode);
+          suggestedQuestions = pickSuggestedQuestions(aiQuestion.options, suggestionMode);
           if (state.refinementMode) {
             state.refinementQuestionsAsked = Number(state.refinementQuestionsAsked || 0) + 1;
           }
@@ -464,14 +531,14 @@ router.post('/message', optionalAuth, async (req, res) => {
           botReply = 'Cảm ơn bạn đã chia sẻ. Mình đang phân tích thông tin để đưa ra gợi ý phù hợp nhất. Vui lòng đợi một chút...';
           nextNode = 'ai_chat';
           suggestionMode = 'question';
-          suggestedQuestions = pickSuggestedQuestions([], effectiveUserType || 'high_school', suggestionMode);
+          suggestedQuestions = pickSuggestedQuestions([], suggestionMode);
         }
       }
     }
 
     botReply = stripInlineSuggestionText(botReply);
-    suggestionMode = isBotAskingQuestion(botReply) ? 'answer' : 'question';
-    suggestedQuestions = pickSuggestedQuestions(suggestedQuestions, effectiveUserType || 'high_school', suggestionMode);
+    suggestionMode = nextNode === 'ai_chat' ? 'answer' : 'question';
+    suggestedQuestions = pickSuggestedQuestions(suggestedQuestions, suggestionMode);
     const suggestedQuestion = suggestedQuestions[0] || '';
 
     if (userId) {
@@ -490,6 +557,8 @@ router.post('/message', optionalAuth, async (req, res) => {
         suggested_questions: suggestedQuestions,
         suggested_question: suggestedQuestion,
         suggestion_type: suggestionMode,
+        user_type: effectiveUserType,
+        turn_intent: resolvedIntent,
         next_node: nextNode,
         conversation_id: convId,
         recommendations: recommendations || undefined,
