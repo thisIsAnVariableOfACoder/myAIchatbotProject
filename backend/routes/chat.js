@@ -258,6 +258,16 @@ async function saveConversationState(convId, userId, state) {
   });
 }
 
+async function runDb(sql, params = []) {
+  if (!global.db) return;
+  await new Promise((resolve, reject) => {
+    global.db.run(sql, params, (err) => {
+      if (err) return reject(err);
+      resolve();
+    });
+  });
+}
+
 
 router.post('/message', requireAuth, async (req, res) => {
   try {
@@ -696,17 +706,10 @@ router.delete('/history/:userId', requireAuth, async (req, res) => {
   const delState = 'DELETE FROM conversation_state WHERE user_id = ?';
   const delConversations = 'DELETE FROM conversations WHERE user_id = ?';
   try {
-    await new Promise((resolve, reject) => {
-      global.db.serialize(() => {
-        global.db.run(delMessages, [userId]);
-        global.db.run(delRecs, [userId]);
-        global.db.run(delState, [userId]);
-        global.db.run(delConversations, [userId], (err) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
-    });
+    await runDb(delMessages, [userId]);
+    await runDb(delRecs, [userId]);
+    await runDb(delState, [userId]);
+    await runDb(delConversations, [userId]);
 
     try {
       await deleteMirroredUserHistory({ appUserId: Number(userId) || userId });
@@ -777,12 +780,13 @@ router.delete('/conversation/:conversationId', requireAuth, (req, res) => {
     const deleteRecs = 'DELETE FROM recommendations WHERE conversation_id = ?';
     const deleteState = 'DELETE FROM conversation_state WHERE conversation_id = ?';
     const deleteConv = 'DELETE FROM conversations WHERE id = ?';
-    global.db.serialize(() => {
-      global.db.run(deleteMessages, [conversationId]);
-      global.db.run(deleteRecs, [conversationId]);
-      global.db.run(deleteState, [conversationId]);
-      global.db.run(deleteConv, [conversationId], async function (err2) {
-        if (err2) return res.status(500).json({ success: false, error: err2.message });
+
+    (async () => {
+      try {
+        await runDb(deleteMessages, [conversationId]);
+        await runDb(deleteRecs, [conversationId]);
+        await runDb(deleteState, [conversationId]);
+        await runDb(deleteConv, [conversationId]);
 
         try {
           await deleteMirroredConversationData({
@@ -793,9 +797,11 @@ router.delete('/conversation/:conversationId', requireAuth, (req, res) => {
           console.warn('[CHAT DEBUG] deleteMirroredConversationData warning:', mirrorError.message);
         }
 
-        res.json({ success: true, data: { deleted: true } });
-      });
-    });
+        return res.json({ success: true, data: { deleted: true } });
+      } catch (err2) {
+        return res.status(500).json({ success: false, error: err2.message });
+      }
+    })();
   });
 });
 
