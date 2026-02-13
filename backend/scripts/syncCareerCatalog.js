@@ -35,7 +35,21 @@ const CATEGORY_ICON_MAP = {
     Transportation: '/career-icons/engineering.svg',
     Construction: '/career-icons/engineering.svg',
     Energy: '/career-icons/engineering.svg',
-    Research: '/career-icons/engineering.svg'
+    Research: '/career-icons/engineering.svg',
+    Banking: '/career-icons/business.svg',
+    Insurance: '/career-icons/business.svg',
+    HumanResources: '/career-icons/business.svg',
+    CustomerService: '/career-icons/service.svg',
+    PublicService: '/career-icons/community.svg',
+    CivilService: '/career-icons/admin.svg',
+    Manufacturing: '/career-icons/industry.svg',
+    Environment: '/career-icons/community.svg',
+    Administration: '/career-icons/admin.svg',
+    SecurityDefense: '/career-icons/security.svg',
+    ECommerce: '/career-icons/business.svg',
+    Product: '/career-icons/management.svg',
+    Consulting: '/career-icons/management.svg',
+    InternationalBusiness: '/career-icons/business.svg'
 };
 
 function getIconForCategory(category) {

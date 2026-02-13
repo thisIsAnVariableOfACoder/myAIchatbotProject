@@ -4,10 +4,111 @@ const bcrypt = require('bcrypt');
 const { buildCareerRecords } = require('../data/careerLibrary');
 const { ADMIN_EMAIL, ADMIN_PASSWORD } = require('../config');
 
+const CATEGORY_ICON_MAP = {
+  Technology: '/career-icons/tech.svg',
+  Data: '/career-icons/tech.svg',
+  Business: '/career-icons/business.svg',
+  Marketing: '/career-icons/business.svg',
+  Finance: '/career-icons/business.svg',
+  Banking: '/career-icons/business.svg',
+  Insurance: '/career-icons/business.svg',
+  HumanResources: '/career-icons/business.svg',
+  CustomerService: '/career-icons/service.svg',
+  Design: '/career-icons/creative.svg',
+  Media: '/career-icons/creative.svg',
+  Education: '/career-icons/education.svg',
+  Healthcare: '/career-icons/health.svg',
+  Engineering: '/career-icons/engineering.svg',
+  Legal: '/career-icons/legal.svg',
+  Hospitality: '/career-icons/hospitality.svg',
+  Logistics: '/career-icons/transport.svg',
+  Government: '/career-icons/admin.svg',
+  PublicService: '/career-icons/community.svg',
+  CivilService: '/career-icons/admin.svg',
+  Science: '/career-icons/science.svg',
+  Trades: '/career-icons/industry.svg',
+  Agriculture: '/career-icons/agri.svg',
+  RealEstate: '/career-icons/business.svg',
+  Retail: '/career-icons/business.svg',
+  Beauty: '/career-icons/creative.svg',
+  Sports: '/career-icons/health.svg',
+  Transportation: '/career-icons/transport.svg',
+  Construction: '/career-icons/construction.svg',
+  Manufacturing: '/career-icons/industry.svg',
+  Environment: '/career-icons/community.svg',
+  Administration: '/career-icons/admin.svg',
+  SecurityDefense: '/career-icons/security.svg',
+  ECommerce: '/career-icons/business.svg',
+  Product: '/career-icons/management.svg',
+  Consulting: '/career-icons/management.svg',
+  InternationalBusiness: '/career-icons/business.svg'
+};
+
+const JOBS_SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    category TEXT,
+    tags TEXT,
+    image_url TEXT,
+    source TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_title ON jobs(title);
+  CREATE INDEX IF NOT EXISTS idx_jobs_category ON jobs(category);
+`;
+
+function getIconForCategory(category) {
+  return CATEGORY_ICON_MAP[String(category || '').trim()] || '/career-icons/default.svg';
+}
+
 function execSql(db, sql) {
   return new Promise((resolve, reject) => {
     db.exec(sql, (err) => (err ? reject(err) : resolve()));
   });
+}
+
+function runSql(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, (err) => (err ? reject(err) : resolve()));
+  });
+}
+
+function clampBatchSize(value, fallback = 500) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(50, Math.min(2000, Math.floor(n)));
+}
+
+async function upsertInBatches({ db, rows, query, mapParams, batchSize, onProgress, tableName }) {
+  const expected = rows.length;
+  if (!expected) return;
+
+  for (let index = 0; index < expected; index += batchSize) {
+    const batch = rows.slice(index, index + batchSize);
+    await execSql(db, 'BEGIN TRANSACTION');
+    try {
+      for (const row of batch) {
+        await runSql(db, query, mapParams(row));
+      }
+      await execSql(db, 'COMMIT');
+    } catch (error) {
+      await execSql(db, 'ROLLBACK').catch(() => {});
+      throw error;
+    }
+
+    if (typeof onProgress === 'function') {
+      onProgress({
+        table: tableName,
+        processed: Math.min(expected, index + batch.length),
+        expected
+      });
+    }
+  }
+}
+
+async function ensureJobsTable(db) {
+  await execSql(db, JOBS_SCHEMA_SQL);
 }
 
 function getCount(db, table) {
@@ -38,7 +139,16 @@ async function initDbIfNeeded(db) {
   // Run migrations after schema is applied (for existing databases)
   await runMigrations(db);
 
-  await seedCareerLibrary(db);
+  const careerSyncResult = await seedCareerLibrary(db);
+  if (careerSyncResult?.synced) {
+    console.log(`📌 Synced careers: ${careerSyncResult.total}/${careerSyncResult.expected}`);
+  }
+
+  // Keep Explore catalog in sync with careerLibrary (including generated large dataset).
+  const jobsSyncResult = await syncJobsFromCareerLibrary(db);
+  if (jobsSyncResult?.synced) {
+    console.log(`📚 Synced jobs catalog: ${jobsSyncResult.total}/${jobsSyncResult.expected}`);
+  }
 
   const userCount = await getCount(db, 'users');
   let seeded = false;
@@ -51,25 +161,97 @@ async function initDbIfNeeded(db) {
   return { seeded, userCount };
 }
 
-async function seedCareerLibrary(db) {
+async function seedCareerLibrary(db, options = {}) {
+  const force = Boolean(options.force);
+  const onProgress = options.onProgress;
+  const batchSize = clampBatchSize(options.batchSize, 500);
   const careers = buildCareerRecords();
-  const query = 'INSERT OR IGNORE INTO careers (name, category, required_skills, salary_range, job_outlook, description) VALUES (?, ?, ?, ?, ?, ?)';
-  for (const c of careers) {
-    await new Promise((resolve, reject) => {
-      db.run(
-        query,
-        [
-          c.name,
-          c.category,
-          JSON.stringify(c.required_skills || []),
-          c.salary_range,
-          c.job_outlook,
-          c.description
-        ],
-        (err) => (err ? reject(err) : resolve())
-      );
-    });
+  const currentCount = await getCount(db, 'careers').catch(() => 0);
+  const expected = careers.length;
+
+  if (!force && currentCount >= Math.floor(expected * 0.98)) {
+    return { synced: false, total: currentCount, expected };
   }
+
+  const query = `
+    INSERT INTO careers (name, category, required_skills, salary_range, job_outlook, description)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(name) DO UPDATE SET
+      category = excluded.category,
+      required_skills = excluded.required_skills,
+      salary_range = excluded.salary_range,
+      job_outlook = excluded.job_outlook,
+      description = excluded.description
+  `;
+
+  await upsertInBatches({
+    db,
+    rows: careers,
+    query,
+    batchSize,
+    onProgress,
+    tableName: 'careers',
+    mapParams: (c) => [
+      c.name,
+      c.category,
+      JSON.stringify(c.required_skills || []),
+      c.salary_range,
+      c.job_outlook,
+      c.description
+    ]
+  });
+
+  const total = await getCount(db, 'careers').catch(() => expected);
+  return { synced: true, total, expected };
+}
+
+async function syncJobsFromCareerLibrary(db, options = {}) {
+  const force = Boolean(options.force);
+  const onProgress = options.onProgress;
+  const batchSize = clampBatchSize(options.batchSize, 500);
+
+  await ensureJobsTable(db);
+
+  const careers = buildCareerRecords();
+  const expected = careers.length;
+  const currentCount = await getCount(db, 'jobs').catch(() => 0);
+
+  if (!force && currentCount >= Math.floor(expected * 0.98)) {
+    return { synced: false, total: currentCount, expected };
+  }
+
+  const query = `
+    INSERT INTO jobs (title, category, tags, image_url, source)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(title) DO UPDATE SET
+      category = excluded.category,
+      tags = excluded.tags,
+      image_url = excluded.image_url,
+      source = excluded.source
+  `;
+
+  await upsertInBatches({
+    db,
+    rows: careers,
+    query,
+    batchSize,
+    onProgress,
+    tableName: 'jobs',
+    mapParams: (c) => [
+      c.name,
+      c.category,
+      JSON.stringify(c.required_skills || []),
+      getIconForCategory(c.category),
+      'careerLibrary'
+    ]
+  });
+
+  const total = await getCount(db, 'jobs').catch(() => expected);
+  return { synced: true, total, expected };
+}
+
+async function syncCareersFromCareerLibrary(db, options = {}) {
+  return seedCareerLibrary(db, options);
 }
 
 async function runMigrations(db) {
@@ -200,4 +382,4 @@ async function ensureAdminAccount(db) {
   }
 }
 
-module.exports = { initDbIfNeeded };
+module.exports = { initDbIfNeeded, syncJobsFromCareerLibrary, syncCareersFromCareerLibrary };

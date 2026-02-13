@@ -13,6 +13,51 @@ function normalizeUserType(value) {
   return null;
 }
 
+function parseNullableNumber(value) {
+  if (value === null || typeof value === 'undefined') return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeWorkStyle(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'remote' || normalized === 'office' || normalized === 'hybrid') {
+    return normalized;
+  }
+  return null;
+}
+
+function normalizeProfileByEducationLevel({
+  educationLevel,
+  currentGrade,
+  workExperienceYears,
+  preferredWorkStyle
+}) {
+  if (educationLevel === 'professional') {
+    return {
+      current_grade: null,
+      work_experience_years: workExperienceYears,
+      preferred_work_style: preferredWorkStyle
+    };
+  }
+
+  if (educationLevel === 'high_school' || educationLevel === 'university') {
+    return {
+      current_grade: currentGrade,
+      work_experience_years: null,
+      preferred_work_style: null
+    };
+  }
+
+  return {
+    current_grade: currentGrade,
+    work_experience_years: workExperienceYears,
+    preferred_work_style: preferredWorkStyle
+  };
+}
+
 router.get('/:id', requireAuth, (req, res) => {
   const { id } = req.params;
   if (req.user.user_type !== 'admin' && String(req.user.user_id) !== String(id)) {
@@ -32,6 +77,21 @@ router.put('/:id', requireAuth, (req, res) => {
   const targetId = req.user.user_type === 'admin' ? id : req.user.user_id;
   const { skills, interests, education_level, current_grade, work_experience_years, preferred_work_style } = req.body;
   const normalizedEducationLevel = normalizeUserType(education_level);
+
+  if (education_level && !normalizedEducationLevel) {
+    return res.status(400).json({ success: false, error: 'Invalid education_level' });
+  }
+
+  const parsedCurrentGrade = parseNullableNumber(current_grade);
+  const parsedWorkYears = parseNullableNumber(work_experience_years);
+  const normalizedWorkStyle = normalizeWorkStyle(preferred_work_style);
+
+  const normalizedByLevel = normalizeProfileByEducationLevel({
+    educationLevel: normalizedEducationLevel,
+    currentGrade: parsedCurrentGrade,
+    workExperienceYears: parsedWorkYears,
+    preferredWorkStyle: normalizedWorkStyle
+  });
   
   const query = `
     INSERT INTO profiles (user_id, skills, interests, education_level, current_grade, work_experience_years, preferred_work_style, updated_at) 
@@ -46,8 +106,19 @@ router.put('/:id', requireAuth, (req, res) => {
   global.db.run(
     query,
     [
-      targetId, skillsJson, interestsJson, normalizedEducationLevel, current_grade || null, work_experience_years || null, preferred_work_style || null,
-      skillsJson, interestsJson, normalizedEducationLevel, current_grade || null, work_experience_years || null, preferred_work_style || null
+      targetId,
+      skillsJson,
+      interestsJson,
+      normalizedEducationLevel,
+      normalizedByLevel.current_grade,
+      normalizedByLevel.work_experience_years,
+      normalizedByLevel.preferred_work_style,
+      skillsJson,
+      interestsJson,
+      normalizedEducationLevel,
+      normalizedByLevel.current_grade,
+      normalizedByLevel.work_experience_years,
+      normalizedByLevel.preferred_work_style
     ],
     function(err) {
       if (err) {

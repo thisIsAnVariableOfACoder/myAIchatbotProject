@@ -341,7 +341,10 @@ export default function Chat() {
       const nextProfile = {
         ...payload,
         current_grade: payload?.current_grade ?? null,
-        work_experience_years: payload?.work_experience_years ?? null
+        work_experience_years: payload?.work_experience_years ?? null,
+        preferred_work_style: payload?.preferred_work_style ?? null,
+        skills: Array.isArray(payload?.skills) ? payload.skills : [],
+        interests: Array.isArray(payload?.interests) ? payload.interests : []
       };
       setProfileInitial(nextProfile);
       console.log("profileInitial state updated to:", nextProfile);

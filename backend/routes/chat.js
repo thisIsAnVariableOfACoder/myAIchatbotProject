@@ -23,8 +23,8 @@ const MEMORY_MESSAGES = [];
 const MIN_CONF_SCORE = 1;
 const MIN_CONF_COUNT = 5;
 const MAX_QUESTIONS = 50;
-const MIN_REFINEMENT_QUESTIONS = 8;
-const EXTRA_REFINEMENT_QUESTIONS_ON_REQUEST = 6;
+const MIN_REFINEMENT_QUESTIONS = 14;
+const EXTRA_REFINEMENT_QUESTIONS_ON_REQUEST = 12;
 
 function getRequiredRefinementQuestions(state, requestedMore) {
   const explicitlyRequested = Boolean(requestedMore || state?.forceDeeperRefinement);
@@ -365,11 +365,11 @@ router.post('/message', requireAuth, async (req, res) => {
     // Determine if we have enough information for AI recommendations
     // Minimum 5 answers for accurate scoring (more data = better results)
     const minAnswersForRecommendation = state.refinementMode
-      ? Math.max(12, 9 + (state.forceDeeperRefinement ? 4 : 0))
-      : 9;
+      ? Math.max(22, 16 + (state.forceDeeperRefinement ? 8 : 0))
+      : 16;
     const maxQuestions = state.refinementMode
-      ? (state.forceDeeperRefinement ? 28 : 22)
-      : 18; // AI keeps asking longer to improve confidence
+      ? (state.forceDeeperRefinement ? 44 : 34)
+      : 28; // Ask substantially more before concluding
 
     let recommendations = null;
     let completed = false;

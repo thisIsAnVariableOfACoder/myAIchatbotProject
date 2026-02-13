@@ -48,7 +48,10 @@ function serializeConversationState(state) {
     lastQuestionText: state.lastQuestionText || null,
     lastQuestionId: state.lastQuestionId || null,
     lastQuestionOptions: Array.isArray(state.lastQuestionOptions) ? state.lastQuestionOptions : [],
-    profile: state.profile || null
+    profile: state.profile || null,
+    refinementMode: Boolean(state.refinementMode),
+    forceDeeperRefinement: Boolean(state.forceDeeperRefinement),
+    refinementQuestionsAsked: Number(state.refinementQuestionsAsked || 0)
   };
 }
 
@@ -65,7 +68,10 @@ function hydrateConversationState(conversationId, data, userTypeFallback) {
     lastQuestionText: data.lastQuestionText || null,
     lastQuestionId: data.lastQuestionId || null,
     lastQuestionOptions: Array.isArray(data.lastQuestionOptions) ? data.lastQuestionOptions : [],
-    profile: data.profile || null
+    profile: data.profile || null,
+    refinementMode: Boolean(data.refinementMode),
+    forceDeeperRefinement: Boolean(data.forceDeeperRefinement),
+    refinementQuestionsAsked: Number(data.refinementQuestionsAsked || 0)
   };
   CONVERSATIONS.set(conversationId, state);
   return state;
