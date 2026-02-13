@@ -11,6 +11,7 @@ const {
 
 const { initDbIfNeeded } = require('./services/dbInit');
 const { initCatalogSchema } = require('./services/careerCatalog');
+const { getUserDataDb } = require('./services/userDataStore');
 
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
@@ -76,6 +77,16 @@ async function initializeMainDb() {
 
     await initCatalogSchema();
     console.log('📚 Catalog schema ready');
+
+    try {
+      const userDataDb = await getUserDataDb();
+      if (userDataDb) {
+        console.log('🗂️ userDATA schema ready');
+      }
+    } catch (userDataErr) {
+      console.warn('⚠️ userDATA initialization warning:', userDataErr.message);
+    }
+
     startServer();
   } catch (e) {
     console.error('❌ DB init failed:', e.message);

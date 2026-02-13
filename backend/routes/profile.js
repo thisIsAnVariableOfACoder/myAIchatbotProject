@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
+const { mirrorUserAccount } = require('../services/userDataStore');
 
 function normalizeUserType(value) {
   const normalized = String(value || '').trim().toLowerCase();
@@ -57,10 +58,37 @@ router.put('/:id', requireAuth, (req, res) => {
         global.db.run(
           'UPDATE users SET user_type = ? WHERE id = ?',
           [normalizedEducationLevel, targetId],
-          (userErr) => {
+          async (userErr) => {
             if (userErr) {
               return res.status(500).json({ success: false, error: userErr.message });
             }
+
+            try {
+              const userRow = await new Promise((resolve) => {
+                global.db.get(
+                  'SELECT id, email, username, password_hash, user_type FROM users WHERE id = ? LIMIT 1',
+                  [targetId],
+                  (getErr, row) => {
+                    if (getErr) return resolve(null);
+                    resolve(row || null);
+                  }
+                );
+              });
+
+              if (userRow?.email) {
+                await mirrorUserAccount({
+                  appUserId: userRow.id,
+                  username: userRow.username || userRow.email,
+                  email: userRow.email,
+                  passwordHash: userRow.password_hash || '',
+                  userType: userRow.user_type || normalizedEducationLevel,
+                  source: 'profile_update'
+                });
+              }
+            } catch (mirrorError) {
+              console.warn('Profile mirror warning:', mirrorError.message);
+            }
+
             res.json({ success: true, data: { updated: true, user_type: normalizedEducationLevel } });
           }
         );

@@ -21,6 +21,7 @@ async function request(path, options = {}) {
   if (shouldBlockRelativeApiCall(path)) {
     return {
       success: false,
+      status: 0,
       error: 'Backend API chưa được cấu hình. Cập nhật window.__API_BASE__ trong runtime-config.js.'
     };
   }
@@ -41,6 +42,7 @@ async function request(path, options = {}) {
     if (!res.ok) {
       return {
         success: false,
+        status: res.status,
         error: json?.error || `Request failed (${res.status})`
       };
     }
@@ -50,6 +52,8 @@ async function request(path, options = {}) {
   } catch {
     return {
       success: false,
+      status: 0,
+      network_error: true,
       error: 'Không thể kết nối máy chủ. Vui lòng kiểm tra API hoặc thử lại.'
     };
   }

@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 const { JWT_SECRET, ADMIN_EMAIL } = require('../config');
 const { requireAuth } = require('../middleware/auth');
+const { mirrorUserAccount } = require('../services/userDataStore');
 
 function hasColumn(tableName, columnName) {
   return new Promise((resolve) => {
@@ -165,6 +166,15 @@ router.post('/register', async (req, res) => {
       throw new Error('Đăng ký thất bại: dữ liệu email lưu không khớp');
     }
 
+    await mirrorUserAccount({
+      appUserId: result.lastID,
+      username: loginName,
+      email: normalizedEmail,
+      passwordHash,
+      userType,
+      source: 'auth_register'
+    });
+
     const token = jwt.sign({
       user_id: result.lastID,
       username: loginName,
@@ -219,6 +229,19 @@ router.post('/login', async (req, res) => {
     updateLastLogin(user.id);
 
     const resolvedUsername = (usernameExists ? user.username : null) || getEmailLocalPart(user.email) || user.email;
+
+    try {
+      await mirrorUserAccount({
+        appUserId: user.id,
+        username: resolvedUsername,
+        email: user.email,
+        passwordHash: user.password_hash || '',
+        userType: user.user_type,
+        source: 'auth_login'
+      });
+    } catch (mirrorError) {
+      console.warn('Login mirror warning:', mirrorError.message);
+    }
 
     const token = jwt.sign({
       user_id: user.id,

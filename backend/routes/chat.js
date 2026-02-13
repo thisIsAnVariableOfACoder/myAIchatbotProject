@@ -12,6 +12,12 @@ const {
 } = require('../services/questionEngine');
 const llmScorer = require('../services/llmScorer');
 const { isEnabled: isLlmEnabled } = llmScorer;
+const {
+  mirrorChatMessage,
+  mirrorCareerProbabilities,
+  deleteMirroredConversationData,
+  deleteMirroredUserHistory
+} = require('../services/userDataStore');
 
 const MEMORY_MESSAGES = [];
 const MIN_CONF_SCORE = 1;
@@ -664,24 +670,38 @@ router.put('/conversation/:conversationId', requireAuth, async (req, res) => {
   );
 });
 
-router.delete('/history/:userId', requireAuth, (req, res) => {
+router.delete('/history/:userId', requireAuth, async (req, res) => {
   const { userId } = req.params;
   if (req.user.user_type !== 'admin' && String(req.user.user_id) !== String(userId)) {
     return res.status(403).json({ success: false, error: 'Forbidden' });
   }
   const delMessages = 'DELETE FROM chat_messages WHERE user_id = ?';
   const delRecs = 'DELETE FROM recommendations WHERE user_id = ?';
+  const delState = 'DELETE FROM conversation_state WHERE user_id = ?';
   const delConversations = 'DELETE FROM conversations WHERE user_id = ?';
-  global.db.serialize(() => {
-    global.db.run(delMessages, [userId]);
-    global.db.run(delRecs, [userId], function (err) {
-      if (err) return res.status(500).json({ success: false, error: err.message });
-      global.db.run(delConversations, [userId], (err2) => {
-        if (err2) return res.status(500).json({ success: false, error: err2.message });
-        res.json({ success: true, data: { deleted: true } });
+  try {
+    await new Promise((resolve, reject) => {
+      global.db.serialize(() => {
+        global.db.run(delMessages, [userId]);
+        global.db.run(delRecs, [userId]);
+        global.db.run(delState, [userId]);
+        global.db.run(delConversations, [userId], (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
       });
     });
-  });
+
+    try {
+      await deleteMirroredUserHistory({ appUserId: Number(userId) || userId });
+    } catch (mirrorError) {
+      console.warn('[CHAT DEBUG] deleteMirroredUserHistory warning:', mirrorError.message);
+    }
+
+    res.json({ success: true, data: { deleted: true } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 router.get('/messages/:conversationId', requireAuth, (req, res) => {
@@ -739,12 +759,24 @@ router.delete('/conversation/:conversationId', requireAuth, (req, res) => {
 
     const deleteMessages = 'DELETE FROM chat_messages WHERE conversation_id = ?';
     const deleteRecs = 'DELETE FROM recommendations WHERE conversation_id = ?';
+    const deleteState = 'DELETE FROM conversation_state WHERE conversation_id = ?';
     const deleteConv = 'DELETE FROM conversations WHERE id = ?';
     global.db.serialize(() => {
       global.db.run(deleteMessages, [conversationId]);
       global.db.run(deleteRecs, [conversationId]);
-      global.db.run(deleteConv, [conversationId], function (err2) {
+      global.db.run(deleteState, [conversationId]);
+      global.db.run(deleteConv, [conversationId], async function (err2) {
         if (err2) return res.status(500).json({ success: false, error: err2.message });
+
+        try {
+          await deleteMirroredConversationData({
+            appUserId: row?.user_id || null,
+            conversationId
+          });
+        } catch (mirrorError) {
+          console.warn('[CHAT DEBUG] deleteMirroredConversationData warning:', mirrorError.message);
+        }
+
         res.json({ success: true, data: { deleted: true } });
       });
     });
@@ -776,9 +808,25 @@ async function saveMessage(convId, userId, sender, message, nodeId) {
         reject(err);
       } else {
         console.log('[CHAT DEBUG] saveMessage SUCCESS - messageId:', this.lastID);
-        resolve(this.lastID);
+        const insertedId = this.lastID;
+        resolve(insertedId);
       }
     });
+  }).then(async (messageId) => {
+    try {
+      await mirrorChatMessage({
+        appUserId: userId,
+        conversationId: convId,
+        messageId,
+        sender,
+        message,
+        nodeId,
+        createdAt: new Date().toISOString()
+      });
+    } catch (mirrorError) {
+      console.warn('[CHAT DEBUG] mirrorChatMessage warning:', mirrorError.message);
+    }
+    return messageId;
   });
 }
 
@@ -880,6 +928,16 @@ async function saveRecommendations(convId, userId, recommendations) {
         (err) => (err ? reject(err) : resolve())
       );
     });
+  }
+
+  try {
+    await mirrorCareerProbabilities({
+      appUserId: userId,
+      conversationId: convId,
+      recommendations
+    });
+  } catch (mirrorError) {
+    console.warn('[CHAT DEBUG] mirrorCareerProbabilities warning:', mirrorError.message);
   }
 }
 
