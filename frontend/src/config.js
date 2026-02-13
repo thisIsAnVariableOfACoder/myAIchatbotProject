@@ -26,7 +26,7 @@ const configuredApiBase = isInvalidGithubApiBase ? '' : (runtimeApiBase || envAp
 const runtimeOfflineRaw = typeof window !== 'undefined' ? window.__IS_OFFLINE__ : undefined;
 const runtimeOffline = parseBooleanLike(runtimeOfflineRaw);
 const envOffline = parseBooleanLike(import.meta.env.VITE_OFFLINE_MODE);
-const autoOfflineWithoutApi = !configuredApiBase && !isLocalhost && !isGithubPages;
+const autoOfflineWithoutApi = !configuredApiBase && !isLocalhost;
 
 export const API_BASE = configuredApiBase;
 export const IS_OFFLINE = Boolean(runtimeOffline ?? envOffline ?? autoOfflineWithoutApi);

@@ -96,7 +96,7 @@ function getNextQuestion(conversationId, userType) {
 
   // Initial mode: ask a small set of broad questions (tối ưu thời gian)
   // Giảm từ ~25 câu xuống 10 câu đầu tiên để rút ngắn hội thoại
-  if (state.answers.length >= 10) {
+  if (state.answers.length >= 14) {
     return null; // Done with initial questions
   }
 
@@ -164,7 +164,7 @@ function startRefinementMode(conversationId) {
 
   // Get a small set of highly discriminating questions to keep flow short
   // Giảm từ 15 câu refinement xuống 5 câu tập trung
-  const refinementQuestions = getDiscriminatingQuestions(topCareers, state.askedQuestions, 5);
+  const refinementQuestions = getDiscriminatingQuestions(topCareers, state.askedQuestions, 8);
 
   return {
     mode: 'refinement',
@@ -440,8 +440,8 @@ function getCareerRecommendations(conversationId) {
   const allAnswers = [...state.answers, ...state.refinementAnswers];
 
   // Giảm số lượng câu trả lời tối thiểu để sinh gợi ý nghề (từ 10 xuống 6)
-  if (allAnswers.length < 6) {
-    throw new Error(`Need at least 6 answers to generate recommendations (current: ${allAnswers.length})`);
+  if (allAnswers.length < 9) {
+    throw new Error(`Need at least 9 answers to generate recommendations (current: ${allAnswers.length})`);
   }
 
   // Calculate scores
@@ -489,7 +489,7 @@ function getCareerRecommendations(conversationId) {
     recommendations,
     totalAnswers: allAnswers.length,
     mode: state.mode,
-    canRefine: state.mode === 'initial' && allAnswers.length >= 20
+    canRefine: state.mode === 'initial' && allAnswers.length >= 24
   };
 }
 
@@ -546,7 +546,7 @@ function canStartRefinement(conversationId) {
   const state = getConversationState(conversationId);
   return state.mode === 'initial' &&
     // Cho phép vào refinement sớm hơn (từ 5 câu xuống 3 câu)
-    state.answers.length >= 3 &&
+    state.answers.length >= 5 &&
     state.refinementAnswers.length === 0;
 }
 
@@ -565,7 +565,7 @@ function getRefinementProgress(conversationId) {
 function isEnoughInfo(state) {
   // Simple heuristic for chat mode: 3 answers is enough to start brainstorming
   // Giảm từ 5 xuống 3 để bot có thể đề xuất nghề sớm hơn
-  return (state?.answers?.length || 0) >= 3;
+  return (state?.answers?.length || 0) >= 6;
 }
 
 module.exports = {

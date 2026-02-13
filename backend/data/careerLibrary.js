@@ -23,7 +23,12 @@ const CATEGORY_SKILLS = {
   Transportation: ['safety', 'operations', 'navigation'],
   Construction: ['planning', 'safety', 'execution'],
   Energy: ['analysis', 'engineering', 'safety'],
-  Research: ['research', 'analysis', 'writing']
+  Research: ['research', 'analysis', 'writing'],
+  Administration: ['organization', 'documentation', 'communication'],
+  PublicService: ['policy', 'community', 'administration'],
+  Manufacturing: ['operations', 'quality', 'safety'],
+  Environment: ['sustainability', 'analysis', 'field_work'],
+  SecurityDefense: ['discipline', 'safety', 'operations']
 };
 
 const CAREER_LIBRARY = {
@@ -152,11 +157,35 @@ const CAREER_LIBRARY = {
   ],
   Transportation: [
     'Quản lý Vận tải', 'Chuyên gia Quy hoạch Giao thông',
-    'Kiểm soát viên Không lưu', 'Nhân viên Điều hành Bay'
+    'Kiểm soát viên Không lưu', 'Nhân viên Điều hành Bay',
+    'Lái xe tải', 'Lái xe bus', 'Lái xe taxi / công nghệ', 'Điều phối viên đội xe', 'Nhân viên điều độ vận tải'
   ],
   Construction: [
     'Quản lý Xây dựng', 'Kỹ sư Công trường',
     'Khảo sát viên', 'Chuyên viên An toàn Xây dựng', 'Kỹ sư Kết cấu'
+  ],
+  Administration: [
+    'Nhân viên Hành chính văn phòng', 'Trợ lý Hành chính', 'Thư ký', 'Lễ tân',
+    'Nhân viên Nhập liệu', 'Nhân viên Văn thư lưu trữ', 'Điều phối viên văn phòng',
+    'Nhân viên CSKH', 'Nhân viên Tổng đài', 'Nhân viên xử lý hồ sơ'
+  ],
+  PublicService: [
+    'Công chức Hành chính', 'Viên chức Giáo dục', 'Viên chức Y tế', 'Chuyên viên UBND',
+    'Cán bộ Phòng Lao động - Thương binh và Xã hội', 'Chuyên viên Phòng Tài nguyên và Môi trường',
+    'Chuyên viên Thuế', 'Chuyên viên Hải quan', 'Cán bộ Kho bạc', 'Cán bộ Bảo hiểm xã hội'
+  ],
+  Manufacturing: [
+    'Kỹ thuật viên Sản xuất', 'Quản đốc Phân xưởng', 'Chuyên viên Kiểm soát Chất lượng',
+    'Nhân viên QA/QC', 'Kỹ thuật viên Bảo trì', 'Nhân viên Vận hành máy', 'Kỹ sư Quy trình',
+    'Kỹ sư Sản xuất', 'Nhân viên An toàn lao động'
+  ],
+  Environment: [
+    'Chuyên viên Môi trường', 'Kỹ sư Môi trường', 'Chuyên viên Quan trắc môi trường',
+    'Chuyên viên ESG', 'Chuyên viên Quản lý chất thải', 'Kiểm định viên môi trường'
+  ],
+  SecurityDefense: [
+    'Cảnh sát', 'Sĩ quan Quân đội', 'Bảo vệ Chuyên nghiệp', 'Chuyên viên An ninh',
+    'Điều tra viên', 'Cán bộ Phòng cháy chữa cháy', 'Nhân viên An ninh sân bay'
   ]
 };
 

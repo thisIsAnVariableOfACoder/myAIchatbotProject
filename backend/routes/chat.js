@@ -354,8 +354,8 @@ router.post('/message', requireAuth, async (req, res) => {
 
     // Determine if we have enough information for AI recommendations
     // Minimum 5 answers for accurate scoring (more data = better results)
-    const minAnswersForRecommendation = 5;
-    const maxQuestions = 12; // AI should stop before this if confident
+    const minAnswersForRecommendation = 9;
+    const maxQuestions = 18; // AI keeps asking longer to improve confidence
 
     let recommendations = null;
     let completed = false;
@@ -534,7 +534,7 @@ router.post('/message', requireAuth, async (req, res) => {
             state.refinementQuestionsAsked = Number(state.refinementQuestionsAsked || 0) + 1;
           }
         } else {
-          botReply = 'Cảm ơn bạn đã chia sẻ. Mình đang phân tích thông tin để đưa ra gợi ý phù hợp nhất. Vui lòng đợi một chút...';
+          botReply = 'Cảm ơn bạn đã chia sẻ. Mình đang phân tích thông tin để đưa ra gợi ý phù hợp nhất. Vui lòng đợi một chút và nhắn hỏi lại sau ít phút để nhận được phân tích.';
           nextNode = 'ai_chat';
           suggestionMode = 'question';
           suggestedQuestions = pickSuggestedQuestions([], suggestionMode);

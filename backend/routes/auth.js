@@ -55,6 +55,41 @@ function getEmailLocalPart(value) {
   return email.slice(0, atIndex);
 }
 
+async function getUserById(userId) {
+  if (!userId) return null;
+  return dbGet(
+    'SELECT id, email, username, password_hash, user_type FROM users WHERE id = ? LIMIT 1',
+    [userId]
+  );
+}
+
+async function getUserByEmail(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return null;
+  return dbGet(
+    'SELECT id, email, username, password_hash, user_type FROM users WHERE lower(email) = ? ORDER BY id DESC LIMIT 1',
+    [normalized]
+  );
+}
+
+async function syncUserMirror(userRow, source = 'auth_sync', options = {}) {
+  if (!userRow?.id || !userRow?.email) return;
+  const strict = Boolean(options?.strict);
+  try {
+    await mirrorUserAccount({
+      appUserId: userRow.id,
+      username: userRow.username || getEmailLocalPart(userRow.email) || userRow.email,
+      email: userRow.email,
+      passwordHash: userRow.password_hash || '',
+      userType: userRow.user_type || 'high_school',
+      source
+    });
+  } catch (mirrorError) {
+    if (strict) throw mirrorError;
+    console.warn(`[AUTH MIRROR] ${source} warning:`, mirrorError.message);
+  }
+}
+
 async function findUserForLogin(identifier, usernameExists) {
   let user = await dbGet('SELECT * FROM users WHERE lower(email) = ?', [identifier]);
 
@@ -152,13 +187,15 @@ router.post('/register', async (req, res) => {
 
     const result = await dbRun(insertQuery, insertParams);
 
-    if (!result || !result.lastID) {
-      throw new Error('Đăng ký thất bại: không nhận được user_id từ database');
+    // Defensive for cloud drivers: lastID can be missing even when insert succeeded.
+    let insertedUser = null;
+    if (result?.lastID) {
+      insertedUser = await getUserById(result.lastID);
     }
-
-    // Verify persistence to online DB immediately (defensive for cloud drivers)
-    const insertedUser = await dbGet('SELECT id, email, username, user_type FROM users WHERE id = ? LIMIT 1', [result.lastID]);
     if (!insertedUser) {
+      insertedUser = await getUserByEmail(normalizedEmail);
+    }
+    if (!insertedUser?.id) {
       throw new Error('Đăng ký thất bại: user chưa được lưu vào database');
     }
 
@@ -166,31 +203,36 @@ router.post('/register', async (req, res) => {
       throw new Error('Đăng ký thất bại: dữ liệu email lưu không khớp');
     }
 
-    await mirrorUserAccount({
-      appUserId: result.lastID,
-      username: loginName,
-      email: normalizedEmail,
-      passwordHash,
-      userType,
-      source: 'auth_register'
-    });
+    const resolvedUserType = insertedUser.user_type || userType;
+    const resolvedUsername = insertedUser.username || loginName || getEmailLocalPart(normalizedEmail) || normalizedEmail;
+
+    await syncUserMirror(
+      {
+        ...insertedUser,
+        username: resolvedUsername,
+        user_type: resolvedUserType,
+        password_hash: insertedUser.password_hash || passwordHash
+      },
+      'auth_register',
+      { strict: true }
+    );
 
     const token = jwt.sign({
-      user_id: result.lastID,
-      username: loginName,
+      user_id: insertedUser.id,
+      username: resolvedUsername,
       email: normalizedEmail,
-      user_type: userType
+      user_type: resolvedUserType
     }, JWT_SECRET, { expiresIn: '7d' });
 
-    console.log('User registered successfully:', result.lastID);
+    console.log('User registered successfully:', insertedUser.id);
 
     res.json({
       success: true,
       data: {
-        user_id: result.lastID,
-        username: loginName,
+        user_id: insertedUser.id,
+        username: resolvedUsername,
         email: normalizedEmail,
-        user_type: userType,
+        user_type: resolvedUserType,
         token
       }
     });
@@ -229,19 +271,13 @@ router.post('/login', async (req, res) => {
     updateLastLogin(user.id);
 
     const resolvedUsername = (usernameExists ? user.username : null) || getEmailLocalPart(user.email) || user.email;
-
-    try {
-      await mirrorUserAccount({
-        appUserId: user.id,
-        username: resolvedUsername,
-        email: user.email,
-        passwordHash: user.password_hash || '',
-        userType: user.user_type,
-        source: 'auth_login'
-      });
-    } catch (mirrorError) {
-      console.warn('Login mirror warning:', mirrorError.message);
-    }
+    await syncUserMirror(
+      {
+        ...user,
+        username: resolvedUsername
+      },
+      'auth_login'
+    );
 
     const token = jwt.sign({
       user_id: user.id,
@@ -268,15 +304,39 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.get('/me', requireAuth, (req, res) => {
-  const user = req.user || {};
-  res.json({
-    success: true,
-    data: {
-      ...user,
-      username: user.username || user.email
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    const tokenUser = req.user || {};
+    const dbUser = await getUserById(tokenUser.user_id);
+
+    if (!dbUser?.id) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
-  });
+
+    const resolvedUsername = dbUser.username || getEmailLocalPart(dbUser.email) || dbUser.email;
+    const resolvedType = dbUser.user_type || tokenUser.user_type || 'high_school';
+
+    await syncUserMirror(
+      {
+        ...dbUser,
+        username: resolvedUsername,
+        user_type: resolvedType
+      },
+      'auth_me'
+    );
+
+    res.json({
+      success: true,
+      data: {
+        user_id: dbUser.id,
+        username: resolvedUsername,
+        email: dbUser.email,
+        user_type: resolvedType
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 module.exports = router;

@@ -118,6 +118,14 @@ When configured, user/chat/profile data is stored online and shared across all b
 - `DB_PROVIDER=sqlitecloud`
 - `SQLITECLOUD_URL=sqlitecloud://<host>:<port>/<database>?apikey=<api-key>`
 
+Use [`backend/.env.example`](backend/.env.example) as template for local setup.
+
+⚠️ Security note:
+
+- Do not commit real `.env` files.
+- Put real values in GitHub **Secrets/Variables** for CI.
+- This repository includes [`playwright.yml`](playwright.yml) for CI-safe env injection (no plaintext keys in git).
+
 `SQLITECLOUD_URL` must be a real connection string, not the dashboard URL.
 
 Optional (instead of `SQLITECLOUD_URL`):

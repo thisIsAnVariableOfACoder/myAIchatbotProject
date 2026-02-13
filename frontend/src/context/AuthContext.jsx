@@ -3,6 +3,31 @@ import { api } from '../api';
 
 const AuthContext = createContext(null);
 
+function parseJwtPayload(token) {
+  try {
+    const raw = String(token || '').trim();
+    if (!raw) return null;
+    const parts = raw.split('.');
+    if (parts.length !== 3) return null;
+
+    const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4 || 4)) % 4);
+    const decoded = atob(padded);
+    const payload = JSON.parse(decoded);
+    return payload && typeof payload === 'object' ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+function isTokenExpired(token) {
+  const payload = parseJwtPayload(token);
+  const exp = Number(payload?.exp || 0);
+  if (!Number.isFinite(exp) || exp <= 0) return false;
+  // Grace period 30s to avoid edge-case race around expiration time.
+  return exp * 1000 <= Date.now() + 30_000;
+}
+
 function persistAuthSession(payload) {
   const token = String(payload?.token || '').trim();
   const userId = payload?.user_id;
@@ -39,8 +64,19 @@ function clearAuthSession() {
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => {
     try {
-      const stored = localStorage.getItem('token');
-      return stored && stored.trim() !== '' ? stored : '';
+      const rawSnapshot = localStorage.getItem('auth:session');
+      const parsedSnapshot = rawSnapshot ? JSON.parse(rawSnapshot) : null;
+      const fromSnapshot = String(parsedSnapshot?.token || '').trim();
+      const hasSnapshotUser = Boolean(parsedSnapshot?.user?.user_id);
+      const candidate = hasSnapshotUser ? fromSnapshot : '';
+      if (!candidate) return '';
+
+      if (isTokenExpired(candidate)) {
+        clearAuthSession();
+        return '';
+      }
+
+      return candidate;
     } catch {
       return '';
     }
@@ -66,6 +102,15 @@ export function AuthProvider({ children }) {
     async function loadMe() {
       if (!token) {
         setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      if (isTokenExpired(token)) {
+        clearAuthSession();
+        setToken('');
+        setUser(null);
+        setError('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại');
         setLoading(false);
         return;
       }

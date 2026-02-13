@@ -15,5 +15,16 @@ yarn-error.log*
 # Local QA artifacts
 screenshots/
 
-# playwright
+# Environment secrets (never commit)
 .env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Playwright artifacts
+playwright-report/
+test-results/
+.playwright/

@@ -6,17 +6,19 @@
     <title>Career Guidance Chatbot</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <script src="./runtime-config.js"></script>
-    <!-- Fix trailing slash for GitHub Pages - redirect to URL with trailing slash -->
+    <!-- Decode GitHub Pages 404 redirect format (/?/path) back to clean client route -->
     <script>
       (function() {
-        var path = window.location.pathname;
-        // If path doesn't end with / and has no extension, redirect to add trailing slash
-        if (!path.endsWith('/') && !path.includes('.') && !path.includes('?')) {
-          window.location.replace(path + '/' + window.location.search + window.location.hash);
+        var l = window.location;
+        if (l.search && l.search.startsWith('?/')) {
+          var decoded = l.search.slice(2).replace(/~and~/g, '&');
+          var cleanPath = decoded.split('?')[0] || '/';
+          var cleanQuery = decoded.includes('?') ? ('?' + decoded.split('?').slice(1).join('?')) : '';
+          window.history.replaceState(null, null, cleanPath + cleanQuery + l.hash);
         }
       })();
     </script>
-    <script type="module" crossorigin src="./assets/index-0hZkGWZq.js"></script>
+    <script type="module" crossorigin src="./assets/index-DGCzFcs3.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-DGGiPoMD.css">
   </head>
   <body>

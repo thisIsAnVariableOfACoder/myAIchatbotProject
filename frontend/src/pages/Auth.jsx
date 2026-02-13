@@ -15,6 +15,14 @@ export default function Auth() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  function switchMode(nextMode) {
+    setMode(nextMode);
+    setError('');
+    if (nextMode === 'register' && !username && identifier) {
+      setUsername(identifier);
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (submitting) return;
@@ -80,8 +88,20 @@ export default function Auth() {
   return (
     <div className="max-w-md mx-auto card card-elevated p-6">
       <div className="flex gap-2 mb-4">
-        <button className={`px-3 py-2 rounded-lg text-sm ${mode === 'login' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setMode('login')}>Đăng nhập</button>
-        <button className={`px-3 py-2 rounded-lg text-sm ${mode === 'register' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setMode('register')}>Tạo tài khoản</button>
+        <button
+          type="button"
+          className={`px-3 py-2 rounded-lg text-sm ${mode === 'login' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => switchMode('login')}
+        >
+          Đăng nhập
+        </button>
+        <button
+          type="button"
+          className={`px-3 py-2 rounded-lg text-sm ${mode === 'register' ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => switchMode('register')}
+        >
+          Tạo tài khoản
+        </button>
       </div>
       {IS_OFFLINE && (
         <div className="mb-3 text-xs text-[#B91C1C]">

@@ -115,7 +115,11 @@ const VARIABLE_MAPPINGS = {
         { value: 'biên tập', careers: ['Biên tập viên Video', 'Content Editor', 'Nhà báo', 'Publisher'], weight: 17 },
 
         // Business & Management
-        { value: 'giao tiếp', careers: ['Marketing Manager', 'PR Specialist', 'Sales Manager', 'Account Manager', 'HR Manager'], weight: 14 },
+        { value: 'giao tiếp', careers: ['Marketing Manager', 'PR Specialist', 'Sales Manager', 'Account Manager', 'HR Manager', 'Nhân viên CSKH', 'Lễ tân'], weight: 14 },
+        { value: 'hành chính', careers: ['Nhân viên Hành chính văn phòng', 'Trợ lý Hành chính', 'Thư ký', 'Văn thư lưu trữ'], weight: 18 },
+        { value: 'quản trị vận hành', careers: ['Operations Manager', 'Supply Chain Manager', 'Quản lý Kho', 'Điều phối Logistics'], weight: 17 },
+        { value: 'quản trị nhà nước', careers: ['Công chức Hành chính', 'Chuyên viên UBND', 'Chuyên viên Thuế'], weight: 18 },
+        { value: 'điều phối công việc', careers: ['Điều phối viên văn phòng', 'Điều phối Sự kiện', 'Điều phối Logistics'], weight: 16 },
         { value: 'quản lý dự án', careers: ['Project Manager', 'Product Manager', 'Quản lý Xây dựng', 'Program Manager'], weight: 17 },
         { value: 'quản lý nhân sự', careers: ['HR Manager', 'HR Business Partner', 'Talent Specialist', 'Giám đốc Nhân sự'], weight: 18 },
         { value: 'quản lý tài chính', careers: ['Financial Analyst', 'Accountant', 'CFO', 'Controller'], weight: 18 },
@@ -154,6 +158,14 @@ const VARIABLE_MAPPINGS = {
         { value: 'du lịch', careers: ['Hướng dẫn viên Du lịch', 'Tư vấn Du lịch', 'Quản lý Khách sạn'], weight: 17 },
         { value: 'ẩm thực', careers: ['Đầu bếp', 'Quản lý Nhà hàng', 'Food Technologist'], weight: 17 },
         { value: 'bất động sản', careers: ['Môi giới Bất động sản', 'Quản lý Tài sản', 'Chuyên viên Phân tích Bất động sản'], weight: 18 },
+        { value: 'hành chính văn phòng', careers: ['Nhân viên Hành chính văn phòng', 'Trợ lý Hành chính', 'Thư ký', 'Lễ tân'], weight: 17 },
+        { value: 'công vụ nhà nước', careers: ['Công chức Hành chính', 'Chuyên viên UBND', 'Chuyên viên Thuế', 'Cán bộ Kho bạc'], weight: 18 },
+        { value: 'sản xuất công nghiệp', careers: ['Kỹ sư Sản xuất', 'Kỹ thuật viên Sản xuất', 'Quản đốc Phân xưởng', 'Nhân viên QA/QC'], weight: 17 },
+        { value: 'môi trường và phát triển bền vững', careers: ['Chuyên viên Môi trường', 'Kỹ sư Môi trường', 'Chuyên viên ESG'], weight: 18 },
+        { value: 'an ninh quốc phòng', careers: ['Cảnh sát', 'Sĩ quan Quân đội', 'Cán bộ Phòng cháy chữa cháy', 'Nhân viên An ninh sân bay'], weight: 17 },
+        { value: 'quản trị doanh nghiệp', careers: ['Operations Manager', 'Project Manager', 'Product Manager', 'Strategy Analyst'], weight: 18 },
+        { value: 'nhân sự', careers: ['HR Specialist', 'HR Manager', 'Recruiter', 'Talent Acquisition Specialist'], weight: 17 },
+        { value: 'thương mại điện tử', careers: ['Quản lý Thương mại điện tử', 'Growth Marketer', 'Digital Marketing Specialist', 'E-commerce Operations Specialist'], weight: 17 },
         { value: 'bán lẻ', careers: ['Quản lý Bán lẻ', 'Chuyên viên Hàng hóa', 'Giám sát Cửa hàng'], weight: 16 },
         { value: 'làm đẹp', careers: ['Chuyên viên Trang điểm', 'Nhà Tạo mẫu Tóc', 'Chuyên gia Chăm sóc Da'], weight: 17 },
         { value: 'thể thao', careers: ['Huấn luyện viên', 'Chuyên gia Thể dục', 'Chuyên viên Phân tích Thể thao'], weight: 17 },
@@ -179,12 +191,14 @@ const VARIABLE_MAPPINGS = {
         { value: 'độc lập', careers: ['Software Engineer', 'Content Writer', 'Freelance Designer'], weight: 12 },
         { value: 'theo nhóm', careers: ['Project Manager', 'Product Manager', 'Scrum Master'], weight: 12 },
         { value: 'từ xa', careers: ['Software Engineer', 'Data Analyst', 'Content Writer', 'UI Designer'], weight: 10 },
-        { value: 'văn phòng', careers: ['Accountant', 'HR Manager', 'Operations Manager'], weight: 8 }
+        { value: 'văn phòng', careers: ['Accountant', 'HR Manager', 'Operations Manager', 'Nhân viên Hành chính văn phòng', 'Thư ký'], weight: 8 }
     ],
 
     environment: [
         { value: 'năng động', careers: ['Startup Founder', 'Product Manager', 'Growth Hacker'], weight: 11 },
-        { value: 'ổn định', careers: ['Accountant', 'Auditor', 'Công chức'], weight: 10 },
+        { value: 'ổn định', careers: ['Accountant', 'Auditor', 'Công chức Hành chính', 'Viên chức Giáo dục', 'Viên chức Y tế'], weight: 10 },
+        { value: 'kỷ luật cao', careers: ['Cảnh sát', 'Sĩ quan Quân đội', 'Cán bộ Phòng cháy chữa cháy'], weight: 11 },
+        { value: 'cộng đồng', careers: ['Công chức Hành chính', 'Giáo viên Tiểu học', 'Nhà Tâm lý học Lâm sàng', 'Nhân viên Chăm sóc sức khỏe'], weight: 10 },
         { value: 'sáng tạo', careers: ['UI Designer', 'UX Designer', 'Content Creator', 'Biên kịch'], weight: 13 }
     ],
 
@@ -203,7 +217,14 @@ const VARIABLE_MAPPINGS = {
         { value: 'vẽ và thiết kế', careers: ['Graphic Designer', 'Illustrator', 'Art Director'], weight: 21 },
 
         // Business & Management
-        { value: 'gặp gỡ khách hàng', careers: ['Account Manager', 'Sales Manager', 'Customer Success Manager', 'Sales Executive'], weight: 20 },
+        { value: 'gặp gỡ khách hàng', careers: ['Account Manager', 'Sales Manager', 'Customer Success Manager', 'Sales Executive', 'Môi giới Bất động sản'], weight: 20 },
+        { value: 'xử lý hồ sơ', careers: ['Nhân viên Hành chính văn phòng', 'Văn thư lưu trữ', 'Công chức Hành chính'], weight: 20 },
+        { value: 'tiếp nhận và hỗ trợ người dân', careers: ['Công chức Hành chính', 'Chuyên viên UBND', 'Cán bộ Bảo hiểm xã hội'], weight: 21 },
+        { value: 'giảng dạy và hướng dẫn', careers: ['Giáo viên Tiểu học', 'Giáo viên Trung học cơ sở', 'Giảng viên Đại học / Cao đẳng'], weight: 21 },
+        { value: 'quản lý bất động sản', careers: ['Quản lý Tài sản', 'Môi giới Bất động sản', 'Chuyên viên Phân tích Bất động sản'], weight: 20 },
+        { value: 'vận hành dây chuyền sản xuất', careers: ['Kỹ sư Sản xuất', 'Kỹ thuật viên Sản xuất', 'Nhân viên Vận hành máy'], weight: 20 },
+        { value: 'kiểm soát chất lượng', careers: ['Nhân viên QA/QC', 'Chuyên viên Kiểm soát Chất lượng', 'Kỹ sư Quy trình'], weight: 20 },
+        { value: 'đảm bảo an toàn và an ninh', careers: ['Cảnh sát', 'Bảo vệ Chuyên nghiệp', 'Cán bộ Phòng cháy chữa cháy'], weight: 20 },
         { value: 'lập kế hoạch chiến lược', careers: ['Product Manager', 'Strategy Consultant', 'Business Analyst'], weight: 19 },
         { value: 'quản lý team', careers: ['Project Manager', 'Team Lead', 'Department Manager'], weight: 18 },
         { value: 'đàm phán hợp đồng', careers: ['Sales Manager', 'Business Development', 'Account Executive'], weight: 18 },
@@ -236,7 +257,9 @@ const VARIABLE_MAPPINGS = {
         { value: 'học công nghệ mới liên tục', careers: ['Software Engineer', 'Data Engineer', 'Cloud Engineer'], weight: 15 },
         { value: 'làm việc với deadline gấp', careers: ['Project Manager', 'Marketing Manager', 'Nhà báo'], weight: 12 },
         { value: 'chịu áp lực cao', careers: ['Bác sĩ', 'Trader', 'Investment Banker'], weight: 14 },
-        { value: 'đi công tác thường xuyên', careers: ['Sales Manager', 'Account Manager', 'Khảo sát viên'], weight: 11 }
+        { value: 'đi công tác thường xuyên', careers: ['Sales Manager', 'Account Manager', 'Khảo sát viên'], weight: 11 },
+        { value: 'tuân thủ quy trình nghiêm ngặt', careers: ['Công chức Hành chính', 'Nhân viên QA/QC', 'Cán bộ Phòng cháy chữa cháy'], weight: 12 },
+        { value: 'phục vụ cộng đồng dài hạn', careers: ['Công chức Hành chính', 'Viên chức Giáo dục', 'Viên chức Y tế'], weight: 12 }
     ]
 };
 
