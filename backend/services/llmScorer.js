@@ -1511,18 +1511,8 @@ function safeParseRecommendations(content, context = null) {
   };
 }
 
-async function generateAgentQuestion() {
-  return null;
-}
-
-async function generateAgentRecommendations() {
-  return null;
-}
-
 module.exports = {
   isEnabled,
-  generateAgentQuestion,
-  generateAgentRecommendations,
   generateAgentChatReply,
   generateCareerQuestion,
   generateCareerRecommendations,
