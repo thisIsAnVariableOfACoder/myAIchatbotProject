@@ -1,7 +1,21 @@
 # 🚀 Career Advisor Chatbot  
-### AI Young Guru 2026 – Team LLMagik  
+### AI Young Guru 2026 – Team LLMagik - AI YOGU GYM 3
 
 An AI-powered career advisory chatbot that helps users explore career paths, discover job information, and receive personalized recommendations using LLM technology.
+
+<!-- Badges & visual header -->
+[![Node.js](https://img.shields.io/badge/Backend-Node.js-green)](https://nodejs.org/)
+[![Vite](https://img.shields.io/badge/Frontend-Vite-yellowgreen)](https://vitejs.dev/)
+[![SQLiteCloud](https://img.shields.io/badge/DB-SQLiteCloud-blue)](https://sqlite.org/)
+[![Model](https://img.shields.io/badge/LLM-GPT--OSS-red)](https://console.groq.com/)
+
+<p align="center">
+   <img src="banner.svg" alt="Project Banner" style="max-width:100%;height:auto;border-radius:12px;" />
+</p>
+
+<p align="center">
+   <em>Polished prototype for interactive career discovery, personalized recommendations, and LLM-driven guidance.</em>
+</p>
 
 ---
 
@@ -30,10 +44,56 @@ An AI-powered career advisory chatbot that helps users explore career paths, dis
 
 ## 📁 Project Structure
 
-```bash
-career-advisor-chatbot/
-├── backend/      # API server, database, AI integration
-└── frontend/     # Web client application
+Below is a complete project structure overview (expanded) to help contributors and reviewers quickly locate modules and assets.
+
+```
+myAIchatbotProject/
+├── 632652149_887073670753166_3710026893000461784_n.jpg    # Hero banner
+├── ai-young-guru-logo.png
+├── index.html
+├── 404.html
+├── package.json
+├── runtime-config.js
+├── assets/                      # Generated frontend assets (build)
+├── career-icons/                # Icon set used by the UI
+├── screenshots/
+├── scripts/
+├── backend/
+│   ├── index.js
+│   ├── server.js
+│   ├── config.js
+   │   ├── package.json
+│   ├── testLLM.js
+│   ├── data/
+│   │   ├── careerLibrary.js
+│   │   └── generatedCareerDataset.js
+│   ├── database/
+│   │   ├── esco_occupations.csv
+│   │   ├── schema.sql
+│   │   └── seed.sql
+│   ├── middleware/
+│   │   └── auth.js
+│   ├── routes/
+│   │   ├── chat.js
+│   │   ├── chatbot.js
+│   │   ├── auth.js
+│   │   ├── admin.js
+│   │   └── analytics.js
+│   └── services/
+│       └── ...
+├── frontend/
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── postcss.config.cjs
+│   ├── tailwind.config.cjs
+│   ├── public/
+│   └── src/
+│       ├── main.js
+│       ├── app/
+│       ├── components/
+│       └── styles/
+└── README.MD
 ```
 
 ---
@@ -238,13 +298,12 @@ Used for conversational intelligence, contextual understanding, and personalized
 
 ---
 
-## 👥 Team LLMagik
+## RESULT:
 
-- **Phạm Khôi Nguyên**  
-  https://github.com/thisIsAnVariableOfACoder  
+TOP 5 AI YOGU GYM 3 PROJECT
 
-- **Đinh Quang Minh**  
-  https://github.com/minhhdinh192  
+<p align="center">
+   <img src="632652149_887073670753166_3710026893000461784_n.jpg" alt="TOP 5 AI YOGU GYM 3 PROJECT" width="600" />
+</p>
 
-- **Vũ Minh Hoàng**  
-  https://github.com/GetInHod  
+

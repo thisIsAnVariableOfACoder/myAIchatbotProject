@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 360" width="1400" height="360">
+  <defs>
+    <linearGradient id="g1" x1="0" x2="1">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="50%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <filter id="blur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="18" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="360" rx="18" fill="url(#g1)" />
+
+  <!-- soft decorative circle -->
+  <g filter="url(#blur)">
+    <circle cx="1120" cy="140" r="120" fill="#ffffff22" />
+  </g>
+
+  <!-- main left-aligned content -->
+  <g font-family="Inter, Roboto, Arial, sans-serif" fill="#fff">
+    <!-- Left margin -->
+    <text x="40" y="80" font-size="40" font-weight="700" text-anchor="start">CAREER GUIDANCE CHATBOT</text>
+    <text x="40" y="112" font-size="16" opacity="0.95" text-anchor="start">AI Young Guru 2026 • Team LLMagik — AI YOGU GYM 3</text>
+
+    <!-- separator -->
+    <rect x="40" y="126" width="360" height="6" rx="3" fill="#ffffff" opacity="0.12" />
+
+    <!-- description -->
+    <text x="40" y="158" font-size="14" opacity="0.95" text-anchor="start">Polished prototype for intelligent career discovery, tailored job recommendations, and LLM-guided conversations.</text>
+
+    <!-- bullet highlights -->
+    <g font-size="13" opacity="0.95">
+      <text x="40" y="198">• 1000+ roles imported from O*NET</text>
+      <text x="40" y="220">• SQLiteCloud (online) for shared app data</text>
+      <text x="40" y="242">• LLM-driven chat + rule-based matching</text>
+    </g>
+  </g>
+
+  <!-- right card: precise alignment with decorative circle (designer tweaks) -->
+  <g>
+    <!-- card background (shadow-like) slightly lowered -->
+    <rect x="1160" y="120" width="180" height="160" rx="18" fill="#ffffff0f" stroke="#ffffff14"/>
+
+    <!-- subtle diagonal texture for depth -->
+    <g opacity="0.03" fill="#fff">
+      <rect x="1170" y="130" width="140" height="5" transform="rotate(-18 1250 132)" />
+      <rect x="1170" y="150" width="140" height="5" transform="rotate(-18 1250 152)" />
+    </g>
+
+    <!-- stacked title centered on the decorative circle updated to compact project label -->
+    <text x="1120" y="122" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">CGC AI</text>
+    <text x="1120" y="144" text-anchor="middle" font-size="11" fill="#fff" opacity="0.95">LLM • Recommendations</text>
+
+    <!-- small badges under the stacked title to balance white space -->
+    <g transform="translate(1024,160)" fill="#fff" opacity="0.95" font-size="10">
+      <rect x="0" y="0" width="56" height="18" rx="6" fill="#ffffff14" />
+      <text x="28" y="12" text-anchor="middle">AI</text>
+    </g>
+    <g transform="translate(1092,160)" fill="#fff" opacity="0.95" font-size="10">
+      <rect x="0" y="0" width="56" height="18" rx="6" fill="#ffffff14" />
+      <text x="28" y="12" text-anchor="middle">Realtime</text>
+    </g>
+    <g transform="translate(1160,160)" fill="#fff" opacity="0.95" font-size="10">
+      <rect x="0" y="0" width="56" height="18" rx="6" fill="#ffffff14" />
+      <text x="28" y="12" text-anchor="middle">NLP</text>
+    </g>
+  </g>
+</svg>
